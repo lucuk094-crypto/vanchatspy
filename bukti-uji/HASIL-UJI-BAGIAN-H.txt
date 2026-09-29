@@ -1,9 +1,9 @@
 perintah : node tools/uji-bagian-h.mjs
-waktu    : 2026-09-29T17:22:53.147Z
+waktu    : 2026-09-29T17:51:52.649Z
 
 ══ H. riset mendalam · builder · gambar · suara · halaman baru ══
 riset mendalam → 7 langkah (Sedang membuat rencana… | Sedang mencari sumber… | Sedang mengumpulkan informasi……) · sumber 4 · label penyedia 4
-riset mendalam → berkas laporan: riset-mumy222pnobbq.html
+riset mendalam → berkas laporan: riset-mumz3c8vm69rk.html
 mode berpikir → ["Normal — Ling 3.0 Flash","Berpikir — Dots 3 Note","Berpikir Mendalam — Nex 2.5 Pro","Expert (tambahan) — Nemotron 3 Super 120B"]
 builder → " MIRU Streaming " · berkas ["app.js","index.html","styles.css"] · pratinjau 1958 karakter
 builder → jejak 10/10 selesai · konsol: console 3 · peringatan 0 · console error 0 · runtime error 0 · jaringan 1
@@ -45,7 +45,7 @@ profil → instruksi ikut terkirim: true
 admin (belum masuk) → "Halaman ini terkunciKunci admin sudah dibuat di Pengaturan →"
 admin (masuk) → peran "peran: admin" · bagian: System Health · Penggunaan · Model · Provider · Plugin · Rate Limit · Log (audit lokal) · Pengguna & hak akses
 admin → rate limit tampil: "chat 60 "
-kuota habis → pesan: "SISTEM 17.22 Riset mendalam dimulai untuk: “kopi arabika” — 2 permintaan AI + pencarian multi-penyedia. SISTEM 17.22 AI "
+kuota habis → pesan: "SISTEM 17.51 Riset mendalam dimulai untuk: “kopi arabika” — 2 permintaan AI + pencarian multi-penyedia. SISTEM 17.51 AI "
 kuota habis → lembar Mode AI: "Mode AI batas penyedia tercapai (dari NaraRouter) · tunggu sebentar atau naikkan paket di dasbor"
 galat JS (bagian H) → tidak ada
 permintaan AI yang dipakai uji: 11

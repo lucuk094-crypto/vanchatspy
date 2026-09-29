@@ -168,9 +168,11 @@ sendiri sudah diperiksa langsung: tanpa kunci selalu menjawab
 2. Buka **Setelan → Model AI** di aplikasi: ada daftar model → kunci & jaringan beres.
 3. Jawaban «kunci penyedia AI ditolak penyedianya» → kunci salah/terpotong, atau
    sudah dihapus di NaraRouter. Periksa juga spasi/newline yang ikut tersalin.
-4. Jawaban «Tidak bisa menghubungi penyedia AI» → jaringan atau NaraRouter sedang
-   tidak bisa dihubungi. Aplikasi mencoba lagi otomatis; begitu normal, percakapan
-   langsung jalan **tanpa restart**.
+4. Jawaban «Tidak bisa menghubungi penyedia AI» → **pesannya sekarang menyebut
+   penyebabnya** (mis. `penyebab: tidak menjawab dalam 9 detik`). Buka
+   `/api/health?uji=1` di browser untuk melihat status HTTP & lama waktunya; kalau
+   `AI_BASE_URL` kamu isi sendiri, kosongkan dulu (bawaannya sudah benar). Aplikasi
+   mencoba lagi otomatis; begitu normal, percakapan langsung jalan **tanpa restart**.
 5. Pesan batas/kuota dari penyedia → tunggu sebentar atau tingkatkan paketnya.
 6. Di Vercel: sudah **redeploy** setelah mengubah env?
 7. Daftar model kosong padahal kunci benar → paket akunmu mungkin belum punya

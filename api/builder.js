@@ -38,29 +38,33 @@ const json = (o, s, extra) =>
 
 import { asalDiizinkan } from "./_aman.js";
 import { penyediaTeks } from "./_ai.js";
-import { daftarModelLokal, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong } from "./chat.js";
+import { daftarModelLokal, daftarModelCepat, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, sebabLokalTerakhir } from "./chat.js";
 
 /* daftar model untuk membangun halaman: diambil dari NaraRouter (GET /models),
    supaya yang dipakai benar-benar model yang diizinkan paket akunmu */
 async function kandidatBangun(env) {
   const p = penyediaTeks(env);
   const jelas = String(env.AI_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const daftar = await daftarModelLokal(env);
+  const daftar = await daftarModelCepat(env, 1500);   /* builder: tunggu seperlunya saja */
   if (daftar && daftar.length) {
     if (jelas.length) return jelas.slice(0, 6);
     const pilih = [pilihModelMode("deep", daftar, env), pilihModelMode("think", daftar, env), pilihModelMode("fast", daftar, env)].filter(Boolean);
     const unik = [...new Set(pilih)];
     return unik.concat(daftar.filter((d) => !unik.includes(d)).slice(0, 3));
   }
-  /* router belum bisa dihubungi → pakai model dari setelan (kalau ada) */
-  return [...new Set([env.AI_MODEL_DEEP, env.AI_MODEL_THINK, env.AI_MODEL_FAST, env.AI_MODEL].filter(Boolean))];
+  /* daftar model dari penyedia belum terbaca (lambat/gagal sesaat) → JANGAN menyerah:
+     pakai model dari setelan, lalu daftar bawaan. Kalau penyedianya memang tak bisa
+     dihubungi, percobaannya sendiri yang gagal dan pesannya menyebut sebabnya. */
+  const dariSetelan = [...new Set([env.AI_MODEL_DEEP, env.AI_MODEL_THINK, env.AI_MODEL_FAST, env.AI_MODEL].filter(Boolean))];
+  return dariSetelan.length ? dariSetelan : MODEL_BANGUN.slice();
 }
 
 const pesanRouterMati = (p) => {
   const nama = p.nama === "bynara" ? "NaraRouter" : p.nama;
-  return "Tidak bisa menghubungi penyedia AI (" + nama + " di " + p.dasar + ") untuk membangun halaman. "
-    + "Periksa koneksi internet server ini dan kunci AI_API_KEY; cek cepat dengan "
-    + "`node tools/cek-penyedia.mjs --url " + p.dasar + " --key <kunci> --nama bynara`. "
+  const sebab = sebabLokalTerakhir();
+  return "Tidak bisa menghubungi penyedia AI (" + nama + " di " + p.dasar + ") untuk membangun halaman."
+    + (sebab ? " Penyebab: " + sebab + "." : "")
+    + " Periksa koneksi internet server ini dan kunci AI_API_KEY (diagnosa cepat: buka /api/health?uji=1). "
     + "Ruang kerja tetap bisa dipakai: halaman lama masih bisa dibuka, dijalankan, dan diunduh.";
 };
 

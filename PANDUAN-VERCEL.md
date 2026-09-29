@@ -121,7 +121,18 @@ yang sudah jalan. Setiap kali mengganti/menambah env →
    * `keyConfigured: false` → `AI_API_KEY` belum masuk / salah tempat.
 2. Buka webnya → **Setelan → Model AI**: daftar model harus terisi (itu diambil
    dari akunmu). Kalau kosong, kunci belum berlaku → redeploy lagi.
-3. Kirim pesan uji: `Balas tepat tiga kata: kopi itu enak` →
+3. Kalau masih ada masalah, buka **`/api/health?uji=1`** — itu menyentuh NaraRouter
+   sungguhan dan menyebut penyebabnya apa adanya (HTTP berapa, berapa milidetik,
+   atau galat jaringannya). Tambahkan `?uji=chat` untuk sekalian mengirim satu
+   percakapan sangat pendek (memakai sedikit kuota):
+
+   ```
+   https://<proyek-mu>.vercel.app/api/health?uji=1
+   https://<proyek-mu>.vercel.app/api/health?uji=chat
+   ```
+
+   Contoh jawaban sehat: `"kesimpulan": "alamat + kunci sehat (37 model terlihat)"`.
+4. Kirim pesan uji: `Balas tepat tiga kata: kopi itu enak` →
    jawaban pendek yang mengikuti perintah = seluruh jalur sudah sehat.
 
 ---

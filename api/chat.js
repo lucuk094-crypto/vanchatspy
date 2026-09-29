@@ -152,7 +152,18 @@ const alamatPenyedia = (env) => penyediaTeks(env).dasar + "/chat/completions";
    Diambil dari GET {dasar}/models milik NaraRouter, jadi aplikasi hanya
    memakai model yang BENER-BENER diizinkan paket akunmu — bukan daftar
    karangan. Hasilnya disimpan 60 detik supaya tidak memanggil berulang. */
-let cacheLokal = { dasar: "", ts: 0, daftar: [], ok: false, kode: 0 };
+let cacheLokal = { dasar: "", ts: 0, daftar: [], ok: false, kode: 0, sebab: "", ms: 0 };
+
+/* alasan kegagalan terakhir (untuk pesan jujur: timeout? HTTP berapa? DNS?) */
+const sebabLokalTerakhir = () => cacheLokal.sebab || "";
+function sebabDari(e, ms) {
+  const nama = String((e && e.name) || "");
+  if (nama === "TimeoutError" || nama === "AbortError") return "penyedia tidak menjawab dalam " + Math.round(ms / 1000) + " detik";
+  const status = Number((e && e.status) || 0);
+  if (status) return "penyedia menjawab HTTP " + status;
+  const m = String((e && e.message) || e).slice(0, 140);
+  return m ? "gagal menghubungi penyedia (" + m + ")" : "gagal menghubungi penyedia";
+}
 /* pemeriksaan terakhir GAGAL karena kuncinya ditolak (bukan karena penyedia mati)?
    Dipakai supaya pesannya tidak menyesatkan ("pastikan sudah jalan") saat
    alamatnya sebenarnya menjawab, hanya kuncinya salah. */
@@ -165,26 +176,49 @@ async function daftarModelLokal(env) {
      percobaan yang gagal tidak boleh dianggap "daftar kosong" (nanti model
      penyedia lain yang dipakai) — harus null = tidak bisa dihubungi */
   if (cacheLokal.dasar === p.dasar && kini - cacheLokal.ts < 60000) return cacheLokal.ok ? cacheLokal.daftar : null;
+  const t0 = Date.now();
   try {
     const h = { "Content-Type": "application/json" };
     if (p.kunci) h.Authorization = "Bearer " + p.kunci;
+    /* batas waktu 9 detik: di hosting (Vercel Edge) + penyedia di balik Cloudflare,
+       permintaan pertama bisa lambat — 4 detik terlalu ketat dan membuat aplikasi
+       mengaku "penyedia mati" padahal hanya lambat. */
     const r = await fetch(p.dasar + "/models", {
       headers: h,
-      signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+      signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined,
     });
     if (!r.ok) throw Object.assign(new Error("HTTP " + r.status), { status: r.status });
     const j = await r.json();
     const daftar = (j.data || j.models || [])
       .map((m) => String((m && (m.id || m.name)) || "").trim())
       .filter(Boolean).slice(0, 80);
-    cacheLokal = { dasar: p.dasar, ts: kini, daftar, ok: daftar.length > 0, kode: 0 };
-    return daftar.length ? daftar : null;
+    cacheLokal = { dasar: p.dasar, ts: kini, daftar, ok: daftar.length > 0, kode: 0, sebab: "", ms: Date.now() - t0 };
+    if (!daftar.length) { cacheLokal.sebab = "penyedia menjawab, tetapi daftar model untuk paketmu kosong"; return null; }
+    return daftar;
   } catch (e) {
     /* penyedia belum bisa dihubungi → coba lagi 5 detik kemudian (bukan menunggu 60 detik),
        supaya begitu jaringan/penyedia normal lagi, web langsung jalan tanpa di-restart */
-    cacheLokal = { dasar: p.dasar, ts: kini - 55000, daftar: [], ok: false, kode: Number((e && e.status) || 0) };
+    cacheLokal = {
+      dasar: p.dasar, ts: kini - 55000, daftar: [], ok: false,
+      kode: Number((e && e.status) || 0), sebab: sebabDari(e, Date.now() - t0), ms: Date.now() - t0,
+    };
     return null;
   }
+}
+
+/* Versi SABAR-TAPI-TIDAK-LAMA: percakapan tidak boleh menunggu probe lambat.
+   Kalau daftar model belum selesai dalam 2,5 detik, percakapan tetap jalan
+   memakai daftar bawaan — probe-nya terus berjalan di latar dan hasilnya
+   tersimpan untuk permintaan berikutnya. */
+const DAFTAR_CEPAT_MS = 800;   /* tunggu paling lama 0,8 detik; sisanya jalur bawaan */
+let janjiCari = null;
+async function daftarModelCepat(env, ms = DAFTAR_CEPAT_MS) {
+  if (cacheLokal.dasar === penyediaTeks(env).dasar && cacheLokal.ok) return cacheLokal.daftar;
+  if (!janjiCari) {
+    janjiCari = daftarModelLokal(env).finally(() => { janjiCari = null; });
+  }
+  const batas = new Promise((r) => setTimeout(() => r(null), ms));
+  return Promise.race([janjiCari, batas]);
 }
 
 /* apakah model ditentukan sendiri oleh pengguna (env)? kalau ya, jangan menyerah
@@ -211,12 +245,16 @@ function pesanKunciKosong(penyedia) {
 }
 
 /* pesan apa adanya saat penyedia AI tidak bisa dihubungi */
-function pesanPenyediaMati(penyedia, env) {
+function pesanPenyediaMati(penyedia, env, sebab) {
   const nama = penyedia.nama === 'bynara' ? 'NaraRouter' : penyedia.nama;
-  return 'Tidak bisa menghubungi penyedia AI (' + nama + ' di ' + penyedia.dasar + '). '
-    + 'Periksa (1) koneksi internet server ini, (2) alamat AI_BASE_URL kalau kamu mengubahnya, '
-    + 'dan (3) kunci AI_API_KEY masih berlaku. Percakapan lama tetap bisa dibaca — tidak ada jawaban palsu. '
-    + 'Cek cepat dari terminal: `node tools/cek-penyedia.mjs --url ' + penyedia.dasar + ' --key <kunci> --nama bynara`.';
+  const ubahAlamat = String((env && env.AI_BASE_URL) || '').trim();
+  return 'Tidak bisa menghubungi penyedia AI (' + nama + ' di ' + penyedia.dasar + ').'
+    + (sebab ? ' Penyebab: ' + sebab + '.' : '')
+    + (ubahAlamat ? ' AI_BASE_URL diisi "' + ubahAlamat + '" — coba kosongkan dulu (bawaannya sudah https://router.bynara.id/v1).' : '')
+    + ' Periksa koneksi internet server ini dan kunci AI_API_KEY masih berlaku. '
+    + 'Percakapan lama tetap bisa dibaca — tidak ada jawaban palsu. '
+    + 'Diagnosa cepat: buka /api/health?uji=1 di browser, atau dari terminal: '
+    + '`node tools/cek-penyedia.mjs --url ' + penyedia.dasar + ' --key <kunci> --nama bynara`.';
 }
 
 /* pilih model yang paling masuk akal untuk tiap mode, dari nama modelnya */
@@ -235,8 +273,8 @@ function pilihModelMode(mode, daftar, env) {
 }
 /* antrean model: khusus untuk penyedia lokal — model pilihan lebih dulu,
    sisanya jadi cadangan bila model itu gagal */
-async function antreanLokal(env) {
-  const daftar = await daftarModelLokal(env);
+async function antreanLokal(env, cepat = false) {
+  const daftar = cepat ? await daftarModelCepat(env) : await daftarModelLokal(env);
   const dasar = antreanMode(env);
   if (!daftar || !daftar.length) return dasar;
   const jelas = String(env.AI_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -249,8 +287,8 @@ async function antreanLokal(env) {
   return hasil;
 }
 /* model yang bisa melihat gambar di penyedia lokal */
-async function visiLokal(env) {
-  const daftar = await daftarModelLokal(env);
+async function visiLokal(env, cepat = false) {
+  const daftar = cepat ? await daftarModelCepat(env) : await daftarModelLokal(env);
   if (!daftar || !daftar.length) return null;
   if (env.AI_MODEL_VISI) return [String(env.AI_MODEL_VISI)];
   const kena = daftar.filter((d) => /vl|vision|omni|multimodal|gemini|gpt-4|gpt-5|sonnet|claude|dots|qwen.*vl|llava|pixtral/i.test(d));
@@ -620,10 +658,12 @@ async function tangani(request, env) {
   const c = cors(origin, env, request);
   const kunci = kunciDipakai(env);
   const penyedia = penyediaTeks(env);
-  /* model selalu diambil dari NaraRouter (daftar milik akunmu) */
-  const penyediaMati = penyedia.router && !adaModelPaksa(env) ? (await daftarModelLokal(env)) === null : false;
-  const antrean = penyedia.router ? await antreanLokal(env) : antreanMode(env);
-  const antreanVisi = penyedia.router ? ((await visiLokal(env)) || antrean.fast || []) : ANTREAN_VISI;
+  /* model selalu diambil dari NaraRouter (daftar milik akunmu).
+     Untuk POST (percakapan) pakai jalur cepat supaya pengguna tidak menunggu
+     probe yang lambat; untuk GET (halaman Setelan) boleh menunggu sepenuhnya. */
+  const cepat = request.method === "POST";
+  const antrean = penyedia.router ? await antreanLokal(env, cepat) : antreanMode(env);
+  const antreanVisi = penyedia.router ? ((await visiLokal(env, cepat)) || antrean.fast || []) : ANTREAN_VISI;
 
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: c });
 
@@ -666,19 +706,18 @@ async function tangani(request, env) {
   const prompt = teksMasuk(body.prompt, 24000);
   if (!prompt.trim()) return json({ ok: false, pesan: "Pertanyaan masih kosong." }, 400, c);
 
-  /* gerbang penyedia dipasang SETELAH validasi masukan & asal: permintaan yang
-     memang ngawur tetap dijawab 400/403 apa pun keadaan penyedia AI */
-  if (penyediaMati) {
-    if (!penyedia.adaKunci) {
-      audit("kunci-kosong", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
-      return json({ ok: false, kunci: true, pesan: pesanKunciKosong(penyedia) }, 401, c);
-    }
-    if (kunciDitolakTerakhir()) {
-      audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
-      return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
-    }
-    audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
-    return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env), penyedia: { nama: penyedia.nama, alamat: penyedia.dasar, lokal: penyedia.lokal, router: penyedia.router, dasarLokal: penyedia.dasarLokal } }, 502, c);
+  /* Gerbang di sini SENGAJA hanya untuk hal yang pasti (kunci belum dipasang /
+     kunci ditolak). Hasil "uji daftar model" TIDAK memblokir percakapan:
+     probe yang lambat/gagal sesaat dulu membuat aplikasi berkata "penyedia mati"
+     padahal percakapan sebenarnya bisa. Sekarang percakapan selalu dicoba dulu,
+     dan kalau memang gagal, pesannya menyebut penyebab yang sebenarnya. */
+  if (!penyedia.adaKunci) {
+    audit("kunci-kosong", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
+    return json({ ok: false, kunci: true, pesan: pesanKunciKosong(penyedia) }, 401, c);
+  }
+  if (kunciDitolakTerakhir()) {
+    audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
+    return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
   }
 
   /* jaring pengaman: kalau penyedia tidak bergaya router tetapi kuncinya kosong */
@@ -775,8 +814,8 @@ async function tangani(request, env) {
           audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
           return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
         }
-        audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
-        return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env) }, 502, c);
+        audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip, sebab: sebabLokalTerakhir() });
+        return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env, sebabLokalTerakhir()) }, 502, c);
       }
       terakhir = m;
       /* model bermasalah → lanjut ke model cadangan berikutnya */
@@ -786,7 +825,7 @@ async function tangani(request, env) {
 }
 
 /* diekspor supaya bisa diuji tanpa memanggil AI: node tools/uji-bentuk.mjs */
-export { perintahKetat, periksaJawaban, hitungKata, instruksiPerbaikan, susunPesan, jarakBentuk, teknologiDiminta, cocokTeknologi, blokKode, kunciTeknologi, antreanLokal, visiLokal, daftarModelLokal, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, pesanPenyediaMati, tangani };
+export { perintahKetat, periksaJawaban, hitungKata, instruksiPerbaikan, susunPesan, jarakBentuk, teknologiDiminta, cocokTeknologi, blokKode, kunciTeknologi, antreanLokal, visiLokal, daftarModelLokal, daftarModelCepat, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, pesanPenyediaMati, sebabLokalTerakhir, tangani };
 
 export const config = { runtime: "edge" };
 

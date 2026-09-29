@@ -1,5 +1,5 @@
 UJI PENYEDIA NARAROUTER (router.bynara.id)
-29/9/2026, 17.23.51
+29/9/2026, 17.49.54
 ──────────────────────────────────────────────────────────
 ══ uji: Van Chat.SPY memakai NaraRouter (router.bynara.id) ══
    penyediaTeks({AI_PROVIDER:"bynara"}) → {"dasar":"https://router.bynara.id/v1","gaya":"openai","router":true}
@@ -20,9 +20,9 @@ UJI PENYEDIA NARAROUTER (router.bynara.id)
   ✓ foto terkirim & "dilihat"
    builder: 263 bita dari nemotron-3-ultra-free
   ✓ AI Builder jalan lewat penyedia yang sama
-   sebelum penyedia hidup → "Tidak bisa menghubungi penyedia AI (NaraRouter di http://127.0.0.1:20151/v1). Periksa (1) "
+   sebelum penyedia hidup → "Tidak bisa menghubungi penyedia AI (NaraRouter di http://127.0.0.1:20151/v1). Penyebab: ga"
   ✓ sebelum hidup dijawab jujur (bukan jawaban palsu)
-   setelah penyedia hidup → web jalan dalam 5.0 detik (tanpa restart)
+   setelah penyedia hidup → web jalan dalam 1.0 detik (tanpa restart)
   ✓ web aktif sendiri tanpa di-restart setelah penyedia normal
    kunci salah → HTTP pesan: "kunci penyedia AI ditolak penyedianya (bynara di http://127.0.0.1:20150/v1). Periksa AI_API_KEY — di NaraRouter kunci ha"
   ✓ kunci salah dijawab jujur (bukan "semua model sibuk")
