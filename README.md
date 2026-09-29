@@ -101,6 +101,9 @@ begitu normal, percakapan langsung jalan tanpa perlu restart.
 3. **Deploy** — lalu buka webnya. Kalau env diubah belakangan, **redeploy**
    supaya berlaku.
 
+Langkah super rinci (nama env satu per satu, contoh isi, cara memastikan sudah
+benar, dan daftar masalah umum) ada di **`PANDUAN-VERCEL.md`**.
+
 > `.vercelignore` mengeluarkan folder `tools/` (perkakas uji lokal) supaya tidak
 > ikut terunggah.
 
