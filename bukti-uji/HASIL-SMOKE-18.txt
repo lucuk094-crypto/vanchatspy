@@ -1,0 +1,30 @@
+══ smoke-18: semua halaman & tombol kunci ══
+   · #/builder → "AI Builder" (3395 bita HTML)
+  ✓ #/builder menampilkan Proyek Builder
+   · #/projects → "Proyek" (1988 bita HTML)
+  ✓ #/projects menampilkan Proyek
+   · #/scheduled → "Tugas Terjadwal" (3086 bita HTML)
+  ✓ #/scheduled menampilkan Tugas Terjadwal
+   · #/settings → "Pengaturan" (25545 bita HTML)
+  ✓ #/settings menampilkan Pengaturan
+   · #/plugins → "Plugin / Aplikasi" (6449 bita HTML)
+  ✓ #/plugins menampilkan Plugin / Aplikasi
+   · #/admin → "Dashboard Admin" (4909 bita HTML)
+  ✓ #/admin menampilkan Dashboard Admin
+  ✓ #/library membuka Pustaka
+  ✓ palet pencarian (Ctrl+Shift+K) bekerja
+   · studio gambar → "butuh kunci — memakai jalur kode SVG" · 4 rasio · 3 kualitas
+  ✓ studio gambar terbuka dengan pilihan lengkap
+  ✓ status studio jujur soal kunci — butuh kunci — memakai jalur kode SVG
+   · suara → ["Mikrofon","Mulai Voice","Berhenti","Mute","Speaker"] · alur 6 langkah
+  ✓ tombol suara "Mikrofon" ada
+  ✓ tombol suara "Mulai Voice" ada
+  ✓ tombol suara "Berhenti" ada
+  ✓ tombol suara "Mute" ada
+  ✓ tombol suara "Speaker" ada
+   · bagikan → ["Pribadi","Siapa saja yang punya tautan"] · masa ["1 hari","7 hari","30 hari","Tanpa batas"]
+  ✓ pilihan bagikan lengkap
+   · galat JS: tidak ada
+  ✓ tidak ada galat JS
+
+HASIL: SEMUA LULUS

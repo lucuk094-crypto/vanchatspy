@@ -1,0 +1,17 @@
+{
+  "name": "Van Chat.SPY — ruang kerja AI",
+  "short_name": "Van Chat.SPY",
+  "description": "Asisten AI dengan ruang kerja: percakapan, pratinjau hasil, dan riwayat dalam satu halaman.",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0c0c0e",
+  "theme_color": "#0c0c0e",
+  "icons": [
+    { "src": "assets/logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/logo-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

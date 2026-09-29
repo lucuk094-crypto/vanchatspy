@@ -1,0 +1,12 @@
+  ✓ percakapan biasa memakai model mode fast — inclusionai/ling-3.0-flash-sante:free
+  ✓ instruksi sistem dasar terkirim
+  ✓ jawaban mengalir (stream) aktif
+  ✓ gambar memakai antrean model VISION — dots-studio/dots-3-note-preview:free
+  ✓ gambar dikirim sebagai image_url
+  ✓ teks pertanyaan tetap ikut
+  ✓ saat ada gambar, jawaban dikirim utuh (bukan stream)
+  ✓ memori disisipkan ke instruksi
+  ✓ arahan proyek disisipkan ke instruksi
+  ✓ jumlah giliran riwayat dibatasi (maks 4)
+  ✓ mode tidak dikenal jatuh ke fast (tidak error)
+  ✓ prompt kosong → 400

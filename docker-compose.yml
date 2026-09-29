@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────
+# Van Chat.SPY + 9Router dalam satu VPS
+#   cp .env.example .env      (isi AI_API_KEY kalau 9Router memakai kunci)
+#   docker compose up -d      → web: http://<ip-vps>:8131
+#
+# 9Router: npm global, dijalankan di container sendiri, port 20128 hanya
+# dibuka ke localhost VPS (aman: tidak ikut terekspos ke internet).
+# ─────────────────────────────────────────────────────────────────────
+services:
+  ninerouter:
+    image: node:20-alpine
+    container_name: ninerouter
+    restart: unless-stopped
+    command: sh -c "npm install -g 9router && 9router"
+    environment:
+      # ganti ke true kalau ingin mewajibkan kunci API di 9Router
+      REQUIRE_API_KEY: ${NINEROUTER_REQUIRE_KEY:-false}
+    volumes:
+      - ninerouter-data:/root/.9router          # penyedia & setelan 9Router tersimpan di sini
+    ports:
+      - "127.0.0.1:20128:20128"                 # dashboard/API hanya dari dalam VPS
+    expose:
+      - "20128"                                 # tetap bisa diakses container web
+
+  web:
+    build: .
+    container_name: van-chat-spy
+    restart: unless-stopped
+    depends_on:
+      - ninerouter
+    environment:
+      PORT: 8131
+      AI_PROVIDER: 9router
+      AI_BASE_URL: http://ninerouter:20128/v1   # nama service di jaringan Docker
+      AI_API_KEY: ${AI_API_KEY:-}
+      # opsional: pilih model per mode
+      # AI_MODEL_FAST: gh/gpt-5-mini
+      # AI_MODEL_THINK: kr/claude-sonnet-4.5
+      # AI_MODEL_VISI: vertex/gemini-3-flash
+    ports:
+      - "8131:8131"
+
+volumes:
+  ninerouter-data:

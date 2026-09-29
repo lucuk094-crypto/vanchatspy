@@ -1,0 +1,53 @@
+perintah : node tools/uji-bagian-h.mjs
+waktu    : 2026-09-29T16:28:59.079Z
+
+══ H. riset mendalam · builder · gambar · suara · halaman baru ══
+riset mendalam → 7 langkah (Sedang membuat rencana… | Sedang mencari sumber… | Sedang mengumpulkan informasi……) · sumber 4 · label penyedia 4
+riset mendalam → berkas laporan: riset-mumw4r5lqch7b.html
+mode berpikir → ["Normal — Ling 3.0 Flash","Berpikir — Dots 3 Note","Berpikir Mendalam — Nex 2.5 Pro","Expert (tambahan) — Nemotron 3 Super 120B"]
+builder → " MIRU Streaming " · berkas ["app.js","index.html","styles.css"] · pratinjau 1958 karakter
+builder → jejak 10/10 selesai · konsol: console 3 · peringatan 0 · console error 0 · runtime error 0 · jaringan 1
+builder → uji: Semua 8 pemeriksaan lolos✓ index.html adaindex.html✓ index.h
+builder → isi konsol: logMIRU siapnetfetch /api/daftar-episodelogpratinjau siaplogcontoh jaringan
+diff → +2 / −0 baris · 1 sama · tombol ["Terima","Tolak","Batalkan"]
+diff → diterapkan: isi berkas 298 → 339 karakter
+editor kode → bahasa CSS · nomor baris 4/4 · token tersorot 22
+editor kode → tombol: ["Cari berikutnya","Ganti","Ganti semua","Rapikan","Salin","Unduh"]
+editor kode → cari memilih "border" · ganti semua: border→outline (berhasil)
+editor kode → rapikan: 17 baris, deklarasi bertingkat: true
+uji aplikasi → Semua 8 pemeriksaan lolos✓ index.html adaindex.html✓ index.html punya doctype✓ punya meta 
+build → status "Siap deploy."
+ZIP → miru-streaming.zip · 1105 bita · mulai dengan PK: true
+deploy → status "Pratinjau siap · 3 berkas · 2.0 KB dokumen" · Deployment otomatis belum aktif (butuh DEPLOY_PROVIDER + DEP
+pengaman sandbox → status: "Ada 1 masalah — tekan Perbaiki error untuk meminta AI membetulkan."
+pengaman sandbox → konsol: warnPratinjau ditahan: ditemukan perulangan tanpa henti → app.js baris 2 (while(true)). Menjalankannya bisa membuat brow
+pengaman sandbox → hasil uji: 1 dari 8 pemeriksaan gagal✓ index.html adaindex.html✓ index.html punya doctype✓ punya meta viewport (ponsel)✓ punya <title>✓ semua berkas yang dirujuk
+pengaman sandbox → aplikasi tetap responsif (tidak membeku)
+pengaman sandbox → setelah "tanpa skrip": Pratinjau tanpa skrip · 2 berkas
+gambar (tanpa kunci) → gagal membuat SVG · "Pembuat gambar AI belum bisa dipakai: semua penyedia gambar mewajibkan"
+gambar (penyedia aktif) → openai · 12 ms · gambar tampil true · tombol simpan aktif true
+gambar → tersimpan ke pustaka: 1 berkas
+suara → tombol ["Mikrofon","Mulai Voice","Berhenti","Mute","Speaker"] · alur 6 langkah
+suara → Mute & Speaker bisa ditekan, Berhenti menutup alur
+cari global → grup ["Pesan"] · 1 hasil untuk "kopi"
+bagikan → tautan 1399 karakter, berisi #/bagi= true
+halaman bagikan → "Percakapan dibagikan" · 7 pesan · keterangan hanya-baca true
+proyek → 1 kartu (MIRUaktifUbah) · 7 penghitung: 0 obrolan · 0 file · 0 gambar · 0 memori · 0 tugas · 6 plugin · 0 builder
+proyek → instruksi otomatis: Bahasa jawaban: Indonesia Aturan coding: JavaScript Gaya desain: Clean Minimalis
+cari global → kelompok tersedia: ["Obrolan","Pesan","Proyek","File","Builder"]
+tugas → 1 baris · Setiap Senin pukul 08.00 periksa website utama dan laporkan halaman yang gagal. | jadwal: Setiap Senin pukul 08:00 (Asia
+plugin → 7 plugin (6 aktif) · izin tertera: true
+setelan → 14 bagian: Profil & Akun · Umum · Tampilan · Bahasa & Wilayah · Notifikasi · Suara · Model AI · Keamanan · Privasi & Kontrol Data · Penyimpanan · Memori (0) · Plugin · Penggunaan & Penyedia · Tentang
+setelan → status penyedia: Penyedia teks: openrouterhttps://openrouter.ai/api/v1 · kunci ada (sk-or-…b7ef)Pembuat gambar: openaisiap · gpt-image-1S
+ekspor → berkas-metadata-2026-09-29.csv, percakapan-2026-09-29.csv, preferensi-2026-09-29.json
+model AI → mode Berpikir mengirim model "dots-studio/dots-3-note-preview:free"
+profil → instruksi ikut terkirim: true
+admin (belum masuk) → "Halaman ini terkunciKunci admin sudah dibuat di Pengaturan →"
+admin (masuk) → peran "peran: admin" · bagian: System Health · Penggunaan · Model · Provider · Plugin · Rate Limit · Log (audit lokal) · Pengguna & hak akses
+admin → rate limit tampil: "chat 60 "
+kuota habis → pesan: "SISTEM 16.28 Riset mendalam dimulai untuk: “kopi arabika” — 2 permintaan AI + pencarian multi-penyedia. SISTEM 16.28 AI "
+kuota habis → lembar Mode AI: "Mode AI kuota gratis harian habis (dari penyedia) · terisi ulang 07.00 WIB"
+galat JS (bagian H) → tidak ada
+permintaan AI yang dipakai uji: 11
+
+HASIL: SEMUA LULUS

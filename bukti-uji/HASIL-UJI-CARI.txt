@@ -1,0 +1,14 @@
+perintah : node tools/uji-cari.mjs
+waktu    : 2026-09-29T15:28:18.225Z
+
+  ✓ status 200 — status 200
+  ✓ ada sumber — 9 sumber
+  ✓ tiap sumber punya penyedia/judul/url/cuplikan
+  ✓ penyedia beragam (≥2 jenis) — Stack Overflow, Hacker News, GitHub
+  ✓ catatan pembatas disertakan
+  ✓ topik Indonesia menemukan Wikipedia — 7 sumber · percobaan 1
+  ✓ q kosong → 400 — status 400
+  ✓ tidak ada CORS wildcard "*" — ACAO: ""
+  ✓ asal host sendiri diizinkan
+  ✓ asal asing tidak diberi izin CORS
+  ✓ kueri terlalu panjang → 400 — status 400

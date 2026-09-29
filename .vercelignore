@@ -1,0 +1,7 @@
+# tidak ikut terunggah ke hosting
+tools/
+bukti-uji/
+README.md
+*.zip
+__pycache__/
+tools/penyedia.json

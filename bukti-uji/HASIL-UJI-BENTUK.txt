@@ -1,0 +1,46 @@
+perintah : node tools/uji-bentuk.mjs
+waktu    : 2026-09-29T16:52:49.944Z
+
+══ J. kepatuhan AI pada perintah bentuk ══
+── lapis 1: pengenalan perintah (tanpa kuota) ──
+  ✓ "tepat 3 kata" dikenali — [{"jenis":"kata","n":3,"batas":"tepat"}]
+  ✓ "hanya lima kata" dikenali
+  ✓ "hanya daftar bernomor" dikenali
+  ✓ "hanya kode" dikenali
+  ✓ "satu paragraf" dikenali
+  ✓ permintaan biasa tidak dianggap ketat
+── lapis 1: penilaian jawaban ──
+  ✓ 3 kata dinilai benar
+  ✓ 4 kata dinilai salah
+  ✓ daftar bernomor tanpa pembuka dinilai benar
+  ✓ paragraf dengan pembuka dinilai salah
+  ✓ hanya kode dinilai benar
+  ✓ kode + penjelasan panjang dinilai salah
+  ✓ penghitung kata mengabaikan blok kode
+── lapis 1: susunan perintah ke AI ──
+  ✓ arahan proyek ikut ke prompt sistem
+  ✓ teknologi dari arahan proyek ditegaskan
+  ✓ perintah ketat ditegaskan ke model
+  ✓ aturan kepatuhan ada di prompt dasar
+  ✓ larangan proses berpikir ada
+  ✓ memori ikut dikirim bila ada
+── lapis 1: tepat vs maksimal vs minimal ──
+  ✓ "maksimal 5 kata" dibaca sebagai batas atas — [{"jenis":"kata","n":5,"batas":"maks"}]
+  ✓ "minimal 6 kata" dibaca sebagai batas bawah — [{"jenis":"kata","n":6,"batas":"min"}]
+  ✓ "tepat tiga kata" tetap pas (bukan batas atas) — [{"jenis":"kata","n":3,"batas":"tepat"}]
+  ✓ 5 kata lulus untuk "maksimal 5 kata"
+  ✓ 6 kata ditolak untuk "maksimal 5 kata"
+  ✓ 4 kata ditolak untuk "minimal 6 kata"
+  ✓ arahan perbaikan menyebut "paling banyak" untuk batas atas
+── lapis 1: bahasa kode proyek diperiksa, bukan cuma diminta ──
+  ✓ arahan lengkap proyek masuk ke prompt sistem
+  ✓ bahasa kode proyek terbaca dari arahan
+  ✓ pengguna minta bahasa lain → permintaan pengguna menang
+  ✓ aturan coding "Bebas" tidak dipaksakan
+  ✓ tanpa proyek tidak ada pemeriksaan bahasa
+  ✓ contoh kode JavaScript ditolak saat proyek wajib TypeScript
+  ✓ contoh kode TypeScript diterima
+  ✓ jawaban tanpa kode tidak dianggap melanggar
+  ✓ proyek JavaScript menolak blok TypeScript
+
+HASIL: SEMUA LULUS

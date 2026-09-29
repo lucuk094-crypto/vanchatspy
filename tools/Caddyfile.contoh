@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────
+#  Caddyfile.contoh — pintu masuk HTTPS untuk 9Router lewat domain sendiri
+#  (tanpa tunnel: Cloudflare → router rumah → PC ini)
+#
+#  Cara pakai (Windows):
+#    1. Salin berkas ini jadi  C:\caddy\Caddyfile
+#    2. Ganti router.contoh.com dengan domainmu
+#    3. Unduh origin certificate dari Cloudflare (SSL/TLS → Origin Server)
+#       simpan sebagai C:\caddy\origin.pem dan C:\caddy\origin.key
+#    4. cd C:\caddy  →  caddy run --config Caddyfile
+#
+#  Yang dilakukan konfigurasi ini:
+#    - hanya melayani port 8443 (port yang didukung proxy Cloudflare)
+#    - hanya meneruskan jalur /v1/*  (dashboard 9Router tetap tertutup dari internet)
+#    - HTTPS ke Cloudflare memakai Cloudflare Origin Certificate (mode Full/strict)
+# ─────────────────────────────────────────────────────────────────────
+
+router.contoh.com:8443 {
+	tls C:\caddy\origin.pem C:\caddy\origin.key
+
+	# semua jalur selain /v1/* ditolak (termasuk /dashboard)
+	@bukanv1 not path /v1/*
+	respond @bukanv1 403
+
+	# teruskan ke 9Router di komputer ini
+	reverse_proxy 127.0.0.1:20128 {
+		header_up Host {host}
+	}
+
+	log {
+		output file C:\caddy\akses.log
+	}
+}
+
+# ── Alternatif "cara cepat" (tanpa sertifikat, Cloudflare SSL mode: Flexible) ──
+# http://router.contoh.com:8443 {
+# 	@bukanv1 not path /v1/*
+# 	respond @bukanv1 403
+# 	reverse_proxy 127.0.0.1:20128
+# }
+#
+# ── Kalau kamu memakai Nginx, intinya sama: ──
+# server {
+#   listen 8443 ssl;
+#   server_name router.contoh.com;
+#   ssl_certificate     C:/nginx/origin.pem;
+#   ssl_certificate_key C:/nginx/origin.key;
+#   location /v1/ { proxy_pass http://127.0.0.1:20128; }
+#   location /    { return 403; }
+# }

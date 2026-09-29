@@ -1,0 +1,21 @@
+UJI ARAHAN PROYEK (tanpa kuota AI)
+29/9/2026, 16.27.17
+──────────────────────────────────────────────────────────
+══ uji arahan proyek (tanpa kuota AI) ══
+  ✓ tanpa proyek: hanya aturan bahasa yang dikirim — Jawab dalam bahasa Indonesia.
+  ✓ proyek baru dibuat — mumw37zzx6pdk
+   ringkasan arahan: Bahasa jawaban: Indonesia · Aturan coding: TypeScript · Gaya desain: Clean Minimalist
+  ✓ pilihan "TypeScript" tersimpan
+  ✓ ringkasan arahan menampilkan aturan coding
+   catatan: Obrolan ini belum masuk proyek Uji Arahan — arahan proyek belum dikirim ke AI. Pakai arahan proyek
+  ✓ catatan jujur muncul saat obrolan di luar proyek
+   setelah klik: Obrolan ini masuk proyek Uji Arahan — arahan proyek dikirim pada setiap pesan. Lihat arahan
+  ✓ obrolan masuk proyek setelah klik
+   proyek terkirim: Proyek aktif: Uji Arahan. Bahasa jawaban: Indonesia · Aturan coding: TypeScript · Gaya desain: Clean Minimalist
+  ✓ permintaan membawa nama proyek
+  ✓ permintaan membawa aturan coding TypeScript
+  ✓ permintaan membawa bahasa + gaya desain
+  ✓ permintaan tetap memuat perintah pengguna apa adanya
+  ✓ tidak ada galat JS
+
+HASIL: SEMUA LULUS

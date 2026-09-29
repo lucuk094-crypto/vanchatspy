@@ -1,0 +1,17 @@
+HASIL CEK PENYEDIA AI
+29/9/2026, 16.53.47
+──────────────────────────────────────────────────────────
+══ memeriksa penyedia AI ══
+   alamat : https://router.bynara.id/v1
+   kunci  : sk-n…(25 karakter)
+
+  ✗ daftar model terbaca (GET /models) — HTTP 401 · 0 model
+
+2) percakapan uji via POST /chat/completions (gaya OpenAI)
+   jawaban penyedia: HTTP 401 · A valid API key is required.
+  ✗ kunci ditolak penyedia — periksa --key (HTTP 401)
+
+3) kesimpulan
+   ✗ ada 2 masalah — perbaiki dulu sebelum dipakai di aplikasi.
+
+HASIL: ADA MASALAH

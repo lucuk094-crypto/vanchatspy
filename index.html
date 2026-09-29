@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Van Chat.SPY — Ruang Kerja AI</title>
+<meta name="description" content="Van Chat.SPY — asisten AI dengan ruang kerja: percakapan, pratinjau hasil, dan riwayat dalam satu halaman.">
+<link rel="icon" type="image/png" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/logo-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ═══════════ KIRI · RIWAYAT ═══════════ -->
+  <aside class="rail" id="rail" aria-label="Riwayat percakapan">
+    <div class="rail-hd">
+      <div class="brand">
+        <img class="brand-mk" src="assets/logo.png" alt="Van Chat.SPY" width="30" height="30">
+        <span class="brand-tx"><b>Van Chat<span>.SPY</span></b><small>ruang kerja AI</small></span>
+      </div>
+      <button class="ib" id="btnRailHide" title="Sembunyikan panel riwayat (Ctrl+B)"><span data-ic="panel-left" data-ic-size="17"></span></button>
+    </div>
+
+    <button class="btn-new" id="btnNew"><span data-ic="square-pen" data-ic-size="17"></span><span>Percakapan baru</span></button>
+    <nav class="rail-nav" aria-label="Halaman">
+      <button data-hal="#/builder" title="AI Builder"><span data-ic="hammer" data-ic-size="16"></span><span>Builder</span></button>
+      <button data-hal="#/projects" title="Proyek"><span data-ic="layers" data-ic-size="16"></span><span>Proyek</span></button>
+      <button data-hal="#/scheduled" title="Tugas terjadwal"><span data-ic="clock" data-ic-size="16"></span><span>Tugas</span></button>
+      <button data-hal="#/library" title="Pustaka berkas"><span data-ic="folder" data-ic-size="16"></span><span>Pustaka</span></button>
+      <button data-hal="#/plugins" title="Plugin & izin"><span data-ic="plug" data-ic-size="16"></span><span>Plugin</span></button>
+      <button data-hal="#/admin" title="Dashboard admin"><span data-ic="gauge" data-ic-size="16"></span><span>Admin</span></button>
+      <button id="btnPalet" title="Pencarian global (Ctrl+Shift+K)"><span data-ic="search" data-ic-size="16"></span><span>Cari global</span></button>
+    </nav>
+
+    <div class="proyek-box">
+      <div class="grp grp-aksi"><span>Proyek</span><button class="ib sm" id="btnProyekBaru" title="Proyek baru"><span data-ic="plus" data-ic-size="14"></span></button></div>
+      <div id="proyekList" class="proyek-list"></div>
+    </div>
+
+    <label class="search" for="q">
+      <span data-ic="search" data-ic-size="16"></span>
+      <input id="q" type="search" placeholder="Cari percakapan… (Ctrl+K)" autocomplete="off">
+    </label>
+
+    <div class="rail-list" id="hist" role="list"></div>
+
+    <div class="rail-ft">
+      <button class="rail-btn" id="btnSettings"><span data-ic="settings" data-ic-size="17"></span><span>Pengaturan</span></button>
+      <button class="rail-btn" id="btnTheme"><span data-ic="moon" data-ic-size="17"></span><span id="themeTx">Tema gelap</span></button>
+      <div class="stat" id="stat"><i></i><span id="statTx">memeriksa server…</span></div>
+    </div>
+  </aside>
+
+  <div class="split" id="splitL" role="separator" aria-orientation="vertical" tabindex="0" title="Geser untuk mengatur lebar riwayat"><i></i></div>
+
+  <!-- ═══════════ TENGAH · PERCAKAPAN ═══════════ -->
+  <main class="chat" id="chatCol">
+    <header class="top">
+      <button class="ib" id="btnRailShow" title="Tampilkan/sembunyikan riwayat (Ctrl+B)"><span data-ic="panel-left" data-ic-size="18"></span></button>
+      <div class="top-tx"><b id="chatTitle">Percakapan baru</b><small id="chatSub">siap membantu</small></div>
+      <div class="grow"></div>
+      <button class="chip" id="btnMode" title="Ganti mode AI"><span data-ic="zap" data-ic-size="15"></span><span id="modeTx">Fast</span><span data-ic="chevron-down" data-ic-size="14"></span></button>
+      <button class="ib" id="btnVoice" title="Mode suara"><span data-ic="mic" data-ic-size="17"></span></button>
+      <button class="ib" id="btnBagi" title="Bagikan percakapan"><span data-ic="share-2" data-ic-size="17"></span></button>
+      <button class="ib only-mobile" id="btnWorkShow" title="Ruang kerja"><span data-ic="panel-right" data-ic-size="18"></span></button>
+    </header>
+
+    <div class="feed" id="feed"></div>
+
+    <div class="cmp-wrap">
+      <div class="chips" id="chips">
+        <button class="chip-aksi" data-templat="Jelaskan secara singkat dan jelas: "><span data-ic="sparkles" data-ic-size="14"></span>Jelaskan</button>
+        <button class="chip-aksi" data-templat="Buatkan halaman web: "><span data-ic="file-code" data-ic-size="14"></span>Buat halaman web</button>
+        <button class="chip-aksi" data-templat="Periksa dan perbaiki kode ini:\n\n```\n\n```"><span data-ic="braces" data-ic-size="14"></span>Periksa kode</button>
+        <button class="chip-aksi" data-templat="Ringkas menjadi poin-poin penting: "><span data-ic="file-text" data-ic-size="14"></span>Ringkas</button>
+        <button class="chip-aksi" id="chipRef" title="Aktifkan referensi dari Wikipedia Indonesia"><span data-ic="globe" data-ic-size="14"></span>Cari referensi</button>
+        <button class="chip-aksi" id="chipRiset" title="Riset mendalam: rencana → sumber → laporan (memakai 2 permintaan AI)"><span data-ic="search" data-ic-size="14"></span>Riset dalam</button>
+      </div>
+      <div class="prj-nota" id="prjNota" hidden></div>
+      <div class="cmp-konfirmasi" id="risetKonfirmasi" hidden></div>
+      <div class="cmp" id="cmp">
+        <div class="attach-list" id="attachList" hidden></div>
+        <textarea id="ta" rows="1" placeholder="Tanya apa saja…" title="Enter = kirim · Shift+Enter = baris baru"></textarea>
+        <div class="cmp-row">
+          <button class="ib ic-plus" id="btnPlus" title="Tambah: kamera · foto · file · plugin · mode"><span data-ic="plus" data-ic-size="18"></span></button>
+          <button class="ib" id="btnFile" title="Lampirkan berkas"><span data-ic="paperclip" data-ic-size="17"></span></button>
+          <button class="ib" id="btnMic" title="Bicara (input suara)"><span data-ic="mic" data-ic-size="17"></span></button>
+          <button class="ib" id="btnWork" title="Buka/tutup ruang kerja (Ctrl+J)"><span data-ic="panel-right" data-ic-size="17"></span></button>
+          <button class="chip chip-mode" id="btnModeC" title="Pilih mode AI"><span data-ic="zap" data-ic-size="15"></span><span id="modeTx2">Fast</span><span data-ic="chevron-down" data-ic-size="14"></span></button>
+          <div class="grow"></div>
+          <span class="hint" id="hint"></span>
+          <button class="send" id="btnSend" disabled title="Kirim"><span data-ic="arrow-up" data-ic-size="18"></span></button>
+          <button class="send stop" id="btnStop" hidden title="Hentikan"><span data-ic="square" data-ic-size="15"></span></button>
+        </div>
+      </div>
+      <div class="cmp-foot">Van Chat.SPY · jawaban AI bisa keliru — periksa informasi penting.</div>
+    </div>
+
+    <input type="file" id="fileIn" multiple hidden>
+    <input type="file" id="imgIn" accept="image/*" multiple hidden>
+  </main>
+
+  <div class="split" id="splitR" role="separator" aria-orientation="vertical" tabindex="0" title="Geser untuk mengatur lebar ruang kerja"><i></i></div>
+
+  <!-- ═══════════ KANAN · RUANG KERJA ═══════════ -->
+  <section class="work" id="work" aria-label="Ruang kerja">
+    <header class="work-hd">
+      <div class="tabs">
+        <button class="tab on" data-tab="prev"><span data-ic="eye" data-ic-size="15"></span><span>Pratinjau</span></button>
+        <button class="tab" data-tab="code"><span data-ic="code" data-ic-size="15"></span><span>Kode</span></button>
+        <button class="tab" data-tab="files"><span data-ic="folder" data-ic-size="15"></span><span>Berkas <i id="artCount">0</i></span></button>
+      </div>
+      <div class="grow"></div>
+      <div class="dev" id="devBar">
+        <button class="dvb on" data-w="fit" title="Ikuti lebar panel"><span data-ic="panel-top" data-ic-size="15"></span></button>
+        <button class="dvb" data-w="1280" title="Layar besar 1280px"><span data-ic="monitor" data-ic-size="15"></span></button>
+        <button class="dvb" data-w="834" title="Tablet 834px"><span data-ic="tablet" data-ic-size="15"></span></button>
+        <button class="dvb" data-w="390" title="Ponsel 390px"><span data-ic="smartphone" data-ic-size="15"></span></button>
+      </div>
+      <button class="ib" id="btnUbah" title="Ubah isi berkas"><span data-ic="pencil" data-ic-size="16"></span></button>
+      <button class="ib" id="btnReload" title="Muat ulang pratinjau"><span data-ic="refresh-cw" data-ic-size="16"></span></button>
+      <button class="ib" id="btnOpen" title="Buka di tab baru"><span data-ic="external-link" data-ic-size="16"></span></button>
+      <button class="ib" id="btnDl" title="Unduh berkas"><span data-ic="download" data-ic-size="16"></span></button>
+      <button class="ib" id="btnWorkHide" title="Sembunyikan ruang kerja (Ctrl+J)"><span data-ic="x" data-ic-size="16"></span></button>
+    </header>
+
+    <div class="work-bd">
+      <div class="stage" id="stage">
+        <div class="stage-in" id="stageIn">
+          <iframe id="frame" title="Pratinjau hasil" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+          <pre class="codeview" id="codeView" hidden></pre>
+          <div class="editor" id="editor" hidden>
+            <textarea id="editorTa" spellcheck="false"></textarea>
+            <div class="editor-bar">
+              <span class="editor-info" id="editorInfo"></span>
+              <div class="grow"></div>
+              <button class="btn" id="btnUbahBatal"><span data-ic="x" data-ic-size="15"></span>Batal</button>
+              <button class="btn pr" id="btnUbahSimpan"><span data-ic="check" data-ic-size="15"></span>Simpan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="files" id="filesView" hidden></div>
+      <div class="empty" id="empty">
+        <span class="empty-ic" data-ic="layers" data-ic-size="26"></span>
+        <b>Ruang kerja masih kosong</b>
+        <p>Hasil yang dibuat AI (halaman web, SVG, kode) akan muncul di sini — bisa dilihat, diubah ukurannya, dan diunduh tanpa keluar dari percakapan.</p>
+      </div>
+    </div>
+
+    <footer class="work-ft">
+      <span class="ft-ic" data-ic="file-code" data-ic-size="14"></span>
+      <span id="artName">belum ada berkas</span>
+      <div class="grow"></div>
+      <span id="artMeta"></span>
+    </footer>
+  </section>
+</div>
+
+<!-- ═══════════ MODAL · PENGATURAN ═══════════ -->
+<div class="modal" id="setModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c" role="dialog" aria-modal="true" aria-label="Pengaturan">
+    <header class="modal-hd">
+      <b>Pengaturan</b>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button>
+    </header>
+    <div class="modal-bd2" id="setBody">
+      <section class="set">
+        <h4><span data-ic="palette" data-ic-size="15"></span>Tampilan</h4>
+        <div class="row"><label>Tema</label>
+          <div class="seg" id="setTheme"><button data-v="dark">Gelap</button><button data-v="light">Terang</button></div>
+        </div>
+        <div class="row"><label>Ukuran huruf</label>
+          <div class="seg" id="setFont"><button data-v="15">Kecil</button><button data-v="16">Sedang</button><button data-v="17.5">Besar</button></div>
+        </div>
+        <div class="row"><label>Lebar kolom percakapan</label>
+          <div class="seg" id="setWidth"><button data-v="720">Nyaman</button><button data-v="900">Lebar</button></div>
+        </div>
+      </section>
+
+      <section class="set">
+        <h4><span data-ic="sparkles" data-ic-size="15"></span>Model &amp; jawaban</h4>
+        <div class="row"><label>Mode bawaan</label>
+          <div class="seg" id="setMode">
+            <button data-v="fast"><span data-ic="zap" data-ic-size="14"></span>Fast</button>
+            <button data-v="think"><span data-ic="sparkles" data-ic-size="14"></span>Think</button>
+            <button data-v="deep"><span data-ic="brain" data-ic-size="14"></span>Deep</button>
+            <button data-v="expert"><span data-ic="gem" data-ic-size="14"></span>Expert</button>
+          </div>
+        </div>
+        <div class="row"><label>Jawaban mengalir (streaming)</label><button class="sw" id="setStream" role="switch"></button></div>
+        <div class="row"><label>Suara otomatis pada jawaban baru</label><button class="sw" id="setAutoTTS" role="switch"></button></div>
+        <div class="row"><label>Sertakan referensi Wikipedia</label><button class="sw" id="setRefWiki" role="switch"></button></div>
+        <div class="row"><label>Kirim dengan Enter</label><button class="sw" id="setEnter" role="switch"></button></div>
+        <div class="row col"><label>Suara (text-to-speech)</label><select id="setVoice"></select></div>
+      </section>
+
+      <section class="set">
+        <h4><span data-ic="brain" data-ic-size="15"></span>Memori AI</h4>
+        <div class="row"><label>Ingat catatan tentang saya</label><button class="sw" id="setMemoriAktif" role="switch"></button></div>
+        <div class="row col">
+          <div class="baris-input">
+            <input type="text" id="memTeks" placeholder="contoh: nama saya Rian, saya suka jawaban singkat">
+            <button class="btn pr" id="memTambah"><span data-ic="plus" data-ic-size="15"></span>Tambah</button>
+          </div>
+        </div>
+        <div class="mini-list" id="memList"></div>
+        <p class="note">Catatan ini ikut dikirim ke AI pada setiap pertanyaan (tanpa biaya tambahan), dan hanya tersimpan di browser ini.</p>
+      </section>
+
+      <section class="set">
+        <h4><span data-ic="clock" data-ic-size="15"></span>Tugas terjadwal</h4>
+        <div class="row col"><input type="text" id="tgJudul" placeholder="Nama tugas — contoh: Ringkasan berita pagi"></div>
+        <div class="row col"><textarea id="tgPrompt" rows="2" placeholder="Pertanyaan/perintah yang dijalankan otomatis…"></textarea></div>
+        <div class="row col">
+          <div class="baris-input">
+            <input type="datetime-local" id="tgWaktu">
+            <select id="tgUlang"><option value="sekali">sekali</option><option value="harian">setiap hari</option></select>
+            <button class="btn pr" id="tgTambah"><span data-ic="plus" data-ic-size="15"></span>Tambah</button>
+          </div>
+        </div>
+        <div class="mini-list" id="tgList"></div>
+        <p class="note">Tugas berjalan <b>selama halaman ini terbuka</b> (browser tidak punya penjadwal latar). Hasilnya muncul di percakapan baru + notifikasi browser. Setiap tugas = 1 permintaan AI.</p>
+      </section>
+
+      <section class="set">
+        <h4><span data-ic="database" data-ic-size="15"></span>Pemakaian &amp; data</h4>
+        <div class="row"><label>Permintaan AI hari ini</label><b id="setUsage">0 / 50</b></div>
+        <div class="row"><label>Kuota gratis diisi ulang</label><b>07.00 WIB</b></div>
+        <div class="row"><label>Percakapan tersimpan</label><b id="setCount">0</b></div>
+        <div class="row"><label>Berkas hasil</label><b id="setArts">0</b></div>
+        <div class="btns">
+          <button class="btn" id="setExport"><span data-ic="download" data-ic-size="15"></span>Ekspor semua</button>
+          <button class="btn" id="setImport"><span data-ic="upload" data-ic-size="15"></span>Impor</button>
+          <button class="btn danger" id="setWipe"><span data-ic="trash" data-ic-size="15"></span>Hapus semua data</button>
+        </div>
+        <p class="note" id="setNote">Kunci AI disimpan di server (folder <code>api/</code>), bukan di browser pengunjung.</p>
+      </section>
+
+      <section class="set">
+        <h4><span data-ic="keyboard" data-ic-size="15"></span>Pintasan</h4>
+        <div class="keys">
+          <div><kbd>Ctrl</kbd><kbd>K</kbd><span>cari percakapan</span></div>
+          <div><kbd>Ctrl</kbd><kbd>B</kbd><span>tampilkan/sembunyikan riwayat</span></div>
+          <div><kbd>Ctrl</kbd><kbd>J</kbd><span>tampilkan/sembunyikan ruang kerja</span></div>
+          <div><kbd>Esc</kbd><span>hentikan jawaban yang sedang mengalir</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL · PILIH MODE ═══════════ -->
+<div class="modal" id="modeModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c sm" role="dialog" aria-modal="true" aria-label="Pilih mode AI">
+    <header class="modal-hd"><b>Pilih mode AI</b><button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="mode-list" id="modeList"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════ MENU "+" DI KOTAK TULIS ═══════════ -->
+<div class="menu-plus" id="menuPlus" hidden role="menu" aria-label="Tambah">
+  <button data-plus="kamera" role="menuitem"><span data-ic="camera" data-ic-size="16"></span><b>Kamera</b><small>potret layar/dokumen → AI lihat</small></button>
+  <button data-plus="foto" role="menuitem"><span data-ic="image" data-ic-size="16"></span><b>Foto</b><small>pilih gambar dari perangkat</small></button>
+  <button data-plus="file" role="menuitem"><span data-ic="paperclip" data-ic-size="16"></span><b>File</b><small>PDF · DOCX · XLSX · PPTX · ZIP · kode</small></button>
+  <button data-plus="plugin" role="menuitem"><span data-ic="puzzle" data-ic-size="16"></span><b>Plugin</b><small>alat bawaan (tanpa pemasangan)</small></button>
+  <div class="mp-sep"></div>
+  <button data-plus="think" role="menuitem" class="mp-switch"><span data-ic="brain" data-ic-size="16"></span><b>Berpikir lebih keras</b><small>pakai mode Think</small><i class="sw-mini"></i></button>
+  <button data-plus="web" role="menuitem" class="mp-switch"><span data-ic="globe" data-ic-size="16"></span><b>Pencarian web</b><small>sumber + sitasi di jawaban</small><i class="sw-mini"></i></button>
+  <button data-plus="riset" role="menuitem"><span data-ic="search" data-ic-size="16"></span><b>Riset mendalam</b><small>rencana → sumber → laporan</small></button>
+  <div class="mp-sep"></div>
+  <button data-plus="gambar" role="menuitem"><span data-ic="sparkles" data-ic-size="16"></span><b>Buat gambar</b><small>lewat kode SVG/HTML (gratis)</small></button>
+  <button data-plus="belajar" role="menuitem"><span data-ic="graduation-cap" data-ic-size="16"></span><b>Mode belajar</b><small>jelaskan bertahap + kuis</small></button>
+  <button data-plus="builder" role="menuitem"><span data-ic="code" data-ic-size="16"></span><b>Builder</b><small>halaman/website/komponen</small></button>
+</div>
+
+<!-- ═══════════ MODAL · KAMERA ═══════════ -->
+<div class="modal" id="camModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c" role="dialog" aria-modal="true" aria-label="Kamera">
+    <header class="modal-hd"><b>Kamera</b><button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="cam-bd">
+      <video id="camVideo" playsinline autoplay muted></video>
+      <canvas id="camCanvas" hidden></canvas>
+      <img id="camHasil" alt="hasil jepretan" hidden>
+      <p class="note" id="camNote">Izinkan akses kamera pada browser. Foto yang diambil hanya dikirim ke AI jika kamu menekan Kirim.</p>
+    </div>
+    <footer class="cam-ft">
+      <button class="btn pr" id="camAmbil"><span data-ic="camera" data-ic-size="16"></span>Ambil foto</button>
+      <button class="btn" id="camUlang" hidden><span data-ic="rotate-ccw" data-ic-size="16"></span>Ambil ulang</button>
+      <button class="btn pr" id="camKirim" hidden><span data-ic="arrow-up" data-ic-size="16"></span>Kirim ke AI</button>
+      <button class="btn" id="camTutup">Tutup</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL · KODE (PERBESAR) ═══════════ -->
+<div class="modal" id="kodeModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c lebar" role="dialog" aria-modal="true" aria-label="Kode diperbesar">
+    <header class="modal-hd">
+      <b id="kodeJudul">Kode</b><span class="grow"></span>
+      <span class="kb-lang" id="kodeLang">KODE</span>
+      <button class="kb-btn" id="kodeSalin"><span data-ic="copy" data-ic-size="15"></span><span>Salin</span></button>
+      <button class="kb-btn" id="kodeUnduh"><span data-ic="download" data-ic-size="15"></span><span>Unduh</span></button>
+      <button class="kb-btn" id="kodeJalan" hidden><span data-ic="play" data-ic-size="15"></span><span>Jalankan</span></button>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button>
+    </header>
+    <pre id="kodeIsi" class="kode-besar"></pre>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL · JALANKAN (SANDBOX) ═══════════ -->
+<div class="modal" id="runModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c lebar" role="dialog" aria-modal="true" aria-label="Jalankan kode">
+    <header class="modal-hd">
+      <b>Jalankan di kotak pasir</b><span class="grow"></span>
+      <span class="pill-note"><span data-ic="shield" data-ic-size="14"></span>iframe sandbox — tanpa akses ke berkas/riwayat</span>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button>
+    </header>
+    <iframe id="runFrame" class="run-frame" sandbox="allow-scripts allow-modals allow-forms" title="Hasil jalankan kode"></iframe>
+  </div>
+</div>
+
+<!-- ═══════════ HALAMAN · /library ═══════════ -->
+<div class="lib-page" id="libPage" hidden>
+  <header class="lib-hd">
+    <a class="lib-kembali" id="libKembali" href="#/"><span data-ic="arrow-right" data-ic-size="16"></span>Kembali ke percakapan</a>
+    <b>Pustaka Berkas</b>
+    <span class="pill-note" id="libHitung">0 berkas</span>
+    <div class="grow"></div>
+    <label class="lib-cari"><span data-ic="search" data-ic-size="15"></span>
+      <input type="search" id="libCari" placeholder="Cari nama, tag, atau isi…" autocomplete="off">
+    </label>
+    <button class="btn" id="libUrut"><span data-ic="arrow-up-down" data-ic-size="15"></span><span id="libUrutTx">Terbaru</span></button>
+    <button class="btn" id="libUnggah2"><span data-ic="upload" data-ic-size="15"></span>Unggah</button>
+    <button class="btn danger" id="libBersih"><span data-ic="trash" data-ic-size="15"></span>Hapus kosong/rusak</button>
+  </header>
+  <div class="lib-tabs" id="libTabs">
+    <button data-lt="semua" class="on">Semua File</button>
+    <button data-lt="gambar">Gambar</button>
+    <button data-lt="dokumen">Dokumen</button>
+    <button data-lt="kode">Kode</button>
+    <button data-lt="arsip">Arsip</button>
+  </div>
+  <div class="lib-grid" id="libGrid"></div>
+  <p class="note lib-cat">Berkas disimpan di browser ini (localStorage) — maksimal 60 berkas, isi dipotong 60.000 karakter saat dibaca AI. Berkas besar sebaiknya diunduh sebagai cadangan.</p>
+</div>
+
+<!-- ═══════════ MODAL · PRATINJAU PUSTAKA ═══════════ -->
+<div class="modal" id="libPrev" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c lebar" role="dialog" aria-modal="true" aria-label="Pratinjau berkas">
+    <header class="modal-hd"><b id="libPrevNama">berkas</b><span class="grow"></span>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="lib-prev-bd" id="libPrevIsi"></div>
+  </div>
+</div>
+
+
+<!-- ── halaman ber-alamat (route) selain pustaka ─────────────────────── -->
+<div class="hal-page" id="halPage" hidden>
+  <header class="lib-hd">
+    <a class="lib-kembali" id="halKembali" href="#/"><span data-ic="arrow-right" data-ic-size="16"></span>Kembali ke percakapan</a>
+    <b id="halJudul">Halaman</b>
+    <span class="pill-note" id="halSub"></span>
+    <div class="grow"></div>
+    <div class="hal-aksi" id="halAksi"></div>
+  </header>
+  <div class="hal-body" id="halBody"></div>
+</div>
+
+<!-- ── pencarian global (Ctrl+Shift+K) ──────────────────────────────── -->
+<div class="modal" id="cariPal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c palet-c" role="dialog" aria-modal="true" aria-label="Pencarian global">
+    <header class="palet-hd">
+      <span data-ic="search" data-ic-size="17"></span>
+      <input id="palQ" type="search" placeholder="Cari obrolan, pesan, proyek, file, builder…" autocomplete="off">
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="16"></span></button>
+    </header>
+    <div class="palet-hasil" id="palHasil"></div>
+  </div>
+</div>
+
+<!-- ── studio gambar ────────────────────────────────────────────────── -->
+<div class="modal" id="imgStudio" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c lebar" role="dialog" aria-modal="true" aria-label="Studio gambar">
+    <header class="modal-hd"><b>Studio Gambar</b><span class="pill-note" id="imgStatus">memeriksa penyedia…</span>
+      <span class="grow"></span><button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="img-grid">
+      <div class="img-kiri">
+        <textarea id="imgPrompt" rows="4" placeholder="Tuliskan gambar yang kamu mau… (contoh: kedai kopi kecil di Surabaya, sudut matahari pagi, gaya foto)"></textarea>
+        <div class="baris-opt"><span class="lbl">Rasio</span><div class="seg" id="imgRasio">
+          <button data-v="1:1" class="on">1:1</button><button data-v="16:9">16:9</button><button data-v="9:16">9:16</button><button data-v="4:3">4:3</button></div></div>
+        <div class="baris-opt"><span class="lbl">Kualitas</span><div class="seg" id="imgKualitas">
+          <button data-v="draft">Draft</button><button data-v="standar" class="on">Standar</button><button data-v="hd">HD</button></div></div>
+        <div class="img-aksi">
+          <button class="btn pr" id="imgBuat"><span data-ic="sparkles" data-ic-size="15"></span>Buat gambar</button>
+          <button class="btn" id="imgUlang"><span data-ic="rotate-ccw" data-ic-size="15"></span>Buat ulang</button>
+        </div>
+        <p class="note" id="imgCatatan"></p>
+      </div>
+      <div class="img-kanan">
+        <div class="img-hasil" id="imgHasil"><div class="img-kosong" id="imgKosong">Belum ada gambar.</div></div>
+        <div class="img-aksi">
+          <button class="btn" id="imgSimpan" disabled><span data-ic="save" data-ic-size="15"></span>Simpan ke pustaka</button>
+          <button class="btn" id="imgUnduh" disabled><span data-ic="download" data-ic-size="15"></span>Unduh</button>
+          <button class="btn" id="imgProyek" disabled><span data-ic="layers" data-ic-size="15"></span>Ke proyek</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── bagikan percakapan ──────────────────────────────────────────── -->
+<div class="modal" id="bagiModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c" role="dialog" aria-modal="true" aria-label="Bagikan percakapan">
+    <header class="modal-hd"><b>Bagikan percakapan</b><span class="grow"></span>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="modal-bd2">
+      <div class="set-it"><b>Siapa yang bisa membuka</b>
+        <div class="seg" id="bagiSiapa">
+          <button data-v="pribadi" class="on">Pribadi</button>
+          <button data-v="tautan">Siapa saja yang punya tautan</button></div>
+        <p class="note">Pribadi = tidak ada tautan dibuat (hanya berkas unduhan di perangkatmu).</p>
+      </div>
+      <div class="set-it"><b>Masa berlaku</b>
+        <div class="seg" id="bagiMasa">
+          <button data-v="1">1 hari</button><button data-v="7" class="on">7 hari</button><button data-v="30">30 hari</button><button data-v="0">Tanpa batas</button></div>
+      </div>
+      <div class="set-it"><b>Tautan</b>
+        <div class="baris-tautan"><input id="bagiTautan" readonly placeholder="tekan Buat tautan…">
+        <button class="btn pr" id="bagiBuat">Buat tautan</button></div>
+        <div class="img-aksi"><button class="btn" id="bagiSalin" disabled><span data-ic="copy" data-ic-size="15"></span>Salin</button>
+        <button class="btn" id="bagiHtml"><span data-ic="download" data-ic-size="15"></span>Unduh HTML</button>
+        <button class="btn" id="bagiJson"><span data-ic="download" data-ic-size="15"></span>Unduh JSON</button></div>
+        <p class="note" id="bagiCatatan">Isi percakapan diringkas ke dalam tautan itu sendiri (tidak disimpan di server mana pun). Siapa pun yang memegang tautan bisa membacanya — perlakukan seperti surat terbuka, dan pakai masa berlaku.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── bar mode suara ─────────────────────────────────────────────── -->
+<div class="voice-bar" id="voiceBar" hidden>
+  <div class="voice-tx">
+    <b id="voiceJudul">Percakapan suara</b>
+    <div class="voice-alur" id="voiceAlur"></div>
+  </div>
+  <div class="voice-btn">
+    <button class="btn" id="vMic" title="Mikrofon hidup/mati"><span data-ic="mic" data-ic-size="15"></span><span id="vMicTx">Mikrofon</span></button>
+    <button class="btn pr" id="vMulai"><span data-ic="play" data-ic-size="15"></span>Mulai Voice</button>
+    <button class="btn danger" id="vBerhenti"><span data-ic="square" data-ic-size="15"></span>Berhenti</button>
+    <button class="btn" id="vMute" title="Matikan mikrofon sementara"><span data-ic="mic-off" data-ic-size="15"></span>Mute</button>
+    <button class="btn" id="vSpeaker" title="Suara AI hidup/mati"><span data-ic="volume-2" data-ic-size="15"></span>Speaker</button>
+  </div>
+</div>
+
+
+<!-- ── diff (Terima / Tolak / Batalkan) ─────────────────────────────── -->
+<div class="modal" id="diffModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c lebar" role="dialog" aria-modal="true" aria-label="Perubahan berkas">
+    <header class="modal-hd"><b id="diffJudul">Perubahan</b><span class="pill-note" id="diffHitung"></span><span class="grow"></span>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="diff-isi" id="diffIsi"></div>
+    <footer class="modal-ft">
+      <button class="btn pr" id="diffTerima"><span data-ic="check" data-ic-size="15"></span>Terima</button>
+      <button class="btn" id="diffTolak"><span data-ic="x" data-ic-size="15"></span>Tolak</button>
+      <button class="btn danger" id="diffBatal">Batalkan</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ── edit berkas builder ──────────────────────────────────────────── -->
+<div class="modal" id="editModal" hidden>
+  <div class="modal-bd" data-close></div>
+  <div class="modal-c lebar" role="dialog" aria-modal="true" aria-label="Edit berkas">
+    <header class="modal-hd"><b id="editorJudul">Edit</b><span class="grow"></span>
+      <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button></header>
+    <div class="editor-alat">
+      <input class="editor-inp" id="editorCari" placeholder="Cari…" aria-label="Cari di kode">
+      <input class="editor-inp" id="editorGanti" placeholder="Ganti dengan…" aria-label="Ganti dengan">
+      <button class="btn sm" id="editorCariLagi"><span data-ic="search" data-ic-size="14"></span>Cari berikutnya</button>
+      <button class="btn sm" id="editorGantiSatu">Ganti</button>
+      <button class="btn sm" id="editorGantiSemua">Ganti semua</button>
+      <span class="grow"></span>
+      <span class="pill-note" id="editorBhs">TEXT</span>
+      <button class="btn sm" id="editorRapi"><span data-ic="align-left" data-ic-size="14"></span>Rapikan</button>
+      <button class="btn sm" id="editorSalin"><span data-ic="copy" data-ic-size="14"></span>Salin</button>
+      <button class="btn sm" id="editorUnduh"><span data-ic="download" data-ic-size="14"></span>Unduh</button>
+    </div>
+    <div class="editor-bungkus">
+      <pre class="editor-no" id="editorNo" aria-hidden="true">1</pre>
+      <div class="editor-lapis">
+        <pre class="editor-sorot" id="editorSorot" aria-hidden="true"></pre>
+        <textarea id="editorIsi" class="editor-isi" spellcheck="false" wrap="off" aria-label="Isi berkas"></textarea>
+      </div>
+    </div>
+    <footer class="modal-ft">
+      <button class="btn pr" id="editSimpan"><span data-ic="check" data-ic-size="15"></span>Lihat diff & simpan</button>
+      <button class="btn" id="editBatal" data-close>Batal</button>
+    </footer>
+  </div>
+</div>
+
+<script src="assets/icons.js"></script>
+<script src="assets/berkas.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+UJI PEMERIKSA ALAMAT PUBLIK (tiruan 9Router)
+29/9/2026, 16.26.01
+──────────────────────────────────────────────────────────
+══ uji pemeriksa alamat publik 9Router ══
+  ✓ alamat bisa dijangkau — HTTP 401
+  ✓ kunci memang diwajibkan (401/403) — HTTP 401
+  ✓ dengan kunci → 200 + daftar model — HTTP 200
+  ✓ tanpa kunci → 401 dianggap benar (kunci aktif)
+  ✓ dengan kunci → 200 + daftar model
+  ✓ mencetak nilai env untuk Vercel
+  ✓ seluruh pemeriksaan lolos — keluar 0
+  ✓ alamat mati → dilaporkan tidak bisa dijangkau
+   baris CGNAT: ✗ IP WAN router = IP publik (tidak di belakang CGNAT) — IP WAN di rentang privat/CGNAT → port forward TIDAK akan jalan
+  ✓ WAN di rentang CGNAT → diberi peringatan tegas
+  ✓ WAN = IP publik → dinyatakan siap port forward
+
+HASIL: SEMUA LULUS

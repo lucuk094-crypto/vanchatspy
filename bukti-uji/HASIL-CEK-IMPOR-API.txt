@@ -1,0 +1,12 @@
+  ✓ api/builder.js — handler siap
+  ✓ api/chat.js — handler siap
+  ✓ api/cron.js — handler siap
+  ✓ api/deploy.js — handler siap
+  ✓ api/health.js — handler siap
+  ✓ api/image/generate.js — handler siap
+  ✓ api/providers.js — handler siap
+  ✓ api/search.js — handler siap
+  ✓ api/_aman.js — pendukung bisa diimpor
+  ✓ api/_ai.js — pendukung bisa diimpor
+
+HASIL: SEMUA LULUS — 8 endpoint + 2 pendukung

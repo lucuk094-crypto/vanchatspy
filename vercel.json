@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/library", "destination": "/index.html" },
+    { "source": "/library/", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/search",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=60, s-maxage=300" }]
+    }
+  ]
+}

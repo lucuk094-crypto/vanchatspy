@@ -1,0 +1,13 @@
+kunci yang harus dijaga: 1 (sk-or-v1-475…)
+  ✓ berkas publik bersih dari kunci API
+  ✓ /api/providers hanya mengirim kunci tersamar (1 kunci disamarkan)
+  · prompt kosong → 400 {"ok":false,"pesan":"Pertanyaan masih kosong."}
+  ✓ masukan kosong ditolak rapi (400)
+  ✓ JSON rusak ditolak (400)
+  ✓ asal asing tidak mendapat izin CORS (ACAO: "")
+  ✓ POST /api/chat dari asal asing ditolak (403)
+  ✓ kueri terlalu panjang ditolak (400)
+  ✓ rasio tidak sah ditolak/ditolak jujur (501)
+  ✓ halaman & skrip yang disajikan tidak memuat kunci
+
+HASIL: SEMUA LULUS — kunci tetap di server, masukan divalidasi, asal asing ditolak

@@ -1,0 +1,26 @@
+UJI PENYEDIA NARAROUTER (router.bynara.id)
+29/9/2026, 16.52.46
+──────────────────────────────────────────────────────────
+══ uji: Van Chat.SPY memakai NaraRouter (router.bynara.id) ══
+   penyediaTeks({AI_PROVIDER:"bynara"}) → {"dasar":"https://router.bynara.id/v1","gaya":"openai","router":true}
+  ✓ alamat bawaan NaraRouter sudah dikenal — https://router.bynara.id/v1
+  ✓ gaya protokol = openai (Authorization: Bearer)
+  ✓ daftar model diambil dari penyedia itu sendiri
+   penyedia: {"nama":"bynara","alamat":"http://127.0.0.1:20150/v1","lokal":true,"router":true,"dasarLokal":true,"gaya":"openai","modelDariRouter":true}
+   model dari penyedia: agnes-2.5-flash, agnes-3-flash, gpt-6-luna, nemotron-3-ultra-free, glm-5.3-flash
+  ✓ penyedia dilaporkan sebagai bynara
+  ✓ daftar model berasal dari penyedia itu (agnes-*)
+  ✓ tidak ada model OpenRouter yang nyasar
+   jawaban: "Kopi adalah minuman."
+  ✓ percakapan lewat /v1/chat/completions
+  ✓ perintah bentuk "tepat tiga kata" dipatuhi — Kopi adalah minuman.
+   aliran: 7 potongan → "Jawaban dari 9Router tiruan untuk: Sebut satu fakta sin"
+  ✓ jawaban mengalir (SSE) bekerja
+   visi: "Latar belakang merah dengan lingkaran putih di tengah dan batang vertikal biru."
+  ✓ foto terkirim & "dilihat"
+   builder: 263 bita dari nemotron-3-ultra-free
+  ✓ AI Builder jalan lewat penyedia yang sama
+   kunci salah → HTTP pesan: "kunci penyedia AI ditolak penyedianya (bynara di http://127.0.0.1:20150/v1). Periksa AI_API_KEY — di NaraRouter kunci ha"
+  ✓ kunci salah dijawab jujur (bukan "semua model sibuk")
+
+HASIL: SEMUA LULUS

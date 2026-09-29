@@ -1,0 +1,44 @@
+perintah : node tools/uji-live.mjs
+waktu    : 2026-09-29T13:55:21.755Z
+catatan  : uji ini memakai KUOTA penyedia AI sungguhan
+
+══ I. AI SUNGGUHAN — apakah jawabannya mengikuti perintah? ══
+   (memakai kuota penyedia AI yang sungguhan)
+1) jawaban dasar (1.3 detik) → Kopi arabika menyumbang sekitar 60-70% produksi kopi dunia. Tanaman ini tumbuh terbaik di ketinggian 900-2000 meter di…
+  ✓ jawaban memakai bahasa Indonesia
+  ✓ jawaban terformat markdown — 0 tebal · 2 butir daftar
+  ✓ status proses terlihat saat menyusun — menyusun jawaban… → menyusun jawaban…
+  ✓ tidak membocorkan proses berpikir internal
+2) perintah "tepat 3 kata" → "Kopi minuman biji." (3 kata)
+  ✓ AI mematuhi perintah jumlah kata — 3 kata
+3) perintah "hanya daftar bernomor, tanpa pembuka" → 1. Teh berasal dari tanaman Camellia sinensis. 2. Teh mengandung kafein dan antioksidan.…
+  ✓ jawaban langsung mulai dari butir 1 (tanpa kalimat pembuka) — mulai: 1. Teh beras
+  ✓ jumlah butir sesuai (2) — 2 butir
+4) perintah "in English" → Coffee is a brewed drink made from roasted coffee beans.
+  ✓ AI menjawab dalam bahasa Inggris
+4) jawaban kode → 1 blok kode · JAVASCRIPT Salin Unduh Perbesar Jalankan 1 function jumlahKata(kalimat) { 2 return kalimat…
+  ✓ jawaban kode memakai blok kode
+5) mode Berpikir → Arabika tumbuh di ketinggian tinggi, rasanya lebih halus dan asam, sedangkan robusta tumbuh di dataran rendah, rasanya l…
+  ✓ mode Berpikir menjawab bahasa Indonesia
+  ✓ mode Berpikir tetap tanpa proses internal
+6) catatan di kotak tulis → Obrolan ini belum masuk proyek Uji Live — arahan proyek belum dikirim ke AI. Pakai arahan proyek
+  ✓ aplikasi jujur saat obrolan di luar proyek — Obrolan ini belum masuk proyek Uji Live — arahan proyek belu
+7) arahan proyek "Aturan coding: TypeScript" → DIPATUHI (terlihat anotasi tipe) · ```typescript function hitungTotal(items: { price: number }[]): number { return items.reduce((total: number, item) => total + item…
+  ✓ arahan proyek (bahasa kode) dipakai AI
+7) riset mendalam (sungguhan) → 7 langkah · 7 sumber · 7 tautan nyata · berkas "riset-mumqng7fnl5mn.html"
+   contoh sumber: [1] Kopi arabika Wikipedia Indonesia
+  ✓ riset menghasilkan langkah lengkap
+  ✓ riset mengambil sumber nyata dari internet
+  ✓ riset menulis berkas laporan
+8) visi sungguhan → JAVASCRIPT Ruang kerja Salin Unduh Perbesar Jalankan 1 function jumlahKata(kalimat) { 2 return kalimat.trim().split(/\s+/).filter(kata => ka…
+  ✓ model benar-benar melihat gambar — warna disebut · bentuk disebut
+9) AI Builder (sungguhan) → "KartuUlangTahun" · berkas ["app.js","index.html","styles.css"] · jejak 6/10
+   status: Ada 1 masalah — tekan Perbaiki error untuk meminta AI membetulkan. · uji: 1 dari 8 pemeriksaan gagal✓ index.html adaindex.html✓ index.html punya doctype✗ 
+  ✓ builder menghasilkan berkas nyata
+  ✓ pratinjau terisi — 3979 karakter
+10) penghitung pemakaian di aplikasi: 10 permintaan hari ini
+  ✓ penghitung kuota berjalan
+11) galat JS selama percakapan sungguhan → tidak ada
+  ✓ tidak ada galat JS
+
+HASIL: SEMUA LULUS

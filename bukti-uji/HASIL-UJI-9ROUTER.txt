@@ -1,0 +1,29 @@
+UJI 9ROUTER (router AI lokal, tiruan untuk sandbox)
+29/9/2026, 16.27.01
+──────────────────────────────────────────────────────────
+══ uji: Van Chat.SPY memakai AI dari 9Router (tiruan) ══
+  ✓ tiruan 9Router siap menerima permintaan
+  ✓ server aplikasi jalan dengan penyedia 9Router
+   penyedia: {"nama":"9router","alamat":"http://127.0.0.1:20128/v1","lokal":true,"router":true,"dasarLokal":true,"gaya":"openai","modelDariRouter":true}
+   model dari router: oc/opencode-flash, kr/claude-sonnet-4.5, cc/claude-opus-4-7, gh/gpt-5-mini, if/glm-4.7
+  ✓ daftar model berasal dari /v1/models router
+  ✓ tidak ada lagi model OpenRouter saat memakai 9Router
+  ✓ model visi dari router dikenali — vertex/gemini-3-flash
+   "tepat tiga kata" lewat 9Router → "Kopi adalah minuman." (0 perbaikan)
+  ✓ perintah bentuk "tepat tiga kata" dipatuhi lewat router — Kopi adalah minuman.
+  ✓ jawaban "hanya kode" lewat router — ```python
+print("halo dari 9router")
+```
+   jawaban lewat router → "Jawaban dari 9Router tiruan untuk: Sebutkan satu fakta singkat tentang kopi."
+  ✓ percakapan berjalan lewat 9Router
+   pilihan model di Setelan: oc/opencode-flash, kr/claude-sonnet-4.5, cc/claude-opus-4-7, gh/gpt-5-mini, if/glm-4.7, vertex/gemini-3-flash
+  ✓ Setelan menawarkan model 9Router — 6 pilihan
+   visi lewat router → "Latar belakang merah dengan lingkaran putih di tengah dan batang vertikal biru."
+  ✓ model melihat gambar lewat 9Router — Latar belakang merah dengan lingkaran putih di ten
+   builder lewat router → "KartuUlangTahun" · berkas ["app.js","index.html","styles.css"] · pratinjau 1926 bita
+  ✓ AI Builder menerima proyek dari 9Router — Ada 1 masalah — tekan Perbaiki error untuk meminta AI membet
+  ✓ tidak ada galat JS sepanjang uji
+   router dimatikan → pesan server: "Tidak bisa menghubungi 9Router di http://127.0.0.1:20128/v1. Jalankan 9Router dulu di CMD/terminal — tulis `9router` sampai muncul "Server r"
+  ✓ pesan jujur saat 9Router tidak jalan — Tidak bisa menghubungi 9Router di http://127.0.0.1:20128/v1.
+
+HASIL: SEMUA LULUS

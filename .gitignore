@@ -1,0 +1,23 @@
+# ── rahasia & setelan pribadi: JANGAN di-commit ────────────────────────────
+.env
+.env.local
+.vercel/
+tools/kunci-ai.txt
+# berisi kunci penyedia AI (dibuat oleh tools/cek-penyedia.mjs)
+tools/penyedia.json
+# berisi kunci 9Router (dibuat oleh tools/cek-9router.mjs)
+tools/9router.json
+# berisi token API Cloudflare untuk DDNS (tools/cloudflare-ddns.mjs)
+tools/cloudflare.json
+
+# ── sampah runtime ────────────────────────────────────────────────────────
+node_modules/
+__pycache__/
+*.log
+.DS_Store
+
+# ── berkas besar / khusus sandbox (tidak perlu ikut repo) ─────────────────
+# paket .deb untuk menyiapkan Chromium di sandbox uji
+tools/deb/
+# tangkapan layar uji (ada di berkas ZIP, bukan di repo)
+bukti-uji/*.png
