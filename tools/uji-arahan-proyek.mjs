@@ -60,7 +60,7 @@ page.on('request', (req) => {
     badan.push(req.postData() || '');
     return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, text: JAWABAN, model: 'uji/arahan' }) });
   }
-  if (u.includes('/api/providers')) return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, teks: { penyedia: 'bynara', adaKunci: true, kunci: 'sk-nr…uji' }, gambar: { siap: false }, suara: { stt: {}, tts: {} }, deploy: {}, penjadwal: {}, rateLimit: { terpakai: { total: 1, ditolak: 0 } } }) });
+  if (u.includes('/api/providers')) return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, teks: { penyedia: '9router', adaKunci: true, kunci: 'sk-nr…uji' }, gambar: { siap: false }, suara: { stt: {}, tts: {} }, deploy: {}, penjadwal: {}, rateLimit: { terpakai: { total: 1, ditolak: 0 } } }) });
   req.continue();
 });
 

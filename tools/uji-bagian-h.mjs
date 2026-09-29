@@ -106,7 +106,7 @@ async function ujiHalamanBaru(browser) {
       return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, q: 'kopi', jumlah: SUMBER.length, sumber: SUMBER, catatan: 'uji' }) });
     }
     if (u.includes('/api/providers')) {
-      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, teks: { penyedia: 'bynara', alamat: 'https://router.bynara.id/v1', adaKunci: true, kunci: 'sk-nr…cdef', modelTetap: null }, gambar: { penyedia: 'bynara', model: 'agnes-image-2.1-flash', siap: true, kunci: 'sk-nr…cdef' }, suara: { stt: { penyedia: '(bawaan browser)', siap: false }, tts: { penyedia: '(bawaan browser)', siap: false, suara: 'alloy' } }, deploy: { penyedia: '(belum diatur)', siap: false }, penjadwal: { penyedia: '(belum diatur)', siap: false }, rateLimit: { terpakai: { total: 42, ditolak: 1 } } }) });
+      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, teks: { penyedia: '9router', alamat: 'https://rqacwx8.abc-tunnel.us/v1', adaKunci: true, kunci: 'sk-nr…cdef', modelTetap: null }, gambar: { penyedia: '9router', model: 'gpt-image-1', siap: true, kunci: 'sk-nr…cdef' }, suara: { stt: { penyedia: '(bawaan browser)', siap: false }, tts: { penyedia: '(bawaan browser)', siap: false, suara: 'alloy' } }, deploy: { penyedia: '(belum diatur)', siap: false }, penjadwal: { penyedia: '(belum diatur)', siap: false }, rateLimit: { terpakai: { total: 42, ditolak: 1 } } }) });
     }
     if (u.includes('/api/cron')) return req.respond({ status: 501, contentType: 'application/json', body: JSON.stringify({ ok: false, butuhKunci: true, pesan: 'Penjadwal sisi-server belum aktif: butuh penyimpanan KV (KV_REST_API_URL + KV_REST_API_TOKEN).' }) });
     if (u.includes('/api/deploy')) return req.respond({ status: 501, contentType: 'application/json', body: JSON.stringify({ ok: false, butuhKunci: true, pesan: 'Deployment otomatis belum aktif (butuh DEPLOY_PROVIDER + DEPLOY_TOKEN milikmu).' }) });
@@ -115,12 +115,12 @@ async function ujiHalamanBaru(browser) {
       if (gambarKe === 1) {
         return req.respond({ status: 501, contentType: 'application/json', body: JSON.stringify({ ok: false, butuhKunci: true, pesan: 'Pembuat gambar belum aktif: gambar dihitung per kredit oleh penyedia, jadi kuncinya harus dipasang dulu.' }) });
       }
-      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, gambar: 'data:image/png;base64,' + PNG_KECIL, penyedia: 'bynara', model: 'agnes-image-2.1-flash', rasio: '1:1', kualitas: 'standar', ms: 12 }) });
+      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, gambar: 'data:image/png;base64,' + PNG_KECIL, penyedia: '9router', model: 'gpt-image-1', rasio: '1:1', kualitas: 'standar', ms: 12 }) });
     }
     if (u.includes('/api/health')) return req.respond({ status: 200, contentType: 'application/json', body: '{"ok":true,"keyConfigured":true}' });
     if (u.includes('/api/chat')) {
       if (modeKuotaHabis) {
-        return req.respond({ status: 429, contentType: 'application/json', body: JSON.stringify({ ok: false, kuota: true, pesan: 'batas permintaan penyedia AI tercapai (paket akunmu di NaraRouter). Coba lagi menit berikutnya.' }) });
+        return req.respond({ status: 429, contentType: 'application/json', body: JSON.stringify({ ok: false, kuota: true, pesan: 'batas permintaan penyedia AI tercapai (paket akunmu di 9Router). Coba lagi menit berikutnya.' }) });
       }
       const badan = req.postData() || '';
       badanApi.push(badan);
@@ -531,7 +531,7 @@ async function ujiHalamanBaru(browser) {
   /* 11b. MODEL AI — pilihan model per mode benar-benar dikirim ke server */
   await page.goto(URL_UJI + '#/settings', { waitUntil: 'networkidle2' });
   await tunggu(450);
-  await page.select('#set18M_think', 'agnes-3-flash');
+  await page.select('#set18M_think', 'kr/claude-sonnet-4.5');
   await tunggu(250);
   await page.goto(URL_UJI + '#/', { waitUntil: 'networkidle2' });
   await tunggu(350);
@@ -543,7 +543,7 @@ async function ujiHalamanBaru(browser) {
   const badanModel = badanApi.slice(-1)[0] || '';
   const modelKirim = (badanModel.match(/"model":"([^"]*)"/) || [])[1] || '(kosong)';
   tulis('model AI → mode Berpikir mengirim model "' + modelKirim + '"');
-  if (modelKirim !== 'agnes-3-flash') throw new Error('pilihan model di Setelan tidak ikut dikirim');
+  if (modelKirim !== 'kr/claude-sonnet-4.5') throw new Error('pilihan model di Setelan tidak ikut dikirim');
   /* nama panggilan & bahasa ikut ke instruksi */
   await page.goto(URL_UJI + '#/settings', { waitUntil: 'networkidle2' });
   await tunggu(450);
@@ -604,7 +604,7 @@ async function ujiHalamanBaru(browser) {
   tulis('kuota habis → lembar Mode AI: "' + modeKuota.slice(0, 110) + '"');
   if (!/batas permintaan penyedia/i.test(kuotaUji.galat)) throw new Error('pesan kuota habis tidak tampil');
   if (!kuotaUji.bisaKetik) throw new Error('kotak tulis terkunci saat kuota habis');
-  if (!/batas penyedia tercapai \(dari NaraRouter\)/i.test(modeKuota)) throw new Error('lembar Mode AI masih menjanjikan sisa kuota');
+  if (!/batas penyedia tercapai \(dari 9Router\)/i.test(modeKuota)) throw new Error('lembar Mode AI masih menjanjikan sisa kuota');
   await page.screenshot({ path: path.join(SHOT, '54-kuota-habis.png') });
   modeKuotaHabis = false;
 

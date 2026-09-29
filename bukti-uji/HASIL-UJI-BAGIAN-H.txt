@@ -1,9 +1,9 @@
 perintah : node tools/uji-bagian-h.mjs
-waktu    : 2026-09-29T18:43:32.864Z
+waktu    : 2026-09-29T19:16:49.877Z
 
 ══ H. riset mendalam · builder · gambar · suara · halaman baru ══
 riset mendalam → 7 langkah (Sedang membuat rencana… | Sedang mencari sumber… | Sedang mengumpulkan informasi……) · sumber 4 · label penyedia 4
-riset mendalam → berkas laporan: riset-mun0xsia89h5a.html
+riset mendalam → berkas laporan: riset-mun24kv8x9lh9.html
 mode berpikir → ["Normal — Ling 3.0 Flash","Berpikir — Dots 3 Note","Berpikir Mendalam — Nex 2.5 Pro","Expert (tambahan) — Nemotron 3 Super 120B"]
 builder → " MIRU Streaming " · berkas ["app.js","index.html","styles.css"] · pratinjau 1958 karakter
 builder → jejak 10/10 selesai · konsol: console 3 · peringatan 0 · console error 0 · runtime error 0 · jaringan 1
@@ -25,12 +25,12 @@ pengaman sandbox → hasil uji: 1 dari 8 pemeriksaan gagal✓ index.html adainde
 pengaman sandbox → aplikasi tetap responsif (tidak membeku)
 pengaman sandbox → setelah "tanpa skrip": Pratinjau tanpa skrip · 2 berkas
 gambar (tanpa kunci) → gagal membuat SVG · "Pembuat gambar belum aktif: gambar dihitung per kredit oleh penyedia, "
-gambar (penyedia aktif) → bynara · 12 ms · gambar tampil true · tombol simpan aktif true
+gambar (penyedia aktif) → 9router · 12 ms · gambar tampil true · tombol simpan aktif true
 gambar → tersimpan ke pustaka: 1 berkas
 suara → tombol ["Mikrofon","Mulai Voice","Berhenti","Mute","Speaker"] · alur 6 langkah
 suara → Mute & Speaker bisa ditekan, Berhenti menutup alur
 cari global → grup ["Pesan"] · 1 hasil untuk "kopi"
-bagikan → tautan 1399 karakter, berisi #/bagi= true
+bagikan → tautan 1400 karakter, berisi #/bagi= true
 halaman bagikan → "Percakapan dibagikan" · 7 pesan · keterangan hanya-baca true
 proyek → 1 kartu (MIRUaktifUbah) · 7 penghitung: 0 obrolan · 0 file · 0 gambar · 0 memori · 0 tugas · 6 plugin · 0 builder
 proyek → instruksi otomatis: Bahasa jawaban: Indonesia Aturan coding: JavaScript Gaya desain: Clean Minimalis
@@ -38,15 +38,15 @@ cari global → kelompok tersedia: ["Obrolan","Pesan","Proyek","File","Builder"]
 tugas → 1 baris · Setiap Senin pukul 08.00 periksa website utama dan laporkan halaman yang gagal. | jadwal: Setiap Senin pukul 08:00 (Asia
 plugin → 7 plugin (6 aktif) · izin tertera: true
 setelan → 14 bagian: Profil & Akun · Umum · Tampilan · Bahasa & Wilayah · Notifikasi · Suara · Model AI · Keamanan · Privasi & Kontrol Data · Penyimpanan · Memori (0) · Plugin · Penggunaan & Penyedia · Tentang
-setelan → status penyedia: Penyedia teks: bynarahttps://router.bynara.id/v1 · kunci ada (sk-nr…cdef)Pembuat gambar: bynarasiap · agnes-image-2.1-fl
+setelan → status penyedia: Penyedia teks: 9routerhttps://rqacwx8.abc-tunnel.us/v1 · kunci ada (sk-nr…cdef)Pembuat gambar: 9routersiap · gpt-image-1
 ekspor → berkas-metadata-2026-09-29.csv, percakapan-2026-09-29.csv, preferensi-2026-09-29.json
-model AI → mode Berpikir mengirim model "agnes-3-flash"
+model AI → mode Berpikir mengirim model "kr/claude-sonnet-4.5"
 profil → instruksi ikut terkirim: true
 admin (belum masuk) → "Halaman ini terkunciKunci admin sudah dibuat di Pengaturan →"
 admin (masuk) → peran "peran: admin" · bagian: System Health · Penggunaan · Model · Provider · Plugin · Rate Limit · Log (audit lokal) · Pengguna & hak akses
 admin → rate limit tampil: "chat 60 "
-kuota habis → pesan: "SISTEM 18.42 Riset mendalam dimulai untuk: “kopi arabika” — 2 permintaan AI + pencarian multi-penyedia. SISTEM 18.43 AI "
-kuota habis → lembar Mode AI: "Mode AI batas penyedia tercapai (dari NaraRouter) · tunggu sebentar atau naikkan paket di dasbor"
+kuota habis → pesan: "SISTEM 19.16 Riset mendalam dimulai untuk: “kopi arabika” — 2 permintaan AI + pencarian multi-penyedia. SISTEM 19.16 AI "
+kuota habis → lembar Mode AI: "Mode AI batas penyedia tercapai (dari 9Router) · tunggu sebentar atau naikkan paket di dasbor"
 galat JS (bagian H) → tidak ada
 permintaan AI yang dipakai uji: 11
 

@@ -16,38 +16,66 @@ import { fileURLToPath } from 'node:url';
 const AKAR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 8131);
 
-/* ── penyedia AI yang dipakai ────────────────────────────────────────────
-   Bisa diatur lewat Environment Variable, atau lewat berkas tools/penyedia.json
-   yang ditulis oleh `node tools/cek-penyedia.mjs --tulis` setelah penyedia
-   terbukti jalan (berisi kunci → berkas itu tidak ikut repo/zip).
+/* ── setelan lokal: berkas .env.local (tidak ikut repo/zip) ──────────────
+   Isinya sederhana, satu baris satu setelan:
 
-     AI_PROVIDER=bynara AI_API_KEY=sk-nry-xxxx node tools/server-uji.mjs
+     AI_API_KEY=sk-xxxxxxxx
+     AI_BASE_URL=https://rqacwx8.abc-tunnel.us/v1     (opsional, ini bawaannya)
+     AI_MODEL_FAST=kr/claude-haiku-4.5                (opsional)
+
+   Jadi cara pakainya: nyalakan 9Router (tunnel), lalu `node tools/server-uji.mjs`.
+*/
+function muatEnvLokal() {
+  const berkas = path.join(AKAR, '.env.local');
+  if (!fs.existsSync(berkas)) return null;
+  let jumlah = 0;
+  for (const baris of fs.readFileSync(berkas, 'utf8').split(/\r?\n/)) {
+    const t = baris.trim();
+    if (!t || t.startsWith('#')) continue;
+    const pisah = t.indexOf('=');
+    if (pisah < 1) continue;
+    const kunci = t.slice(0, pisah).trim();
+    const isi = t.slice(pisah + 1).trim().replace(/^["']|["']$/g, '');
+    if (kunci && !process.env[kunci]) { process.env[kunci] = isi; jumlah++; }
+  }
+  return jumlah;
+}
+const DARI_ENV_LOKAL = muatEnvLokal();
+
+/* ── penyedia AI yang dipakai ────────────────────────────────────────────
+   Aplikasi ini memakai **9Router** (satu penyedia saja). Alamat bawaannya
+   https://rqacwx8.abc-tunnel.us/v1 — bisa diganti lewat AI_BASE_URL
+   (mis. http://127.0.0.1:20128/v1 kalau 9Router jalan di komputer sendiri).
+
+     AI_API_KEY=sk-xxxx node tools/server-uji.mjs          (kunci di env)
+     AI_API_KEY=sk-xxxx di .env.local                      (paling mudah)
 
    Tanpa kunci, aplikasi tetap jalan tetapi setiap percakapan dijawab jujur
-   "kunci NaraRouter belum dipasang" — bukan jawaban palsu.
+   "kunci penyedia AI belum dipasang" — bukan jawaban palsu.
 */
 function muatPenyedia() {
   const env = { ...process.env };
-  let catatan = 'NaraRouter (tanpa kunci — isi AI_API_KEY)';
-  /* kalau penyedia sudah ditentukan lengkap lewat environment, pakai itu */
-  if (process.env.AI_PROVIDER && process.env.AI_BASE_URL) {
-    return { env, catatan: process.env.AI_PROVIDER + ' (dari environment)' };
+  const alamat = String(env.AI_BASE_URL || 'https://rqacwx8.abc-tunnel.us/v1').replace(/\/+$/, '');
+  let catatan = '9Router (' + alamat + ') · kunci belum dipasang — isi AI_API_KEY di .env.local';
+  if (env.AI_API_KEY || env.NINE_API_KEY) {
+    catatan = '9Router (' + alamat + ') · kunci dipasang' + (DARI_ENV_LOKAL ? ' (dari .env.local)' : ' (dari environment)');
+    return { env, catatan };
   }
-  /* setelan lokal (opsional): tools/penyedia.json — dibuat oleh tools/cek-penyedia.mjs
-     (`--tulis`). Berisi kunci rahasia, jadi TIDAK ikut repo/zip. */
+  /* cadangan: tools/penyedia.json — berkas kunci lama (tidak ikut repo/zip) */
   let dariBerkas = null;
   const berkas = path.join(AKAR, 'tools', 'penyedia.json');
   try {
     if (fs.existsSync(berkas)) dariBerkas = JSON.parse(fs.readFileSync(berkas, 'utf8'));
   } catch (e) { dariBerkas = null; }
   if (dariBerkas && dariBerkas.url) {
-    env.AI_PROVIDER = env.AI_PROVIDER || String(dariBerkas.nama || 'bynara');
+    env.AI_PROVIDER = env.AI_PROVIDER || '9router';
     env.AI_BASE_URL = env.AI_BASE_URL || String(dariBerkas.url).replace(/\/+$/, '');
     if (!env.AI_API_KEY && dariBerkas.kunci) env.AI_API_KEY = dariBerkas.kunci;
     const m = dariBerkas.model || {};
     env.AI_MODEL_FAST = env.AI_MODEL_FAST || m.fast || '';
     env.AI_MODEL_THINK = env.AI_MODEL_THINK || m.think || '';
-    catatan = String(dariBerkas.nama || 'penyedia') + ' (' + env.AI_BASE_URL + ')' + (dariBerkas.dicek ? ' · terperiksa ' + dariBerkas.dicek : '');
+    catatan = '9Router (' + env.AI_BASE_URL + ') · kunci dipasang (dari tools/penyedia.json)'
+      + (dariBerkas.dicek ? ' · terperiksa ' + dariBerkas.dicek : '');
   }
   return { env, catatan };
 }

@@ -45,7 +45,7 @@ page.on('request', (req) => {
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         ok: true,
-        teks: { penyedia: 'bynara', alamat: 'https://router.bynara.id/v1', adaKunci: true, kunci: 'sk-nr…cdef', modelTetap: null },
+        teks: { penyedia: '9router', alamat: 'https://rqacwx8.abc-tunnel.us/v1', adaKunci: true, kunci: 'sk-nr…cdef', modelTetap: null },
         gambar: { penyedia: '(belum diatur)', model: 'gpt-image-1', siap: false, kunci: '' },
         suara: { stt: { penyedia: '(bawaan browser)', siap: false }, tts: { penyedia: '(bawaan browser)', siap: false, suara: 'alloy' } },
         deploy: { penyedia: '(belum diatur)', siap: false },

@@ -1427,7 +1427,7 @@
     sw($('setMemoriAktif'), SET.memoriAktif, function (v) { SET.memoriAktif = v; simpanSet(); });
     gambarMemori();
     gambarTugas();
-    $('setUsage').textContent = String(SET.pakai.jumlah || 0);   /* hitungan perangkat ini saja — batas resmi ada di dasbor NaraRouter */
+    $('setUsage').textContent = String(SET.pakai.jumlah || 0);   /* hitungan perangkat ini saja — batas resmi ada di dasbor 9Router */
     $('setCount').textContent = sesi.length;
     $('setArts').textContent = sesi.reduce(function (n, s) { return n + (s.artifacts || []).length; }, 0);
   }
@@ -1462,17 +1462,17 @@
   $('btnSettings').addEventListener('click', function () { isiSetelan(); $('setModal').hidden = false; });
   $('btnMode').addEventListener('click', function () { isiMode(); $('modeModal').hidden = false; });
   $('btnModeC').addEventListener('click', function () { isiMode(); $('modeModal').hidden = false; });
-  /* nama penyedia yang sebenarnya (bynara / gateway kustom) untuk tulisan di layar */
+  /* nama penyedia yang sebenarnya (9router / gateway kustom) untuk tulisan di layar */
   function labelPenyedia() {
     var t = SET.penyedia && SET.penyedia.teks;
     if (!t) return 'penyedia AI';
     if (t.label) return t.label;                                  /* dari server: nama yang jujur */
-    if (t.penyedia === 'bynara' || t.penyedia === 'nararouter') return 'NaraRouter';
+    if (t.penyedia === '9router' || t.penyedia === '9router') return '9Router';
     return t.penyedia || 'penyedia AI';
   }
   function tandaKuotaHabis(habis) {
     SET.pakai = SET.pakai || { tanggal: '', jumlah: 0 };
-    SET.pakai.habis = !!habis;    /* batas asli ditentukan paket NaraRouter — kita hanya mencatat apa yang dikatakan penyedia */
+    SET.pakai.habis = !!habis;    /* batas asli ditentukan paket 9Router — kita hanya mencatat apa yang dikatakan penyedia */
     if (habis) SET.pakai.kena = (SET.pakai.kena || 0) + 1;
     simpanSet();
     var el = document.getElementById('modeKepala');
@@ -2868,13 +2868,13 @@
   }
   /* ── model AI: pilihan pengguna per mode (Setelan → Model AI) ─────── */
   /* Cadangan nama model (dipakai hanya bila daftar dari server belum termuat).
-     Daftar sungguhan datang dari NaraRouter lewat GET /api/chat. */
+     Daftar sungguhan datang dari 9Router lewat GET /api/chat. */
   var MODEL_PILIHAN_BAWAAN = [
-    ['agnes-2.5-flash', 'Agnes 2.5 Flash — paling cepat'],
-    ['agnes-3-flash', 'Agnes 3 Flash'],
-    ['deepseek-v4-flash', 'DeepSeek V4 Flash'],
-    ['glm-5.3-flash', 'GLM 5.3 Flash'],
-    ['gemini-3.8-flash-high', 'Gemini 3.8 Flash High'],
+    ['kr/claude-haiku-4.5', 'Claude Haiku 4.5 — paling cepat'],
+    ['kr/claude-sonnet-4.5', 'Claude Sonnet 4.5 — paling teliti'],
+    ['kr/claude-sonnet-4.5-agentic', 'Claude Sonnet 4.5 Agentic — tugas panjang'],
+    ['kr/auto', 'Kiro Auto — dipilih otomatis'],
+    ['FreeTiers', 'FreeTiers — gabungan model gratis'],
   ];
   function modelUntukMode(m) { return (SET.mPilih && SET.mPilih[m]) || ''; }
   function labelMode(m) {
@@ -2936,7 +2936,7 @@
   function pakaiServer() {
     var p = SET.penyedia || {};
     var t = p.teks || {};
-    return '<div class="mini-it"><span><b>Penyedia teks: ' + esc(t.penyedia || 'bynara') + '</b>'
+    return '<div class="mini-it"><span><b>Penyedia teks: ' + esc(t.penyedia || '9router') + '</b>'
       + '<small>' + esc(t.alamat || '') + ' · kunci ' + (t.adaKunci ? 'ada (' + esc(t.kunci || '') + ')' : 'belum ada')
       + (t.modelTetap ? ' · model tetap ' + esc(t.modelTetap) : '') + '</small></span></div>'
       + '<div class="mini-it"><span><b>Pembuat gambar: ' + esc((p.gambar && p.gambar.penyedia) || '(belum diatur)') + '</b>'

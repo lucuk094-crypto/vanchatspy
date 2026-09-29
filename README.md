@@ -37,7 +37,7 @@ van-chat-spy/
    ├─ uji-bentuk.mjs     "respon AI sesuai perintah": lapis logika (tanpa kuota) + lapis AI sungguhan (--live)
    ├─ uji-arahan-proyek.mjs  arahan proyek benar-benar terkirim ke AI (tanpa kuota, penyedia ditiru)
    ├─ uji-live.mjs       uji dengan KUOTA sungguhan: bahasa, format ketat, visi, riset, builder
-   ├─ uji-bynara.mjs     uji alur NaraRouter (tiruan): model, streaming, foto, builder, kunci salah, pulih tanpa restart
+   ├─ uji-9router.mjs     uji alur 9Router (tiruan): model, streaming, foto, builder, kunci salah, pulih tanpa restart
    ├─ mock-openai.mjs    tiruan gateway OpenAI-compatible untuk pengujian (tanpa kuota)
    ├─ cek-penyedia.mjs   periksa penyedia AI (daftar model, kunci, percakapan uji)
    ├─ cek-impor-api.mjs  memastikan semua endpoint bisa diimpor (tidak ada nama ekspor salah)
@@ -58,7 +58,7 @@ node tools/server-uji.mjs          # lalu buka http://127.0.0.1:8131/
 Uji otomatis (tanpa kuota AI) — dijalankan dari folder proyek:
 
 ```bash
-npm run uji                 # 12 rangkaian uji backend/logika (tanpa browser)
+npm run uji                 # rangkaian uji backend/logika (tanpa browser)
 npm i puppeteer             # sekali saja, untuk uji yang memakai browser sungguhan
 npm run uji:tampilan        # uji tampilan & tombol nyata di Chromium
 ```
@@ -66,23 +66,27 @@ npm run uji:tampilan        # uji tampilan & tombol nyata di Chromium
 Berkas backend yang dijalankan persis sama dengan yang nanti dipakai di
 hosting, jadi yang terlihat lokal = yang akan jalan setelah dipasang.
 
-### 1b. Menyiapkan kunci penyedia AI (NaraRouter)
+### 1b. Menyiapkan kunci penyedia AI (9Router)
 
-Aplikasi ini bicara ke **NaraRouter** (https://router.bynara.id) — satu kunci
-untuk banyak model, dengan paket gratis untuk mulai. Tanpa kunci, aplikasi tetap
-bisa dibuka, tetapi setiap percakapan dijawab jujur «kunci NaraRouter belum
-dipasang» — tidak ada jawaban palsu.
+Aplikasi ini **hanya** bicara ke **9Router** — alamat aksesnya lewat tunnel
+`https://rqacwx8.abc-tunnel.us/v1` (bawaannya, jadi `AI_BASE_URL` boleh
+dikosongkan). Tanpa kunci, aplikasi tetap bisa dibuka, tetapi setiap percakapan
+dijawab jujur «kunci 9Router belum dipasang» — tidak ada jawaban palsu.
+
+Cara paling mudah (sekali saja):
 
 ```bash
-# 1. Buat kunci di https://router.bynara.id/keys  (berawalan sk-nry-…)
-# 2. Periksa kuncinya dari terminal (sekaligus menyimpan ke tools/penyedia.json):
-node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara --tulis
+# 1. Nyalakan 9Router (tunnel-nya).
+# 2. Salin contoh setelan lokal, lalu isi kunci:
+cp .env.local.contoh .env.local      # lalu isi AI_API_KEY=sk-…
 # 3. Jalankan aplikasi:
-node tools/server-uji.mjs          # http://127.0.0.1:8131/  → Setelan → Model AI
+node tools/server-uji.mjs            # http://127.0.0.1:8131/
 ```
 
-Tanpa `--tulis`, cukup pakai environment variable:
-`AI_PROVIDER=bynara AI_API_KEY=sk-nry-XXXX node tools/server-uji.mjs`.
+`.env.local` tidak ikut repo/zip (sudah ada di `.gitignore`). Setara dengannya:
+`AI_API_KEY=sk-XXXX node tools/server-uji.mjs`, atau menyimpan hasil pemeriksaan
+kunci lewat `node tools/cek-penyedia.mjs --url https://rqacwx8.abc-tunnel.us/v1
+--key sk-XXXX --nama 9router --tulis` (menulis `tools/penyedia.json`, juga diabaikan Git).
 
 Daftar model di Setelan diambil langsung dari akunmu (`GET /v1/models`), jadi
 yang muncul hanya model yang boleh dipakai paketmu. Kalau penyedia/jaringan
@@ -96,7 +100,7 @@ begitu normal, percakapan langsung jalan tanpa perlu restart.
 1. Buka vercel.com → **Add New → Project** → pilih repo ini (tidak perlu build
    step; `/api/*.js` otomatis menjadi Edge Function, sisanya berkas statis).
 2. Project → **Settings → Environment Variables**, isi:
-   `AI_PROVIDER=bynara` · `AI_API_KEY=sk-nry-…` (kunci NaraRouter-mu).
+   `AI_PROVIDER=9router` · `AI_API_KEY=sk-…` (kunci 9Router-mu).
    Opsional: `AI_MODEL_FAST`, `AI_MODEL_THINK`, `AI_MODEL_VISI`, `ALLOWED_ORIGINS`, `APP_URL`.
 3. **Deploy** — lalu buka webnya. Kalau env diubah belakangan, **redeploy**
    supaya berlaku.
@@ -167,7 +171,7 @@ utama.
 
 Batas yang perlu diketahui (jujur):
 
-* **Kuota**: batas permintaan mengikuti **paket akunmu di NaraRouter** (paket gratis punya batas menit & token harian). Aplikasi tidak mengarang angka kuota — pesan dari penyedia ditampilkan apa adanya.
+* **Kuota**: batas permintaan mengikuti **paket akunmu di 9Router** (paket gratis punya batas menit & token harian). Aplikasi tidak mengarang angka kuota — pesan dari penyedia ditampilkan apa adanya.
 * **Referensi Wikipedia**: artikel yang diambil adalah artikel Wikipedia itu sendiri — AI tidak menjelajah internet bebas, jadi untuk berita/angka terkini tetap bisa keliru. Fitur ini bisa dimatikan.
 * Riwayat disimpan di **browser** pengguna, bukan di server; hapus data browser = riwayat hilang (pakai Ekspor dulu bila perlu).
 * Bukan pembuat gambar: halaman/SVG dibuat lewat kode. Model pembuat gambar di penyedia AI semuanya berbayar, jadi tidak ada tombol "buat gambar" yang pura-pura jalan.
@@ -192,7 +196,7 @@ Batas yang perlu diketahui (jujur):
   "belum dipasang"** — lengkap dengan izin, endpoint, dan autentikasinya.
 * Kalau semua model cadangan sedang sibuk, jawaban gagal dengan pesan yang jelas — bukan diam-diam kosong.
 * **Perintah bentuk** ("tepat tiga kata", "maksimal 5 kata", "hanya daftar bernomor", "hanya kodenya") diperiksa di server dan diperbaiki otomatis sampai 3 putaran — **tepat**, **maksimal**, dan **minimal** dibedakan ("maksimal 8 kata" tidak lagi dianggap "harus pas 8"). Permintaan internal aplikasi (Builder, Riset, Perbaiki berkas) sengaja **tidak** lewat pemeriksa ini: jawabannya dipakai sebagai data (JSON/isi berkas), bukan sebagai jawaban pengguna. Kalau model tetap meleset, aplikasi **mengatakannya** lewat catatan di balon jawaban — tidak ada klaim palsu bahwa perintah sudah dipatuhi.
-* **Batas permintaan penyedia tercapai** ditampilkan apa adanya ("batas penyedia tercapai (dari NaraRouter)"); percakapan lama tetap bisa dibaca dan ruang kerja tetap bisa dipakai.
+* **Batas permintaan penyedia tercapai** ditampilkan apa adanya ("batas penyedia tercapai (dari 9Router)"); percakapan lama tetap bisa dibaca dan ruang kerja tetap bisa dipakai.
 
 ## 5. Uji tampilan (bukti)
 
@@ -214,7 +218,7 @@ Rinciannya (bisa juga dijalankan satu per satu):
 ```bash
 node tools/uji-bentuk.mjs          # "respon AI sesuai perintah": lapis logika (gratis)
 node tools/uji-api.mjs             # kontrak endpoint (badan permintaan diperiksa)
-node tools/uji-bynara.mjs          # alur NaraRouter lengkap (gateway ditiru, tanpa kuota)
+node tools/uji-9router.mjs          # alur 9Router lengkap (gateway ditiru, tanpa kuota)
 node tools/uji-rahasia.mjs         # keamanan: kunci tidak bocor, asal asing ditolak
 node tools/cek-impor-api.mjs       # semua endpoint bisa diimpor
 node tools/cek-ikon.mjs            # semua nama ikon ada
@@ -227,23 +231,23 @@ node tools/smoke-18.mjs            # asap: 6 halaman + tombol kunci + nol galat 
 node tools/uji-live.mjs            # KUOTA sungguhan (± 12 permintaan) — dengan kunci asli
 ```
 
-### Memakai NaraRouter (satu-satunya penyedia aplikasi ini)
+### Memakai 9Router (satu-satunya penyedia aplikasi ini)
 
 Petunjuk lengkap + hasil pemeriksaan endpoint-nya ada di
-**PANDUAN-PENYEDIA-BYNARA.md**. Ringkasnya:
+**PANDUAN-PENYEDIA-9ROUTER.md**. Ringkasnya:
 
 ```bash
-node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara --tulis
+node tools/cek-penyedia.mjs --url https://rqacwx8.abc-tunnel.us/v1 --key sk-XXXX --nama 9router --tulis
 npm run uji           # uji backend/logika (tanpa kuota, tanpa browser)
 npm i puppeteer       # sekali saja — untuk uji tampilan di Chromium
 npm run uji:tampilan  # uji tombol & tampilan sungguhan
 ```
 
-**Gateway OpenAI-compatible lain?** Boleh. Isi `AI_BASE_URL` + `AI_API_KEY`
-(lihat *PANDUAN-VERCEL.md § 5b*). Aplikasi membaca daftar model dari gateway itu,
-menyisir kandidat sampai ketemu model yang benar-benar aktif, lalu mengingatnya —
-jadi gateway yang daftar modelnya "ramai tapi separuh mati" tetap bisa dipakai.
-Kosongkan `AI_BASE_URL` untuk kembali ke NaraRouter. Uji nyata gateway pihak
-ketiga (percakapan, streaming, foto, builder) ada di
+**9Router di alamat lain?** Ganti `AI_BASE_URL` saja — misalnya kalau 9Router
+dijalankan di komputer sendiri: `AI_BASE_URL=http://127.0.0.1:20128/v1`. Aplikasi
+membaca daftar model dari router itu, **menyisir kandidat** sampai ketemu model
+yang benar-benar aktif, lalu mengingatnya — jadi router yang daftar modelnya
+"ramai tapi separuh mati" tetap bisa dipakai. Hasil uji langsung ke tunnel 9Router
+(percakapan, streaming, foto, builder) ada di
 `bukti-uji/HASIL-UJI-GATEWAY-KUSTOM.txt`.
 

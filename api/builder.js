@@ -12,9 +12,9 @@
  * ════════════════════════════════════════════════════════════════════
  */
 
-/* Model cadangan untuk membangun halaman kalau daftar model dari NaraRouter
+/* Model cadangan untuk membangun halaman kalau daftar model dari 9Router
    belum terbaca (daftar sungguhan diambil dari penyedia itu sendiri). */
-const MODEL_BANGUN = ["agnes-3-flash", "agnes-2.5-flash", "deepseek-v4-pro"];
+const MODEL_BANGUN = ["kr/claude-sonnet-4.5", "kr/claude-haiku-4.5", "FreeTiers"];
 
 const MAX_TOKENS = { fast: 4000, think: 6000, deep: 7000, expert: 8000 };
 const SUHU = { fast: 0.5, think: 0.4, deep: 0.4, expert: 0.3 };
@@ -37,10 +37,10 @@ const json = (o, s, extra) =>
   });
 
 import { asalDiizinkan, audit } from "./_aman.js";
-import { penyediaTeks, teksDariSSE } from "./_ai.js";
+import { penyediaTeks, teksDariSSE, bersihkanPikir } from "./_ai.js";
 import { daftarModelLokal, daftarModelCepat, kandidatModel, catatTidakAda, catatTerbukti, RX_MODEL_MATI, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, sebabLokalTerakhir } from "./chat.js";
 
-/* daftar model untuk membangun halaman: diambil dari NaraRouter (GET /models),
+/* daftar model untuk membangun halaman: diambil dari 9Router (GET /models),
    supaya yang dipakai benar-benar model yang diizinkan paket akunmu */
 async function kandidatBangun(env) {
   const p = penyediaTeks(env);
@@ -169,12 +169,13 @@ async function bangunSatu(model, prompt, mode, p, env) {
   try { d = JSON.parse(mentah); } catch (e) {
     /* gateway ini menjawab aliran SSE walau diminta stream:false */
     const sse = teksDariSSE(mentah);
-    if (sse.teks) d = { choices: [{ message: { content: sse.teks } }] };
+    if (sse.teks) d = { choices: [{ message: { content: bersihkanPikir(sse.teks) } }] };
     else throw new Error("jawaban penyedia bukan JSON: " + mentah.replace(/\s+/g, " ").slice(0, 120));
   }
   const c = d && d.choices && d.choices[0];
   let teks = (c && c.message && c.message.content) || (c && c.text) || "";
   if (Array.isArray(teks)) teks = teks.map((b) => (b && (b.text || b.content)) || "").join("");
+  teks = bersihkanPikir(teks);   /* penalaran internal model tidak ikut ke halaman */
   const html = bersihkanHtml(teks);
   if (html.length < 120) throw new Error("hasil terlalu pendek");
   return html;
@@ -255,7 +256,7 @@ function envProses(tambahan) {
   const kunci = {};
   for (const k of ["AI_PROVIDER", "AI_BASE_URL", "AI_API_KEY", "AI_MODEL", "AI_MODELS", "AI_MODEL_VISI",
     "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT",
-    "BYNARA_API_KEY", "MODELS_JSON",
+    "NINE_API_KEY", "MODELS_JSON",
     "ALLOWED_ORIGINS", "APP_URL", "AI_MODEL_IZIN", "AI_CADANGAN",
     "VERCEL", "VERCEL_ENV", "VERCEL_URL", "HOSTING",
   ]) if (g[k] !== undefined) kunci[k] = g[k];

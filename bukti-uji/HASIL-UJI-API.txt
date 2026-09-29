@@ -1,7 +1,7 @@
-  ✓ percakapan biasa memakai model mode fast — agnes-2.5-flash
+  ✓ percakapan biasa memakai model mode fast — kr/claude-haiku-4.5
   ✓ instruksi sistem dasar terkirim
   ✓ jawaban mengalir (stream) aktif
-  ✓ gambar memakai antrean model VISION — gemini-3.8-flash-high
+  ✓ gambar memakai antrean model VISION — kr/claude-haiku-4.5
   ✓ gambar dikirim sebagai image_url
   ✓ teks pertanyaan tetap ikut
   ✓ saat ada gambar, jawaban dikirim utuh (bukan stream)

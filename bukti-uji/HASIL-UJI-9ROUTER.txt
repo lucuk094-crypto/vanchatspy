@@ -1,0 +1,30 @@
+UJI PENYEDIA 9ROUTER — alur aplikasi lewat router tiruan
+29/9/2026, 19.14.46
+──────────────────────────────────────────────────────────
+══ uji: Van Chat.SPY memakai 9Router (rqacwx8.abc-tunnel.us) ══
+   penyediaTeks({AI_PROVIDER:"9router"}) → {"dasar":"https://rqacwx8.abc-tunnel.us/v1","gaya":"openai","router":true}
+  ✓ alamat bawaan 9Router sudah dikenal — https://rqacwx8.abc-tunnel.us/v1
+  ✓ gaya protokol = openai (Authorization: Bearer)
+  ✓ daftar model diambil dari penyedia itu sendiri
+   penyedia: {"nama":"9router","label":"9Router (127.0.0.1:20150)","kustom":true,"alamat":"http://127.0.0.1:20150/v1","lokal":false,"router":true,"dasarLokal":false,"gaya":"openai","modelDariRouter":true}
+   model dari penyedia: kr/claude-haiku-4.5, kr/claude-sonnet-4.5, kr/claude-sonnet-4.5-agentic, kr/auto, cx/gpt-6-sol, FreeTiers
+  ✓ penyedia dilaporkan sebagai 9router
+  ✓ daftar model berasal dari penyedia itu (kr/*) — kr/claude-haiku-4.5,kr/claude-sonnet-4.5,kr/claude-sonnet-4.5-agentic
+  ✓ tidak ada model penyedia lain yang nyasar — kr/claude-haiku-4.5,kr/claude-sonnet-4.5,kr/claude-sonnet-4.5-agentic
+   jawaban: "Kopi adalah minuman."
+  ✓ percakapan lewat /v1/chat/completions
+  ✓ perintah bentuk "tepat tiga kata" dipatuhi — Kopi adalah minuman.
+   aliran: 6 potongan → "Jawaban dari gateway tiruan untuk: Sebut satu fakta sin"
+  ✓ jawaban mengalir (SSE) bekerja
+   visi: "Latar belakang merah dengan lingkaran putih di tengah dan batang vertikal biru."
+  ✓ foto terkirim & "dilihat"
+   builder: 263 bita dari kr/claude-sonnet-4.5
+  ✓ AI Builder jalan lewat penyedia yang sama
+   sebelum penyedia hidup → "Tidak bisa menghubungi penyedia AI (9Router (127.0.0.1:20151) di http://127.0.0.1:20151/v1"
+  ✓ sebelum hidup dijawab jujur (bukan jawaban palsu)
+   setelah penyedia hidup → web jalan dalam 1.0 detik (tanpa restart)
+  ✓ web aktif sendiri tanpa di-restart setelah penyedia normal
+   kunci salah → HTTP pesan: "kunci penyedia AI ditolak penyedianya (9Router (127.0.0.1:20150) di http://127.0.0.1:20150/v1). Periksa AI_API_KEY — kun"
+  ✓ kunci salah dijawab jujur (bukan "semua model sibuk")
+
+HASIL: SEMUA LULUS

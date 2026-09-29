@@ -7,7 +7,7 @@
  *
  *  GET /api/health → { ok, service, versi, keyConfigured, model, modes }
  *
- *  GET /api/health?uji=1     → uji koneksi ke NaraRouter (GET /v1/models)
+ *  GET /api/health?uji=1     → uji koneksi ke 9Router (GET /v1/models)
  *  GET /api/health?uji=chat  → sekalian kirim 1 percakapan sangat pendek
  *  Hasilnya menyebut status HTTP, lama waktu, dan galat apa adanya — dipakai
  *  untuk menjawab "kenapa tidak bisa menghubungi penyedia AI?" tanpa menebak.
@@ -15,12 +15,12 @@
  */
 import { penyediaTeks, teksDariSSE } from "./_ai.js";
 
-/* Model cadangan (daftar sungguhan diambil dari NaraRouter oleh /api/chat). */
+/* Model cadangan (daftar sungguhan diambil dari 9Router oleh /api/chat). */
 const MODEL = {
-  fast: "agnes-2.5-flash",
-  think: "agnes-3-flash",
-  deep: "deepseek-v4-flash",
-  expert: "deepseek-v4-pro",
+  fast: "kr/claude-haiku-4.5",
+  think: "kr/claude-sonnet-4.5",
+  deep: "kr/claude-sonnet-4.5",
+  expert: "kr/claude-sonnet-4.5",
 };
 
 export const config = { runtime: "edge" };
@@ -119,7 +119,7 @@ export default async function (request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (request.method !== "GET") return json({ ok: false, pesan: "Gunakan GET" }, 405);
 
-  const kunci = String(process.env.AI_API_KEY || process.env.BYNARA_API_KEY || "").trim();
+  const kunci = String(process.env.AI_API_KEY || process.env.NINE_API_KEY || "").trim();
 
   /* ?uji=1 / ?uji=chat → diagnosa sungguhan ke penyedia */
   const param = new URL(request.url).searchParams.get("uji");
@@ -149,7 +149,7 @@ export default async function (request) {
       builder: true,
       riwayat: "browser (localStorage)",
       suara: "bawaan browser (Web Speech API)",
-      batas: "sesuai paket akun NaraRouter + pengaman 60 permintaan/menit per IP",
+      batas: "sesuai paket akun 9Router + pengaman 60 permintaan/menit per IP",
     },
     pesan: kunci ? "siap dipakai" : "kunci API belum dipasang",
   }, 200);

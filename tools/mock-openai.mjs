@@ -1,6 +1,6 @@
 /*
  * mock-openai.mjs — TIRUAN gateway OpenAI-compatible (dipakai untuk meniru
- * NaraRouter pada pengujian: alamat, kunci, daftar model, jawaban & streaming).
+ * 9Router pada pengujian: alamat, kunci, daftar model, jawaban & streaming).
  *
  * Tujuannya: membuktikan Van Chat.SPY benar-benar bisa berjalan dengan
  * penyedia sungguhan — tanpa memakai kuota asli.
@@ -11,7 +11,7 @@
  * Kunci: kalau dijalankan dengan --butuh-kunci, wajib Bearer token.
  *
  *   node tools/mock-openai.mjs [--port 20128] [--butuh-kunci kunci-rahasia]
- *   node tools/mock-openai.mjs --model-daftar "agnes-2.5-flash,agnes-3-flash" 
+ *   node tools/mock-openai.mjs --model-daftar "kr/claude-haiku-4.5,kr/claude-sonnet-4.5" 
  */
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -26,7 +26,7 @@ const HOST = arg('host', process.env.MOCK_OPENAI_HOST || '127.0.0.1');
 
 /* model tiruan bawaan.
    Bisa diganti lewat --model-daftar "a,b,c" supaya tiruan yang sama bisa dipakai
-   untuk gateway OpenAI-compatible apa pun (mis. NaraRouter: agnes-2.5-flash, …). */
+   untuk gateway OpenAI-compatible apa pun (mis. 9Router: kr/claude-haiku-4.5, …). */
 const MODEL = (() => {
   const daftar = arg('model-daftar', '');
   if (daftar) return String(daftar).split(',').map((s) => s.trim()).filter(Boolean);

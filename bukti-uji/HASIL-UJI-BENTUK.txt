@@ -1,5 +1,5 @@
 perintah : node tools/uji-bentuk.mjs
-waktu    : 2026-09-29T18:41:38.127Z
+waktu    : 2026-09-29T19:14:39.781Z
 
 ══ J. kepatuhan AI pada perintah bentuk ══
 ── lapis 1: pengenalan perintah (tanpa kuota) ──

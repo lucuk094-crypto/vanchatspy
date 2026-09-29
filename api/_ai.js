@@ -1,24 +1,21 @@
 /*
  * _ai.js — satu pintu ke penyedia AI aplikasi ini.
  *
- * PENYEDIA: **NaraRouter** (https://router.bynara.id) — gateway multi-model yang
- * bicara protokol OpenAI, jadi perkakas OpenAI apa pun bisa dipakai:
+ * PENYEDIA: **9Router** — router multi-model lokal (keluarga 9router) yang
+ * diakses lewat alamat tunnel, dan bicara protokol OpenAI:
  *
- *   AI_PROVIDER = bynara (bawaan; boleh juga nararouter)
- *   AI_BASE_URL = https://router.bynara.id/v1   ← boleh dikosongkan, ini bawaannya
- *   AI_API_KEY  = kunci dari dasbor NaraRouter (halaman API keys, berawalan sk-nry-)
+ *   AI_BASE_URL = https://rqacwx8.abc-tunnel.us/v1   ← boleh dikosongkan, ini bawaannya
+ *   AI_API_KEY  = kunci 9Router (boleh juga NINE_API_KEY)
  *   AI_MODEL    = model tunggal (kalau kosong → daftar per mode di chat.js)
  *
- * Kalau kamu ingin menunjuk ke gateway lain yang **juga** protokol OpenAI
- * (mis. NaraRouter-mu sendiri di alamat lain), isi AI_BASE_URL dan AI_API_KEY —
- * tidak ada perubahan kode yang perlu.
+ * Alamatnya bisa diganti kapan saja lewat AI_BASE_URL. Contoh kalau 9Router jalan
+ * di komputer sendiri: AI_BASE_URL=http://127.0.0.1:20128/v1
  *
- *   IMAGE_PROVIDER = bynara  (gambar lewat api-images.bynara.id)
- *   IMAGE_API_KEY  = kunci NaraRouter (kalau kosong → fitur gambar mati, jujur)
- *   IMAGE_MODEL    = nama model gambar
- *
- *   STT_PROVIDER / STT_API_KEY  = transkripsi suara (protokol OpenAI)
- *   TTS_PROVIDER / TTS_API_KEY  = suara AI (protokol OpenAI)
+ *   IMAGE_PROVIDER / IMAGE_API_KEY = pembuat gambar (opsional; 9Router lewat tunnel
+ *                                  ini TIDAK melayani pembuatan gambar, jadi
+ *                                  fiturnya jujur menyebut belum aktif)
+ *   STT_PROVIDER / STT_API_KEY     = transkripsi suara (protokol OpenAI)
+ *   TTS_PROVIDER / TTS_API_KEY     = suara AI (protokol OpenAI)
  *   TTS_MODEL / TTS_VOICE
  *
  * Fungsi yang disediakan:
@@ -30,18 +27,45 @@
  * atau gambar palsu.
  */
 
-/* NaraRouter: satu-satunya alamat penyedia yang dikenal aplikasi ini. */
-const ALAMAT = {
-  bynara: 'https://router.bynara.id/v1',
-  nararouter: 'https://router.bynara.id/v1',
-};
+/* 9Router: satu-satunya penyedia yang dikenal aplikasi ini. */
+const NAMA_PENYEDIA = '9router';
+const LABEL_PENYEDIA = '9Router';
+const ALAMAT_BAWAAN = 'https://rqacwx8.abc-tunnel.us/v1';
 
-/* Alamat pembuat gambar NaraRouter (dokumentasi resminya: api-images.bynara.id). */
-const ALAMAT_GAMBAR = {
-  bynara: 'https://api-images.bynara.id/v1',
-  nararouter: 'https://api-images.bynara.id/v1',
-};
-;
+/* Model "thinking" kadang menulis penalaran internalnya di dalam tag. Penalarannya
+   TIDAK boleh tampil ke pengguna (aturan aplikasi: jangan pernah menampilkan isi
+   pikiran model), jadi bagian itu dibuang — bukan ditampilkan, bukan dikarang. */
+const RX_PIKIR = /<(thinking|thought|reasoning)>[\s\S]*?<\/\1>/gi;
+export function bersihkanPikir(teks) {
+  return String(teks || '').replace(RX_PIKIR, '').replace(/^\s*<\/?(thinking|thought|reasoning)>\s*/gim, '').trim();
+}
+
+/* Versi untuk jawaban yang MENGALIR: menyaring sambil jalan, tahan potongan tag. */
+export function buatPenyaringPikir() {
+  let buf = '', dalam = false;
+  const buka = /<(thinking|thought|reasoning)>/i, tutup = /<\/(thinking|thought|reasoning)>/i;
+  return {
+    tulis(bagian) {
+      buf += String(bagian || '');
+      let keluar = '';
+      for (;;) {
+        if (dalam) {
+          const m = buf.match(tutup);
+          if (!m) { buf = buf.slice(-12); return keluar; }   /* buang isi pikiran */
+          buf = buf.slice(m.index + m[0].length); dalam = false; continue;
+        }
+        const b = buf.match(buka);
+        if (!b) {
+          if (buf.length > 12) { keluar += buf.slice(0, buf.length - 12); buf = buf.slice(-12); }
+          return keluar;
+        }
+        keluar += buf.slice(0, b.index);
+        buf = buf.slice(b.index + b[0].length); dalam = true;
+      }
+    },
+    sisa() { const s2 = dalam ? '' : buf; buf = ''; dalam = false; return s2; },
+  };
+}
 
 /* Sebagian gateway mengabaikan stream:false dan tetap menjawab dengan aliran SSE.
    Fungsi ini menyatukan potongan-potongan itu menjadi teks utuh supaya jawaban
@@ -68,36 +92,31 @@ export function teksDariSSE(teks) {
   return { teks: utuh.trim(), model, sesuai: true, alasan };
 }
 
-/* nama tampilan yang JUJUR: kalau AI_BASE_URL menunjuk ke gateway lain (bukan
-   NaraRouter), jangan mengaku ini NaraRouter — sebut host-nya apa adanya. */
-function namakanTampilan(nama, dasar, alamatBawaan) {
+/* Nama tampilan yang JUJUR: kalau AI_BASE_URL menunjuk ke alamat lain (mis.
+   9Router yang jalan di komputer sendiri), host-nya disebut apa adanya. */
+function namakanTampilan(dasar, alamatBawaan) {
   const host = (() => { try { return new URL(dasar).host; } catch (e) { return dasar; } })();
   const bawaan = (() => { try { return new URL(alamatBawaan).host; } catch (e) { return ''; } })();
-  if (nama === 'bynara' || nama === 'nararouter') {
-    if (!bawaan || host === bawaan) return 'NaraRouter';
-    return 'gateway OpenAI-compatible di ' + host;   /* jujur: bukan NaraRouter */
-  }
-  return nama;
+  if (!bawaan || host === bawaan) return LABEL_PENYEDIA;
+  return LABEL_PENYEDIA + ' (' + host + ')';
 }
 
 export function penyediaTeks(env = {}) {
-  const nama = String(env.AI_PROVIDER || 'bynara').toLowerCase();
-  const dasar = String(env.AI_BASE_URL || ALAMAT[nama] || ALAMAT.bynara).replace(/\/+$/, '');
-  /* kunci: AI_API_KEY (dan BYNARA_API_KEY sebagai alias kalau kamu suka nama itu) */
-  const kunci = String(env.AI_API_KEY || env.BYNARA_API_KEY || '').trim();
-  const label = namakanTampilan(nama, dasar, ALAMAT[nama] || ALAMAT.bynara);
-  const kustom = (() => { try { return new URL(dasar).host !== new URL(ALAMAT[nama] || ALAMAT.bynara).host; } catch (e) { return false; } })();
+  const dasar = String(env.AI_BASE_URL || ALAMAT_BAWAAN).replace(/\/+$/, '');
+  /* kunci: AI_API_KEY (NINE_API_KEY diterima sebagai alias) */
+  const kunci = String(env.AI_API_KEY || env.NINE_API_KEY || '').trim();
+  const label = namakanTampilan(dasar, ALAMAT_BAWAAN);
+  const kustom = (() => { try { return new URL(dasar).host !== new URL(ALAMAT_BAWAAN).host; } catch (e) { return false; } })();
   return {
-    nama,
+    nama: NAMA_PENYEDIA,
     label,        /* untuk pesan ke pengguna */
-    kustom,       /* true = dipakai gateway lain lewat AI_BASE_URL */
+    kustom,       /* true = alamat lain lewat AI_BASE_URL */
     dasar,
     kunci,
     adaKunci: !!kunci,
-    /* NaraRouter melayani protokol OpenAI: Authorization: Bearer + /chat/completions */
+    /* 9Router melayani protokol OpenAI: Authorization: Bearer + /chat/completions */
     gaya: 'openai',
-    /* daftar model diambil dari penyedia itu sendiri (GET /models) — yang muncul
-       hanya model yang boleh dipakai paket/akunmu */
+    /* daftar model diambil dari penyedia itu sendiri (GET /models) */
     router: true,
     lokal: false,
     dasarLokal: false,
@@ -107,10 +126,9 @@ export function penyediaTeks(env = {}) {
 export function penyediaGambar(env = {}) {
   const nama = String(env.IMAGE_PROVIDER || '').toLowerCase();
   const kunci = String(env.IMAGE_API_KEY || '').trim();
-  const dasar = String(env.IMAGE_BASE_URL || ALAMAT_GAMBAR[nama] || ALAMAT[nama] || 'https://api-images.bynara.id/v1').replace(/\/+$/, '');
-  const model = String(env.IMAGE_MODEL || (ALAMAT_GAMBAR[nama] ? 'agnes-image-2.1-flash' : 'gpt-image-1'));
-  const label = nama ? namakanTampilan(nama, dasar, ALAMAT_GAMBAR[nama] || ALAMAT[nama] || '') : '';
-  return { nama, label, dasar, kunci, model, siap: !!nama && !!kunci };
+  const dasar = String(env.IMAGE_BASE_URL || '').replace(/\/+$/, '');
+  const model = String(env.IMAGE_MODEL || 'gpt-image-1');
+  return { nama, label: nama ? nama : '', dasar, kunci, model, siap: !!nama && !!kunci && !!dasar };
 }
 
 export function penyediaSuara(env = {}, jenis = 'tts') {
@@ -129,12 +147,12 @@ function kepala(penyedia) {
   return h;
 }
 
-/* NaraRouter mewajibkan kunci pada setiap permintaan (tanpa kunci dijawab 401). */
+/* 9Router mewajibkan kunci pada setiap permintaan (tanpa kunci dijawab 401). */
 function bolehJalan(p) { return p.adaKunci; }
 function pesanButuhKunci(p) {
-  return 'Kunci NaraRouter belum dipasang. Buat kunci di dasbor (halaman API keys) lalu isi '
-    + 'AI_API_KEY di hosting/berkas .env — atau jalankan `node tools/cek-penyedia.mjs --url '
-    + p.dasar + ' --key sk-nry-… --nama bynara --tulis`.';
+  return 'Kunci 9Router belum dipasang. Isi AI_API_KEY di berkas .env.local (lokal) atau di '
+    + 'Environment Variables hosting (Vercel → Settings → Environment Variables → Redeploy). '
+    + 'Alamat yang dipakai: ' + p.dasar + '.';
 }
 
 async function gagalAmbil(r) {
@@ -199,7 +217,7 @@ export async function generateImage({ env = {}, prompt, rasio = '1:1', kualitas 
       butuhKunci: true,
       pesan:
         'Pembuat gambar belum aktif: gambar dihitung per kredit oleh penyedia, jadi kuncinya harus dipasang dulu. ' +
-        'Isi Environment Variable IMAGE_PROVIDER=bynara dan IMAGE_API_KEY (kunci NaraRouter), lalu fitur ini langsung jalan.',
+        'Isi Environment Variable IMAGE_PROVIDER=9router dan IMAGE_API_KEY (kunci 9Router), lalu fitur ini langsung jalan.',
     };
   }
   const ukuran = petaUkuran(rasio, kualitas);
@@ -308,8 +326,8 @@ export function daftarProvider(env = {}) {
       penyedia: t.nama, label: t.label, alamat: t.dasar, adaKunci: t.adaKunci, kunci: samarkan(t.kunci),
       modelTetap: env.AI_MODEL || null, lokal: t.lokal, kustom: t.kustom,
       catatan: t.kustom
-        ? 'Gateway OpenAI-compatible pilihanmu (' + t.dasar + ') — daftar model dibaca dari gateway itu sendiri.'
-        : 'NaraRouter (https://router.bynara.id) — model yang tampil diambil dari daftar model milik akunmu.',
+        ? '9Router di alamat pilihanmu (' + t.dasar + ') — daftar model dibaca dari router itu sendiri.'
+        : '9Router (' + ALAMAT_BAWAAN + ') — model yang tampil diambil dari daftar model 9Router-mu.',
     },
     gambar: { penyedia: g.nama || '(belum diatur)', model: g.model, siap: g.siap, kunci: samarkan(g.kunci) },
     suara: { stt: { penyedia: s.nama || '(bawaan browser)', siap: s.siap }, tts: { penyedia: v.nama || '(bawaan browser)', siap: v.siap, suara: v.suara } },

@@ -2,14 +2,14 @@
   "name": "van-chat-spy",
   "version": "1.0.0",
   "private": true,
-  "description": "Van Chat.SPY — asisten AI mandiri: halaman 3 kolom, ruang kerja berkas, AI Builder dengan kotak pasir, riwayat lengkap. Penyedia AI: NaraRouter (OpenAI-compatible).",
+  "description": "Van Chat.SPY — asisten AI mandiri: halaman 3 kolom, ruang kerja berkas, AI Builder dengan kotak pasir, riwayat lengkap. Penyedia AI: 9Router (OpenAI-compatible).",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "mulai": "node tools/server-uji.mjs",
-    "uji": "node tools/uji-bentuk.mjs && node tools/uji-api.mjs && node tools/cek-impor-api.mjs && node tools/cek-ikon.mjs && node tools/uji-rahasia.mjs && node tools/uji-bynara.mjs",
+    "uji": "node tools/uji-bentuk.mjs && node tools/uji-api.mjs && node tools/cek-impor-api.mjs && node tools/cek-ikon.mjs && node tools/uji-rahasia.mjs && node tools/uji-9router.mjs",
     "uji:tampilan": "node tools/uji-tampilan.mjs && node tools/uji-bagian-h.mjs && node tools/uji-arahan-proyek.mjs && node tools/smoke-18.mjs",
     "cek:penyedia": "node tools/cek-penyedia.mjs",
     "uji:live": "node tools/uji-live.mjs"

@@ -1,0 +1,21 @@
+HASIL CEK PENYEDIA AI (OpenAI-compatible)
+29/9/2026, 19.14.07
+──────────────────────────────────────────────────────────
+══ memeriksa penyedia AI (OpenAI-compatible) ══
+   alamat : https://rqacwx8.abc-tunnel.us/v1
+   kunci  : sk-6…(35 karakter)
+
+  ✓ daftar model terbaca (GET /models) — HTTP 200 · 87 model
+   contoh: FreeTiers, kr/auto, kr/auto-thinking, kr/claude-sonnet-4.5, kr/claude-sonnet-4.5-thinking, kr/claude-sonnet-4.5-agentic …
+
+2) percakapan uji via POST /chat/completions (model: kr/minimax-m2.5)
+   jawaban penyedia: HTTP 0 · The operation was aborted due to timeout
+  ✗ percakapan berhasil — HTTP 0
+
+3) streaming (SSE) — yang dipakai halaman chat
+  ✗ mengalir sebagai SSE (data: {...} + [DONE]) — HTTP 0 · 0 potongan
+
+4) kesimpulan
+   ✗ ada 2 masalah — perbaiki dulu sebelum dipakai di aplikasi.
+
+HASIL: ADA MASALAH

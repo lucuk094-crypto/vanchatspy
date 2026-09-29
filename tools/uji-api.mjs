@@ -13,9 +13,9 @@ const AKAR = pathlibInit.resolve(pathlibInit.dirname(fileURLToPath(import.meta.u
 
 /* pengujian ini memakai kunci tiruan + penyedia tiruan (fetch dicegat di bawah),
    supaya jalur backend yang sungguhan ikut teruji — tanpa kuota asli */
-process.env.AI_PROVIDER = 'bynara';
-process.env.AI_BASE_URL = 'https://router.bynara.id/v1';
-process.env.AI_API_KEY = 'sk-nry-tiruan-untuk-uji';
+process.env.AI_PROVIDER = '9router';
+process.env.AI_BASE_URL = 'https://rqacwx8.abc-tunnel.us/v1';
+process.env.AI_API_KEY = 'sk-tiruan-untuk-uji';
 
 const { default: chat } = await import(pathlibInit.join(AKAR, 'api/chat.js'));
 
@@ -30,10 +30,10 @@ const cek = (nama, benar, ket) => {
 
 const asli = globalThis.fetch;
 let terakhir = null;
-/* tiruan NaraRouter: daftar model (GET /models) + jawaban (POST /chat/completions) */
-const MODEL_UJI = ['agnes-2.5-flash', 'agnes-3-flash', 'gemini-3.8-flash-high', 'deepseek-v4-flash', 'claude-sonnet-5'];
+/* tiruan 9Router: daftar model (GET /models) + jawaban (POST /chat/completions) */
+const MODEL_UJI = ['kr/claude-haiku-4.5', 'kr/claude-sonnet-4.5', 'kr/auto', 'FreeTiers'];
 globalThis.fetch = async (url, opsi) => {
-  if (String(url).includes('router.bynara.id')) {
+  if (String(url).includes('rqacwx8.abc-tunnel.us')) {
     if (String(url).endsWith('/models')) {
       return new Response(JSON.stringify({ object: 'list', data: MODEL_UJI.map((id) => ({ id, object: 'model' })) }),
         { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -55,7 +55,7 @@ const panggil = (body) => chat(new Request('http://lokal/api/chat', {
 /* 1. percakapan biasa */
 terakhir = null;
 await panggil({ prompt: 'hai', mode: 'fast', stream: true });
-cek('percakapan biasa memakai model mode fast', /agnes-2\.5-flash|agnes-3-flash|deepseek-v4-flash/.test(terakhir.model), terakhir.model);
+cek('percakapan biasa memakai model mode fast', /kr\/claude-haiku-4\.5|kr\/claude-sonnet-4\.5|FreeTiers|kr\/auto/.test(terakhir.model), terakhir.model);
 cek('instruksi sistem dasar terkirim', /Van Chat\.SPY/.test(terakhir.messages[0].content));
 cek('jawaban mengalir (stream) aktif', terakhir.stream === true);
 

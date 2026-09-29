@@ -1,9 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────
 # Van Chat.SPY di VPS/server sendiri (Docker)
-#   cp .env.example .env      (isi AI_API_KEY = kunci NaraRouter)
+#   cp .env.example .env      (isi AI_API_KEY = kunci 9Router)
 #   docker compose up -d      → web: http://<ip-vps>:8131
 #
-# Penyedia AI-nya NaraRouter (alamat publik), jadi cukup satu layanan —
+# Penyedia AI-nya 9Router (alamat publik), jadi cukup satu layanan —
 # tidak ada router lokal yang perlu dijalankan di dalam server ini.
 # ─────────────────────────────────────────────────────────────────────
 services:
@@ -13,11 +13,11 @@ services:
     restart: unless-stopped
     environment:
       PORT: 8131
-      AI_PROVIDER: bynara
+      AI_PROVIDER: 9router
       AI_API_KEY: ${AI_API_KEY:-}
       # opsional: pilih model per mode
-      # AI_MODEL_FAST: agnes-2.5-flash
-      # AI_MODEL_THINK: agnes-3-flash
-      # AI_MODEL_VISI: gemini-3.8-flash-high
+      # AI_MODEL_FAST: kr/claude-haiku-4.5
+      # AI_MODEL_THINK: kr/claude-sonnet-4.5
+      # AI_MODEL_VISI: kr/claude-sonnet-4.5
     ports:
       - "8131:8131"

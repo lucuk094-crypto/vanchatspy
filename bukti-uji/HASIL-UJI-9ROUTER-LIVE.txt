@@ -1,0 +1,48 @@
+Bukti uji LANGSUNG: Van Chat.SPY memakai 9Router lewat tunnel (penyedia satu-satunya)
+Tanggal (UTC): 2026-09-30  ·  Zona pengguna: Asia/Jakarta
+Alamat  : https://rqacwx8.abc-tunnel.us/v1  (bawaan aplikasi, AI_BASE_URL boleh kosong)
+Kunci   : TIDAK ditulis di berkas ini — hanya di .env.local / Environment Variables
+          (disamarkan: sk-6…(35 karakter))
+Cara    : nyalakan 9Router → `node tools/server-uji.mjs` (kunci dibaca dari .env.local)
+
+1) /api/chat — penyedia & daftar model
+   penyedia   : 9router · label "9Router" · alamat https://rqacwx8.abc-tunnel.us/v1
+   pesan      : siap — 9Router di https://rqacwx8.abc-tunnel.us/v1
+   model/mode : fast kr/claude-haiku-4.5 · think kr/auto-thinking ·
+                deep kr/claude-sonnet-4.5 · expert kr/claude-sonnet-4.5
+                (diambil dari GET /v1/models 9Router; diuji: 87 model terlihat)
+
+2) Percakapan + perintah bentuk
+   prompt : "Balas tepat tiga kata: kopi itu enak"
+   jawaban: "Kopi memang enak."  (model kr/claude-haiku-4.5, diperbaiki 1x → patuh)
+
+3) Kirim foto (visi)
+   gambar 32x32 merah → jawaban "Merah" (model FreeTiers)
+
+4) Streaming + penyaring penalaran internal (uji penting)
+   model  : kr/claude-sonnet-4.5-thinking
+   aliran : 13 potongan, diakhiri data: [DONE]
+   jawaban: "Kopi arabika tumbuh optimal di ketinggian 600-2000 meter …"
+   bocor pikiran dalam (<thinking>…</thinking>): TIDAK — dibuang di server
+
+5) AI Builder
+   ok: true · model kr/claude-sonnet-4.5 · 12.262 bita HTML (satu halaman utuh)
+
+6) /api/health?uji=chat
+   penyedia  : 9Router (https://rqacwx8.abc-tunnel.us/v1) · kunci: true
+   model     : 87 model · 1.381 ms
+   percakapan: ok — model FreeTiers, 1.513 ms, jawaban "Halo"
+   kesimpulan: "penyedia + kunci sehat — percakapan berhasil"
+
+7) Uji tampilan & tombol di Chromium (server ini juga)
+   smoke-18 · uji-tampilan · uji-bagian-h · uji-arahan-proyek · uji-cari → SEMUA LULUS
+
+8) Catatan jujur
+   · Daftar model 9Router "ramai tapi sebagian mati" (openrouter/*:free → 503,
+     sebagian 400/404). Aplikasi menyisir kandidat, MENGINGAT model yang berhasil,
+     dan menahan yang baru gagal selama 5 menit.
+   · Aliran SSE 9Router berakhir tanpa data: [DONE]; aplikasi tidak menunggu
+     penanda itu (aliran ditutup → selesai).
+   · Pembuat gambar BELUM aktif: /v1/images/generations dijawab
+     "No credentials for provider: openai" → panel gambar jujur mengatakan belum aktif.
+   · Host tunnel bersifat sementara; kalau alamatnya berubah, isi AI_BASE_URL baru.

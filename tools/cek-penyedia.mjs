@@ -1,11 +1,11 @@
 /*
  * cek-penyedia.mjs — pemeriksa penyedia AI bergaya OpenAI-compatible
- * (NaraRouter: https://router.bynara.id/v1) sebelum dipakai aplikasi:
+ * (9Router: https://rqacwx8.abc-tunnel.us/v1) sebelum dipakai aplikasi:
  * memeriksa daftar model, kunci, dan satu percakapan uji.
  *
  * Pakai:
- *   node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara
- *   node tools/cek-penyedia.mjs --url ... --key ... --nama bynara --tulis
+ *   node tools/cek-penyedia.mjs --url https://rqacwx8.abc-tunnel.us/v1 --key sk-XXXX --nama 9router
+ *   node tools/cek-penyedia.mjs --url ... --key ... --nama 9router --tulis
  *
  * --tulis menyimpan hasilnya ke tools/penyedia.json (dibaca otomatis oleh
  * tools/server-uji.mjs). Berkas itu berisi kunci rahasia → jangan dibagikan
@@ -32,7 +32,7 @@ const NAMA = String(arg('nama', '')).trim();
 const TULIS = adaFlag('tulis');
 
 if (!URL_P) {
-  console.error('Butuh --url, mis.  node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara');
+  console.error('Butuh --url, mis.  node tools/cek-penyedia.mjs --url https://rqacwx8.abc-tunnel.us/v1 --key sk-XXXX --nama 9router');
   process.exit(2);
 }
 
@@ -76,11 +76,22 @@ if (daftar.ok) {
 cek('daftar model terbaca (GET /models)', daftar.ok && model.length > 0, 'HTTP ' + daftar.status + ' · ' + model.length + ' model');
 if (model.length) tulis('   contoh: ' + model.slice(0, 6).join(', ') + (model.length > 6 ? ' …' : ''));
 if (daftar.status === 401 || daftar.status === 403) {
-  tulis('   catatan: kunci ditolak. Di NaraRouter, kunci harus berawalan sk-nry- dan dibuat di halaman API keys dasbor.');
+  tulis('   catatan: kunci ditolak. Di 9Router, kunci harus berawalan sk- dan dibuat di halaman API keys dasbor.');
 }
 
-/* 2. percakapan uji */
-const modelUji = model.find((m) => /flash|mini|small|lite/i.test(m)) || model[0] || 'model-uji';
+/* 2. percakapan uji
+   Sebagian model di daftar 9Router tidak punya kredensial aktif atau menggantung,
+   jadi satu model gagal BUKAN berarti penyedia mati. Alat ini mencoba beberapa
+   kandidat: keluarga yang terbukti hidup lebih dulu. */
+const PILIHAN_UTAMA = ['kr/claude-haiku-4.5', 'kr/claude-sonnet-4.5', 'kr/auto', 'FreeTiers'];
+const kandidatUji = [].concat(
+  process.env.MODEL_UJI ? [process.env.MODEL_UJI] : [],
+  PILIHAN_UTAMA.filter((m) => model.includes(m)),
+  model.filter((m) => /^kr\//.test(m) && !/-thinking|-agentic/.test(m)),
+  model.filter((m) => /flash|mini|small|lite/i.test(m)),
+  model,
+).filter((m, i, a) => m && a.indexOf(m) === i).slice(0, 5);
+let modelUji = kandidatUji[0] || 'model-uji';
 async function coba(m) {
   const badan = { model: m, max_tokens: 24, messages: [{ role: 'user', content: pesanUji }] };
   const r = await ambil(URL_P + '/chat/completions', { method: 'POST', body: JSON.stringify(badan) });
@@ -96,8 +107,16 @@ async function coba(m) {
 }
 
 tulis('');
-tulis('2) percakapan uji via POST /chat/completions (model: ' + modelUji + ')');
-const hasil = await coba(modelUji);
+tulis('2) percakapan uji via POST /chat/completions (kandidat: ' + kandidatUji.slice(0, 3).join(', ') + ')');
+let hasil = { ok: false, status: 0, teks: '', galat: '', mentah: '' };
+const gagalModel = [];
+for (const m of (kandidatUji.length ? kandidatUji : [modelUji])) {
+  hasil = await coba(m);
+  if (hasil.ok && String(hasil.teks).trim()) { modelUji = m; break; }
+  gagalModel.push(m + ' → ' + String(hasil.galat || hasil.mentah || '').slice(0, 50));
+  await new Promise((r) => setTimeout(r, 300));
+}
+if (gagalModel.length > 1 || (!hasil.ok && gagalModel.length)) tulis('   dicoba: ' + gagalModel.join(' | '));
 if (hasil.ok && String(hasil.teks).trim()) {
   tulis('   jawaban: "' + String(hasil.teks).trim().slice(0, 80) + '"');
   cek('percakapan berhasil', true);
@@ -106,9 +125,9 @@ if (hasil.ok && String(hasil.teks).trim()) {
   const saldo = /insufficient balance|insufficient credit|no credit|saldo|kredit habis|quota/i.test(hasil.galat + ' ' + hasil.mentah);
   const kunciSalah = hasil.status === 401 || hasil.status === 403;
   if (saldo) {
-    cek('batas/saldo penyedia jadi penghalang — bukan salah setelan', false, 'tunggu batasnya lega atau naikkan paket di dasbor NaraRouter, lalu jalankan lagi');
+    cek('batas/saldo penyedia jadi penghalang — bukan salah setelan', false, 'tunggu batasnya lega atau naikkan paket di dasbor 9Router, lalu jalankan lagi');
   } else if (kunciSalah) {
-    cek('kunci ditolak penyedia', false, 'periksa --key (HTTP ' + hasil.status + ') — di NaraRouter kunci berawalan sk-nry-');
+    cek('kunci ditolak penyedia', false, 'periksa --key (HTTP ' + hasil.status + ') — di 9Router kunci berawalan sk-');
   } else {
     cek('percakapan berhasil', false, 'HTTP ' + hasil.status);
   }
@@ -127,12 +146,12 @@ tulis('');
 tulis('4) kesimpulan');
 if (masalah === 0) {
   tulis('   ✓ penyedia siap dipakai. Setelan untuk aplikasi:');
-  tulis('     AI_PROVIDER = ' + (NAMA || 'bynara'));
+  tulis('     AI_PROVIDER = ' + (NAMA || '9router'));
   tulis('     AI_BASE_URL = ' + URL_P);
   tulis('     AI_API_KEY  = (kunci di atas)');
   if (TULIS) {
     const berkas = {
-      nama: NAMA || 'bynara', url: URL_P, kunci: KUNCI,
+      nama: NAMA || '9router', url: URL_P, kunci: KUNCI,
       model: { fast: model.find((m) => /flash/i.test(m)) || model[0] || '', think: model.find((m) => /agnes|glm|deepseek/i.test(m)) || model[0] || '' },
       jumlahModel: model.length, dicek: new Date().toLocaleString('id-ID'),
     };
