@@ -12,15 +12,9 @@
  * ════════════════════════════════════════════════════════════════════
  */
 
-const KUNCI_BAWAAN = "sk-or-v1-DIHAPUS-F27";
-
-const MODEL_BANGUN = [
-  "dots-studio/dots-3-note-preview:free",        /* paling rapi untuk HTML panjang */
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nex-agi/nex-n2.5-pro:free",
-  "cohere/north-mini-code:free",
-  "deepseek/deepseek-v4-flash-0731:free",
-];
+/* Model cadangan untuk membangun halaman kalau daftar model dari NaraRouter
+   belum terbaca (daftar sungguhan diambil dari penyedia itu sendiri). */
+const MODEL_BANGUN = ["agnes-3-flash", "agnes-2.5-flash", "deepseek-v4-pro"];
 
 const MAX_TOKENS = { fast: 4000, think: 6000, deep: 7000, expert: 8000 };
 const SUHU = { fast: 0.5, think: 0.4, deep: 0.4, expert: 0.3 };
@@ -44,14 +38,12 @@ const json = (o, s, extra) =>
 
 import { asalDiizinkan } from "./_aman.js";
 import { penyediaTeks } from "./_ai.js";
-import { daftarModelLokal, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak } from "./chat.js";
+import { daftarModelLokal, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong } from "./chat.js";
 
-/* daftar model untuk membangun halaman:
-   - OpenRouter: daftar tetap di atas
-   - penyedia lokal (9Router/LM Studio): diambil dari router itu sendiri */
+/* daftar model untuk membangun halaman: diambil dari NaraRouter (GET /models),
+   supaya yang dipakai benar-benar model yang diizinkan paket akunmu */
 async function kandidatBangun(env) {
   const p = penyediaTeks(env);
-  if (!p.router) return MODEL_BANGUN;   /* penyedia bergaya router (9Router lokal/tunnel/VPS) → daftar dari router */
   const jelas = String(env.AI_MODELS || "").split(",").map((s) => s.trim()).filter(Boolean);
   const daftar = await daftarModelLokal(env);
   if (daftar && daftar.length) {
@@ -64,16 +56,12 @@ async function kandidatBangun(env) {
   return [...new Set([env.AI_MODEL_DEEP, env.AI_MODEL_THINK, env.AI_MODEL_FAST, env.AI_MODEL].filter(Boolean))];
 }
 
-const pesanRouterMati = (p, env) => {
-  if (env && (env.VERCEL || env.HOSTING) && p.dasarLokal) {
-    return "Alamat " + p.dasar + " tidak bisa dipakai dari hosting (Vercel) — di sana localhost menunjuk ke server Vercel sendiri. "
-      + "Buka 9Router-mu lewat tunnel (cloudflared) atau VPS, lalu set AI_BASE_URL ke alamat publiknya (/v1) dan deploy ulang. Lihat DEPLOY.md bagian C.";
-  }
-  return "Tidak bisa menghubungi " + (p.nama === "9router" ? "9Router" : p.nama) + " di " + p.dasar + ". "
-  + (p.dasarLokal
-    ? "Jalankan 9Router dulu di CMD/terminal — tulis `9router` sampai muncul \"Server ready\" dan dashboard terbuka di http://localhost:20128/dashboard — lalu kirim ulang."
-    : "Pastikan 9Router di alamat itu sedang jalan dan alamatnya berakhiran /v1"
-      + (p.kunci ? "" : " — kalau 9Router itu memakai kunci, isi dulu AI_API_KEY") + ".");
+const pesanRouterMati = (p) => {
+  const nama = p.nama === "bynara" ? "NaraRouter" : p.nama;
+  return "Tidak bisa menghubungi penyedia AI (" + nama + " di " + p.dasar + ") untuk membangun halaman. "
+    + "Periksa koneksi internet server ini dan kunci AI_API_KEY; cek cepat dengan "
+    + "`node tools/cek-penyedia.mjs --url " + p.dasar + " --key <kunci> --nama bynara`. "
+    + "Ruang kerja tetap bisa dipakai: halaman lama masih bisa dibuka, dijalankan, dan diunduh.";
 };
 
 function cors(origin, env, request) {
@@ -108,10 +96,10 @@ function bersihkanHtml(teks) {
 function jamResetWIB(epoch) {
   try {
     const n = Number(epoch);
-    if (!n) return "07.00 WIB";
+    if (!n) return "beberapa saat lagi";
     return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta", hour12: false })
       .format(new Date(n * 1000)).replace(":", ".") + " WIB";
-  } catch { return "07.00 WIB"; }
+  } catch { return "beberapa saat lagi"; }
 }
 function kuotaHabis(status, detail) {
   if (status === 429) return true;
@@ -120,42 +108,22 @@ function kuotaHabis(status, detail) {
 
 async function bangunSatu(model, prompt, mode, p, env) {
   const kepala = { "Content-Type": "application/json" };
-  const antropis = p.gaya === "anthropic";
-  let alamat, badan;
-  if (antropis) {
-    if (p.kunci) kepala["x-api-key"] = p.kunci;
-    kepala["anthropic-version"] = "2023-06-01";
-    badan = {
-      model,
-      max_tokens: MAX_TOKENS[mode] || 6000,
-      temperature: SUHU[mode] ?? 0.4,
-      system: SYSTEM,
-      messages: [{ role: "user", content: String(prompt || "").slice(0, 12000) }],
-    };
-    alamat = p.dasar + "/messages";
-  } else {
-    if (p.kunci) kepala.Authorization = `Bearer ${p.kunci}`;
-    if (!p.lokal) {
-      kepala["HTTP-Referer"] = env.APP_URL || "https://van-chat-spy.local";
-      kepala["X-Title"] = "Van Chat.SPY Builder";
-    }
-    badan = {
-      model,
-      temperature: SUHU[mode] ?? 0.4,
-      max_tokens: MAX_TOKENS[mode] || 6000,
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: String(prompt || "").slice(0, 12000) },
-      ],
-    };
-    if (!p.lokal) badan.reasoning = { enabled: false };
-    alamat = p.dasar + "/chat/completions";
-  }
+  if (p.kunci) kepala.Authorization = `Bearer ${p.kunci}`;
+  const badan = {
+    model,
+    temperature: SUHU[mode] ?? 0.4,
+    max_tokens: MAX_TOKENS[mode] || 6000,
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: String(prompt || "").slice(0, 12000) },
+    ],
+  };
+  const alamat = p.dasar + "/chat/completions";
   let r;
   try {
     r = await fetch(alamat, { method: "POST", headers: kepala, body: JSON.stringify(badan) });
   } catch (e) {
-    throw new Error("LOKAL|" + pesanRouterMati(p, env) + " (" + String((e && e.message) || e).slice(0, 80) + ")");
+    throw new Error("LOKAL|" + pesanRouterMati(p) + " (" + String((e && e.message) || e).slice(0, 80) + ")");
   }
   if (!r.ok) {
     const t = await r.text();
@@ -180,20 +148,14 @@ async function bangunSatu(model, prompt, mode, p, env) {
         const h = (j && j.error && j.error.metadata && j.error.metadata.headers) || {};
         reset = h["X-RateLimit-Reset"] || h["x-ratelimit-reset"] || "";
       } catch {}
-      throw new Error("KUOTA|kuota gratis harian sudah habis — batas 50 pesan/hari dari penyedia AI. Kuota terisi ulang otomatis pukul " + jamResetWIB(reset) + ".");
+      throw new Error("KUOTA|batas permintaan penyedia AI tercapai (paket NaraRouter). Coba lagi " + jamResetWIB(reset) + ", atau naikkan paket di dasbor NaraRouter.");
     }
     throw new Error(pesan);
   }
   const d = await r.json();
-  let teks = "";
-  if (p.gaya === "anthropic") {
-    teks = (Array.isArray(d && d.content) ? d.content : [])
-      .filter((b) => b && (b.type === "text" || b.type === undefined))
-      .map((b) => String(b.text || "")).join("");
-  } else {
-    const c = d && d.choices && d.choices[0];
-    teks = (c && c.message && c.message.content) || (c && c.text) || "";
-  }
+  const c = d && d.choices && d.choices[0];
+  let teks = (c && c.message && c.message.content) || (c && c.text) || "";
+  if (Array.isArray(teks)) teks = teks.map((b) => (b && (b.text || b.content)) || "").join("");
   const html = bersihkanHtml(teks);
   if (html.length < 120) throw new Error("hasil terlalu pendek");
   return html;
@@ -207,18 +169,18 @@ async function tangani(request, env) {
 
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: c });
   if (request.method === "GET") {
-    const daftar = p.lokal ? ((await daftarModelLokal(env)) || []) : MODEL_BANGUN;
+    const daftar = (await daftarModelLokal(env)) || [];
     return json({
-      ok: true, ready: p.lokal ? true : !!kunci, models: daftar.length ? daftar : MODEL_BANGUN,
-      penyedia: { nama: p.nama, alamat: p.dasar, lokal: p.lokal },
-      pesan: p.lokal ? "siap — " + p.nama + " lokal di " + p.dasar : (kunci ? "siap" : "kunci API belum dipasang"),
+      ok: true, ready: !!kunci, models: daftar.length ? daftar : MODEL_BANGUN,
+      penyedia: { nama: p.nama, alamat: p.dasar },
+      pesan: kunci ? "siap — " + p.nama + " di " + p.dasar : "kunci AI_API_KEY belum dipasang",
     }, 200, c);
   }
   if (request.method !== "POST") return json({ ok: false, pesan: "Gunakan GET atau POST" }, 405, c);
   if (!asalDiizinkan(request, env)) {
     return json({ ok: false, pesan: "Permintaan dari alamat asal yang tidak dikenal ditolak." }, 403, c);
   }
-  if (!p.lokal && !kunci) return json({ ok: false, pesan: "Kunci API belum dipasang di server." }, 500, c);
+  if (!kunci) return json({ ok: false, kunci: true, pesan: "Kunci NaraRouter belum dipasang di server (AI_API_KEY)." }, 401, c);
 
   let body;
   try { body = JSON.parse(await request.text()); } catch { return json({ ok: false, pesan: "JSON tidak valid" }, 400, c); }
@@ -230,8 +192,9 @@ async function tangani(request, env) {
   const kandidat = await kandidatBangun(env);
   if (!kandidat.length) {
     /* alamatnya menjawab tapi kuncinya ditolak ≠ penyedia mati */
+    if (!p.adaKunci) return json({ ok: false, kunci: true, pesan: pesanKunciKosong(p) }, 401, c);
     if (kunciDitolakTerakhir()) return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(p) }, 401, c);
-    return json({ ok: false, pesan: pesanRouterMati(p, env), penyedia: { nama: p.nama, alamat: p.dasar, lokal: p.lokal } }, 502, c);
+    return json({ ok: false, pesan: pesanRouterMati(p), penyedia: { nama: p.nama, alamat: p.dasar } }, 502, c);
   }
 
   let terakhir = "tidak diketahui";
@@ -250,22 +213,23 @@ async function tangani(request, env) {
     }
   }
   if (!terakhir || terakhir === "tidak diketahui") terakhir = "penyedia tidak menjawab";
-  if (pesanJujur) return json({ ok: false, pesan: pesanJujur, penyedia: { nama: p.nama, alamat: p.dasar, lokal: p.lokal } }, 502, c);
+  if (pesanJujur) return json({ ok: false, pesan: pesanJujur, penyedia: { nama: p.nama, alamat: p.dasar } }, 502, c);
   return json({ ok: false, pesan: "Semua model sedang sibuk (" + terakhir + "). Coba lagi sebentar." }, 502, c);
 }
 
 export const config = { runtime: "edge" };
 
-/* env dari process.env, boleh ditimpa server lokal (tools/server-uji.mjs → tools/9router.json) */
+/* env dari process.env, boleh ditimpa server lokal (tools/server-uji.mjs → tools/penyedia.json) */
 function envProses(tambahan) {
   const das = (typeof process !== "undefined" && process.env) || {};
   const g = { ...das, ...(tambahan || {}) };
   const kunci = {};
   for (const k of ["AI_PROVIDER", "AI_BASE_URL", "AI_API_KEY", "AI_MODEL", "AI_MODELS", "AI_MODEL_VISI",
     "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT",
-    "ROUTER_API_KEY", "NINEROUTER_API_KEY", "OPENROUTER_KEY", "MODELS_JSON",
-    "ALLOWED_ORIGINS", "APP_URL", "VERCEL", "VERCEL_ENV", "VERCEL_URL", "HOSTING",
-    "AI_GAYA", "AI_STYLE", "AI_ROUTER"]) if (g[k] !== undefined) kunci[k] = g[k];
+    "BYNARA_API_KEY", "MODELS_JSON",
+    "ALLOWED_ORIGINS", "APP_URL", "AI_MODEL_IZIN", "AI_CADANGAN",
+    "VERCEL", "VERCEL_ENV", "VERCEL_URL", "HOSTING",
+  ]) if (g[k] !== undefined) kunci[k] = g[k];
   return kunci;
 }
 

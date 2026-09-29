@@ -1,7 +1,7 @@
-  ✓ percakapan biasa memakai model mode fast — inclusionai/ling-3.0-flash-sante:free
+  ✓ percakapan biasa memakai model mode fast — agnes-2.5-flash
   ✓ instruksi sistem dasar terkirim
   ✓ jawaban mengalir (stream) aktif
-  ✓ gambar memakai antrean model VISION — dots-studio/dots-3-note-preview:free
+  ✓ gambar memakai antrean model VISION — gemini-3.8-flash-high
   ✓ gambar dikirim sebagai image_url
   ✓ teks pertanyaan tetap ikut
   ✓ saat ada gambar, jawaban dikirim utuh (bukan stream)

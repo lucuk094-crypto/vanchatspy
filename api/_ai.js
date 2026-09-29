@@ -1,95 +1,73 @@
 /*
- * _ai.js — abstraksi penyedia AI (provider abstraction).
+ * _ai.js — satu pintu ke penyedia AI aplikasi ini.
  *
- * Semua kemampuan AI lewat satu pintu, supaya aplikasi tidak terkunci pada
- * satu penyedia. Ganti penyedia cukup dengan Environment Variable:
+ * PENYEDIA: **NaraRouter** (https://router.bynara.id) — gateway multi-model yang
+ * bicara protokol OpenAI, jadi perkakas OpenAI apa pun bisa dipakai:
  *
- *   AI_PROVIDER = openrouter (bawaan) | openai | groq | together | ollama | bynara | 9router
- *   AI_BASE_URL = alamat OpenAI-compatible sendiri (mis. http://localhost:11434/v1)
- *   AI_API_KEY  = kunci penyedia lain (kalau kosong → kunci bawaan OpenRouter)
+ *   AI_PROVIDER = bynara (bawaan; boleh juga nararouter)
+ *   AI_BASE_URL = https://router.bynara.id/v1   ← boleh dikosongkan, ini bawaannya
+ *   AI_API_KEY  = kunci dari dasbor NaraRouter (halaman API keys, berawalan sk-nry-)
  *   AI_MODEL    = model tunggal (kalau kosong → daftar per mode di chat.js)
  *
- *   IMAGE_PROVIDER = openai | stability | together | openrouter
- *   IMAGE_API_KEY  = kunci penyedia gambar (kalau kosong → fitur gambar mati, jujur)
+ * Kalau kamu ingin menunjuk ke gateway lain yang **juga** protokol OpenAI
+ * (mis. NaraRouter-mu sendiri di alamat lain), isi AI_BASE_URL dan AI_API_KEY —
+ * tidak ada perubahan kode yang perlu.
+ *
+ *   IMAGE_PROVIDER = bynara  (gambar lewat api-images.bynara.id)
+ *   IMAGE_API_KEY  = kunci NaraRouter (kalau kosong → fitur gambar mati, jujur)
  *   IMAGE_MODEL    = nama model gambar
  *
- *   STT_PROVIDER / STT_API_KEY  = transkripsi suara (OpenAI-compatible)
- *   TTS_PROVIDER / TTS_API_KEY  = suara AI (OpenAI-compatible)
+ *   STT_PROVIDER / STT_API_KEY  = transkripsi suara (protokol OpenAI)
+ *   TTS_PROVIDER / TTS_API_KEY  = suara AI (protokol OpenAI)
  *   TTS_MODEL / TTS_VOICE
  *
- * Fungsi yang disediakan (sesuai daftar permintaan):
+ * Fungsi yang disediakan:
  *   generateText() · streamText() · analyzeImage() · generateImage()
  *   speechToText() · textToSpeech() · daftarProvider()
  *
- * Catatan jujur: kalau kunci tidak tersedia, fungsi mengembalikan
- * { ok:false, pesan: "...", butuhKunci: true } — BUKAN gambar/teks palsu.
+ * Catatan jujur: kunci TIDAK dipasang di dalam kode ini. Kalau kunci belum ada,
+ * fungsi mengembalikan { ok:false, pesan:"…", butuhKunci:true } — bukan jawaban
+ * atau gambar palsu.
  */
 
-const KUNCI_BAWAAN_OPENROUTER = 'sk-or-v1-DIHAPUS-F27';
-
+/* NaraRouter: satu-satunya alamat penyedia yang dikenal aplikasi ini. */
 const ALAMAT = {
-  openrouter: 'https://openrouter.ai/api/v1',
-  openai: 'https://api.openai.com/v1',
-  groq: 'https://api.groq.com/openai/v1',
-  together: 'https://api.together.xyz/v1',
-  deepseek: 'https://api.deepseek.com/v1',
-  mistral: 'https://api.mistral.ai/v1',
-  ollama: 'http://127.0.0.1:11434/v1',
-  /* 9Router — router AI lokal (https://github.com/decolua/9router).
-     Dijalankan di komputer sendiri lewat CMD/terminal: `9router`
-     → API OpenAI-compatible di http://localhost:20128/v1
-     → kunci diambil dari dashboard http://localhost:20128/dashboard
-       (kalau REQUIRE_API_KEY=false, kunci boleh kosong). */
-  '9router': 'http://127.0.0.1:20128/v1',
-  ninerouter: 'http://127.0.0.1:20128/v1',
-  lmstudio: 'http://127.0.0.1:1234/v1',
-  /* Anthropic resmi (juga gaya yang dipakai relay Claude Code seperti cc.freemodel.dev) */
-  anthropic: 'https://api.anthropic.com/v1',
-  claude: 'https://api.anthropic.com/v1',
-  /* NaraRouter (https://router.bynara.id) — gateway multi-model OpenAI-compatible
-     + Anthropic-compatible. Header: Authorization: Bearer sk-nry-… ; daftar model
-     dibaca dari GET /v1/models miliknya sendiri (tergantung paket akun). */
   bynara: 'https://router.bynara.id/v1',
   nararouter: 'https://router.bynara.id/v1',
 };
 
-/* penyedia yang jalan di komputer sendiri: kunci TIDAK wajib */
-const LOKAL = ['9router', 'ninerouter', 'ollama', 'lmstudio', 'llamacpp'];
-
-/* penyedia bergaya "router": daftar modelnya dibaca dari penyedia itu sendiri
-   (GET /models). Berlaku juga kalau 9Router tidak di localhost — misalnya
-   9Router di rumah yang dibuka lewat tunnel, atau 9Router di VPS. */
-const ROUTER = ['9router', 'ninerouter', 'ollama', 'lmstudio', 'llamacpp', 'lokal', 'bynara', 'nararouter'];
-
-/* Penyedia bergaya ANTHROPIC: endpoint POST {dasar}/messages, header x-api-key
-   + anthropic-version (bukan Authorization: Bearer), dan bentuk jawaban
-   { content: [ { type: "text", text: … } ] }. Beberapa gateway (mis. relay
-   Claude Code seperti cc.freemodel.dev) HANYA melayani gaya ini.
-   Bisa dipaksa untuk penyedia apa pun dengan env AI_GAYA=anthropic. */
-const ANTROPIS = ['anthropic', 'claude', 'claude-code', 'cc', 'freemodel'];
+/* Alamat pembuat gambar NaraRouter (dokumentasi resminya: api-images.bynara.id). */
+const ALAMAT_GAMBAR = {
+  bynara: 'https://api-images.bynara.id/v1',
+  nararouter: 'https://api-images.bynara.id/v1',
+};
+;
 
 export function penyediaTeks(env = {}) {
-  const nama = String(env.AI_PROVIDER || (env.AI_BASE_URL ? 'lokal' : 'openrouter')).toLowerCase();
-  const dasar = String(env.AI_BASE_URL || ALAMAT[nama] || ALAMAT.openrouter).replace(/\/+$/, '');
-  const dasarLokal = /(^|\/\/)(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\])(:|\/)/.test(dasar);
-  const lokal = LOKAL.indexOf(nama) >= 0 || dasarLokal;   /* kunci tidak wajib */
-  const gaya = (String(env.AI_GAYA || env.AI_STYLE || '').toLowerCase() === 'anthropic' || ANTROPIS.indexOf(nama) >= 0)
-    ? 'anthropic' : 'openai';
-  const paksaRouter = ['1', 'true', 'ya', 'on'].indexOf(String(env.AI_ROUTER || '').toLowerCase()) >= 0;
-  const router = ROUTER.indexOf(nama) >= 0 || dasarLokal || gaya === 'anthropic' || paksaRouter;  /* daftar model dari penyedia */
-  const kunci = String(
-    env.AI_API_KEY || env.ROUTER_API_KEY || env.NINEROUTER_API_KEY
-    || (nama === 'openrouter' ? env.OPENROUTER_KEY || KUNCI_BAWAAN_OPENROUTER : '')
-    || ''
-  ).trim();
-  return { nama, dasar, kunci, adaKunci: !!kunci, lokal, router, dasarLokal, gaya };
+  const nama = String(env.AI_PROVIDER || 'bynara').toLowerCase();
+  const dasar = String(env.AI_BASE_URL || ALAMAT[nama] || ALAMAT.bynara).replace(/\/+$/, '');
+  /* kunci: AI_API_KEY (dan BYNARA_API_KEY sebagai alias kalau kamu suka nama itu) */
+  const kunci = String(env.AI_API_KEY || env.BYNARA_API_KEY || '').trim();
+  return {
+    nama,
+    dasar,
+    kunci,
+    adaKunci: !!kunci,
+    /* NaraRouter melayani protokol OpenAI: Authorization: Bearer + /chat/completions */
+    gaya: 'openai',
+    /* daftar model diambil dari penyedia itu sendiri (GET /models) — yang muncul
+       hanya model yang boleh dipakai paket/akunmu */
+    router: true,
+    lokal: false,
+    dasarLokal: false,
+  };
 }
 
 export function penyediaGambar(env = {}) {
   const nama = String(env.IMAGE_PROVIDER || '').toLowerCase();
   const kunci = String(env.IMAGE_API_KEY || '').trim();
-  const dasar = String(env.IMAGE_BASE_URL || ALAMAT[nama] || ALAMAT.openai).replace(/\/+$/, '');
-  const model = String(env.IMAGE_MODEL || (nama === 'stability' ? 'sd3.5-large' : nama === 'together' ? 'black-forest-labs/FLUX.1-schnell-Free' : 'gpt-image-1'));
+  const dasar = String(env.IMAGE_BASE_URL || ALAMAT_GAMBAR[nama] || ALAMAT[nama] || 'https://api-images.bynara.id/v1').replace(/\/+$/, '');
+  const model = String(env.IMAGE_MODEL || (ALAMAT_GAMBAR[nama] ? 'agnes-image-2.1-flash' : 'gpt-image-1'));
   return { nama, dasar, kunci, model, siap: !!nama && !!kunci };
 }
 
@@ -97,7 +75,7 @@ export function penyediaSuara(env = {}, jenis = 'tts') {
   const awalan = jenis === 'tts' ? 'TTS' : 'STT';
   const nama = String(env[awalan + '_PROVIDER'] || '').toLowerCase();
   const kunci = String(env[awalan + '_API_KEY'] || '').trim();
-  const dasar = String(env[awalan + '_BASE_URL'] || ALAMAT[nama] || ALAMAT.openai).replace(/\/+$/, '');
+  const dasar = String(env[awalan + '_BASE_URL'] || '').replace(/\/+$/, '');
   const model = jenis === 'tts' ? String(env.TTS_MODEL || 'gpt-4o-mini-tts') : String(env.STT_MODEL || 'whisper-1');
   return { nama, dasar, kunci, model, suara: String(env.TTS_VOICE || 'alloy'), siap: !!nama && !!kunci };
 }
@@ -106,21 +84,15 @@ export function penyediaSuara(env = {}, jenis = 'tts') {
 function kepala(penyedia) {
   const h = { 'Content-Type': 'application/json' };
   if (penyedia.kunci) h.Authorization = 'Bearer ' + penyedia.kunci;
-  if (penyedia.nama === 'openrouter') {
-    h['HTTP-Referer'] = 'https://van-chat-spy.vercel.app';
-    h['X-Title'] = 'Van Chat.SPY';
-  }
   return h;
 }
 
-/* penyedia lokal (9Router/Ollama/LM Studio) boleh tanpa kunci; yang penting
-   kuncinya KALAU ADA tetap dikirim, karena 9Router bisa memasang
-   REQUIRE_API_KEY=true untuk membatasi akses. */
-function bolehJalan(p) { return p.adaKunci || p.lokal; }
+/* NaraRouter mewajibkan kunci pada setiap permintaan (tanpa kunci dijawab 401). */
+function bolehJalan(p) { return p.adaKunci; }
 function pesanButuhKunci(p) {
-  return p.lokal
-    ? 'Penyedia lokal ' + p.nama + ' di ' + p.dasar + ' — jalankan dulu di terminal.'
-    : 'Kunci penyedia teks belum dipasang (AI_API_KEY / OPENROUTER_KEY).';
+  return 'Kunci NaraRouter belum dipasang. Buat kunci di dasbor (halaman API keys) lalu isi '
+    + 'AI_API_KEY di hosting/berkas .env — atau jalankan `node tools/cek-penyedia.mjs --url '
+    + p.dasar + ' --key sk-nry-… --nama bynara --tulis`.';
 }
 
 async function gagalAmbil(r) {
@@ -184,8 +156,8 @@ export async function generateImage({ env = {}, prompt, rasio = '1:1', kualitas 
       ok: false,
       butuhKunci: true,
       pesan:
-        'Pembuat gambar belum aktif: penyedia gambar AI semuanya berbayar, jadi kunci harus dipasang dulu. ' +
-        'Isi Environment Variable IMAGE_PROVIDER (openai/stability/together) dan IMAGE_API_KEY, lalu fitur ini langsung jalan.',
+        'Pembuat gambar belum aktif: gambar dihitung per kredit oleh penyedia, jadi kuncinya harus dipasang dulu. ' +
+        'Isi Environment Variable IMAGE_PROVIDER=bynara dan IMAGE_API_KEY (kunci NaraRouter), lalu fitur ini langsung jalan.',
     };
   }
   const ukuran = petaUkuran(rasio, kualitas);
@@ -293,10 +265,8 @@ export function daftarProvider(env = {}) {
     teks: {
       penyedia: t.nama, alamat: t.dasar, adaKunci: t.adaKunci, kunci: samarkan(t.kunci),
       modelTetap: env.AI_MODEL || null, lokal: t.lokal,
-      catatan: t.lokal
-        ? (t.nama === '9router'
-          ? 'Router AI lokal (9Router) di komputer ini — harus dijalankan dulu di terminal, lalu buka dashboard http://localhost:20128/dashboard untuk kunci/model.'
-          : 'Penyedia AI lokal di komputer ini — harus jalan sebelum dipakai.')
+      catatan: t.nama === 'bynara'
+        ? 'NaraRouter (https://router.bynara.id) — model yang tampil diambil dari daftar model milik akunmu.'
         : null,
     },
     gambar: { penyedia: g.nama || '(belum diatur)', model: g.model, siap: g.siap, kunci: samarkan(g.kunci) },
@@ -307,4 +277,3 @@ export function daftarProvider(env = {}) {
   };
 }
 
-export const KUNCI_BAWAAN = KUNCI_BAWAAN_OPENROUTER;

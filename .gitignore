@@ -5,10 +5,8 @@
 tools/kunci-ai.txt
 # berisi kunci penyedia AI (dibuat oleh tools/cek-penyedia.mjs)
 tools/penyedia.json
-# berisi kunci 9Router (dibuat oleh tools/cek-9router.mjs)
-tools/9router.json
-# berisi token API Cloudflare untuk DDNS (tools/cloudflare-ddns.mjs)
-tools/cloudflare.json
+# catatan riwayat pengerjaan lama (tidak ikut repo publik)
+dokumen-lama/
 
 # ── sampah runtime ────────────────────────────────────────────────────────
 node_modules/

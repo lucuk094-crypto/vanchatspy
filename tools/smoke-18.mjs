@@ -20,7 +20,7 @@ const puppeteer = (() => {
 })();
 
 const AKAR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CHROME = process.env.CHROME || require('puppeteer').executablePath();
+const CHROME = process.env.CHROME || puppeteer.executablePath();
 const URL_UJI = process.env.UJI_URL || 'http://127.0.0.1:8131/';
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -45,7 +45,7 @@ page.on('request', (req) => {
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         ok: true,
-        teks: { penyedia: 'openrouter', alamat: 'https://openrouter.ai/api/v1', adaKunci: true, kunci: 'sk-or-…b7ef', modelTetap: null },
+        teks: { penyedia: 'bynara', alamat: 'https://router.bynara.id/v1', adaKunci: true, kunci: 'sk-nr…cdef', modelTetap: null },
         gambar: { penyedia: '(belum diatur)', model: 'gpt-image-1', siap: false, kunci: '' },
         suara: { stt: { penyedia: '(bawaan browser)', siap: false }, tts: { penyedia: '(bawaan browser)', siap: false, suara: 'alloy' } },
         deploy: { penyedia: '(belum diatur)', siap: false },

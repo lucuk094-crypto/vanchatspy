@@ -1,9 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────
 # Van Chat.SPY — citra untuk VPS / server sendiri
 # Web ini tidak butuh build step; cukup Node + berkas proyek.
-# 9Router dijalankan sebagai container terpisah (lihat docker-compose.yml).
+# Penyedia AI = NaraRouter (alamat publik), jadi cukup satu container.
 #   docker build -t van-chat-spy .
-#   docker run -p 8131:8131 -e AI_PROVIDER=9router -e AI_BASE_URL=http://host.docker.internal:20128/v1 van-chat-spy
+#   docker run -p 8131:8131 -e AI_API_KEY=sk-nry-xxxx van-chat-spy
 # ─────────────────────────────────────────────────────────────────────
 FROM node:20-alpine
 

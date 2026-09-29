@@ -122,7 +122,7 @@ if (LIVE) {
       j = await r.json();
     }
     if (j.kuota) {
-      tulis('CATATAN: kuota gratis harian habis — lapis AI sungguhan ditunda (ulangi setelah 07.00 WIB).');
+      tulis('CATATAN: batas permintaan penyedia tercapai — lapis AI sungguhan ditunda (ulangi beberapa saat lagi).');
       tulis('Lapis logika di atas sudah lulus dan tetap berlaku.');
       ditunda = true;
       break;

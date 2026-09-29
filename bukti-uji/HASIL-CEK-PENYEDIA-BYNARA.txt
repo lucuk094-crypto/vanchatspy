@@ -1,17 +1,21 @@
-HASIL CEK PENYEDIA AI
-29/9/2026, 16.53.47
+HASIL CEK PENYEDIA AI (OpenAI-compatible)
+29/9/2026, 17.23.55
 ──────────────────────────────────────────────────────────
-══ memeriksa penyedia AI ══
+══ memeriksa penyedia AI (OpenAI-compatible) ══
    alamat : https://router.bynara.id/v1
-   kunci  : sk-n…(25 karakter)
+   kunci  : sk-n…(29 karakter)
 
   ✗ daftar model terbaca (GET /models) — HTTP 401 · 0 model
+   catatan: kunci ditolak. Di NaraRouter, kunci harus berawalan sk-nry- dan dibuat di halaman API keys dasbor.
 
-2) percakapan uji via POST /chat/completions (gaya OpenAI)
+2) percakapan uji via POST /chat/completions (model: model-uji)
    jawaban penyedia: HTTP 401 · A valid API key is required.
-  ✗ kunci ditolak penyedia — periksa --key (HTTP 401)
+  ✗ kunci ditolak penyedia — periksa --key (HTTP 401) — di NaraRouter kunci berawalan sk-nry-
 
-3) kesimpulan
-   ✗ ada 2 masalah — perbaiki dulu sebelum dipakai di aplikasi.
+3) streaming (SSE) — yang dipakai halaman chat
+  ✗ mengalir sebagai SSE (data: {...} + [DONE]) — HTTP 401 · 0 potongan
+
+4) kesimpulan
+   ✗ ada 3 masalah — perbaiki dulu sebelum dipakai di aplikasi.
 
 HASIL: ADA MASALAH

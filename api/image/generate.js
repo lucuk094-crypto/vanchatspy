@@ -2,8 +2,8 @@
  * /api/image/generate — pembuat gambar AI.
  *
  * Siap dipakai begitu dua Environment Variable ini diisi di hosting:
- *   IMAGE_PROVIDER = openai | stability | together | openrouter
- *   IMAGE_API_KEY  = kunci penyedia gambar
+ *   IMAGE_PROVIDER = bynara            (gambar lewat api-images.bynara.id)
+ *   IMAGE_API_KEY  = kunci NaraRouter (sk-nry-…)
  * (opsional: IMAGE_MODEL, IMAGE_BASE_URL)
  *
  * Selama kunci belum diisi, endpoint ini menjawab jujur dengan status 501 dan
@@ -33,7 +33,7 @@ export default async function handler(request, env = {}) {
       kualitas: KUALITAS_SAH,
       pesan: status.siap
         ? 'Pembuat gambar siap.'
-        : 'Pembuat gambar belum aktif — isi IMAGE_PROVIDER dan IMAGE_API_KEY di hosting.',
+        : 'Pembuat gambar belum aktif — isi IMAGE_PROVIDER=bynara dan IMAGE_API_KEY (kunci NaraRouter) di hosting.',
     }, 200, s.tambahan);
   }
 

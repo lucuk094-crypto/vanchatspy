@@ -9,13 +9,12 @@
  * ════════════════════════════════════════════════════════════════════
  */
 
-const KUNCI_BAWAAN = "sk-or-v1-DIHAPUS-F27";
-
+/* Model cadangan (daftar sungguhan diambil dari NaraRouter oleh /api/chat). */
 const MODEL = {
-  fast: "inclusionai/ling-3.0-flash-sante:free",
-  think: "dots-studio/dots-3-note-preview:free",
-  deep: "nex-agi/nex-n2.5-pro:free",
-  expert: "nvidia/nemotron-3-super-120b-a12b:free",
+  fast: "agnes-2.5-flash",
+  think: "agnes-3-flash",
+  deep: "deepseek-v4-flash",
+  expert: "deepseek-v4-pro",
 };
 
 export const config = { runtime: "edge" };
@@ -30,13 +29,14 @@ export default async function (request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (request.method !== "GET") return json({ ok: false, pesan: "Gunakan GET" }, 405);
 
-  const kunci = String(process.env.OPENROUTER_KEY || KUNCI_BAWAAN || "").trim();
+  const kunci = String(process.env.AI_API_KEY || process.env.BYNARA_API_KEY || "").trim();
   return json({
     ok: true,
     service: "van-chat-spy",
     versi: "1.0",
+    penyedia: "NaraRouter (https://router.bynara.id)",
     keyConfigured: !!kunci,
-    kunciDari: process.env.OPENROUTER_KEY ? "env" : "bawaan paket",
+    kunciDari: kunci ? "env (AI_API_KEY)" : "belum dipasang",
     model: MODEL,
     fitur: {
       chat: true,
@@ -44,7 +44,7 @@ export default async function (request) {
       builder: true,
       riwayat: "browser (localStorage)",
       suara: "bawaan browser (Web Speech API)",
-      batas: "50 permintaan AI/hari (kuota gratis penyedia) + pengaman 60 permintaan/menit per IP",
+      batas: "sesuai paket akun NaraRouter + pengaman 60 permintaan/menit per IP",
     },
     pesan: kunci ? "siap dipakai" : "kunci API belum dipasang",
   }, 200);

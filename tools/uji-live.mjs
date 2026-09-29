@@ -33,7 +33,7 @@ const puppeteer = (() => {
 
 const AKAR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHOT = path.join(AKAR, 'bukti-uji');
-const CHROME = process.env.CHROME || require('puppeteer').executablePath();
+const CHROME = process.env.CHROME || puppeteer.executablePath();
 const URL_UJI = process.env.UJI_URL || 'http://127.0.0.1:8131/';
 const HEMAT = process.argv.includes('--hemat');
 
@@ -321,7 +321,7 @@ try {
   const kuotaHabis = await page.evaluate(() => /kuota gratis harian sudah habis/i.test(document.body.textContent));
   if (kuotaHabis) {
     tulis('CATATAN: kuota gratis harian habis — sebagian uji tidak bisa dijalankan sekarang.');
-    tulis('Ulangi `node tools/uji-live.mjs` setelah 07.00 WIB (kuota terisi ulang).');
+    tulis('Ulangi `node tools/uji-live.mjs` beberapa saat lagi (batas permintaan penyedia sudah lega).');
     ditunda = true;
   }
 
@@ -343,7 +343,7 @@ try {
     ditunda = true;
     gagal = 0;
     tulis('DITUNDA — ' + String(e.message).replace('DITUNDA: ', ''));
-    tulis('Ulangi `node tools/uji-live.mjs` setelah 07.00 WIB (kuota gratis terisi ulang).');
+    tulis('Ulangi `node tools/uji-live.mjs` beberapa saat lagi (batas permintaan penyedia sudah lega).');
   } else {
     tulis('GAGAL: ' + e.message);
     gagal++;
@@ -355,9 +355,9 @@ fs.writeFileSync(path.join(SHOT, 'HASIL-UJI-LIVE.txt'),
   'perintah : node tools/uji-live.mjs' + (HEMAT ? ' --hemat' : '') + '\nwaktu    : ' + new Date().toISOString() +
   '\ncatatan  : uji ini memakai KUOTA penyedia AI sungguhan\n\n' + catatan.join('\n') + '\n\n' +
   (gagal ? 'HASIL: GAGAL — ' + gagal + ' pemeriksaan'
-    : ditunda ? 'HASIL: SEBAGIAN (kuota gratis harian habis — ulangi setelah 07.00 WIB)'
+    : ditunda ? 'HASIL: SEBAGIAN (batas permintaan penyedia tercapai — ulangi beberapa saat lagi)'
     : 'HASIL: SEMUA LULUS') + '\n');
 console.log(gagal ? '\nHASIL: GAGAL — ' + gagal + ' pemeriksaan'
-  : ditunda ? '\nHASIL: SEBAGIAN — kuota gratis harian habis, ulangi setelah 07.00 WIB'
+  : ditunda ? '\nHASIL: SEBAGIAN — batas permintaan penyedia tercapai, ulangi beberapa saat lagi'
   : '\nHASIL: SEMUA LULUS');
 process.exit(gagal ? 1 : 0);

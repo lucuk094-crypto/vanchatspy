@@ -6,7 +6,7 @@
  *   3. pesan galat tidak memuat kunci/kredensial
  *   4. asal (Origin) asing tidak diizinkan memakai API
  *   5. validasi masukan & batas ukuran berjalan (bukan 200 untuk data ngawur)
- *   6. rahasia hanya hidup di server: kunci di api/*.js & tools/kunci-ai.txt
+ *   6. rahasia hanya hidup di server (env AI_API_KEY atau berkas setelan lokal)
  *      tidak pernah ikut ke berkas yang disajikan ke browser
  *
  *   node tools/uji-rahasia.mjs            (server uji jalan di :8131)

@@ -31,7 +31,7 @@ const puppeteer = (() => {
 
 const AKAR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHOT = path.join(AKAR, 'bukti-uji');
-const CHROME = process.env.CHROME || require('puppeteer').executablePath();
+const CHROME = process.env.CHROME || puppeteer.executablePath();
 const URL_UJI = process.env.UJI_URL || 'http://127.0.0.1:8131/';
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,7 +60,7 @@ page.on('request', (req) => {
     badan.push(req.postData() || '');
     return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, text: JAWABAN, model: 'uji/arahan' }) });
   }
-  if (u.includes('/api/providers')) return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, teks: { penyedia: 'openrouter', adaKunci: true, kunci: 'sk-or-…uji' }, gambar: { siap: false }, suara: { stt: {}, tts: {} }, deploy: {}, penjadwal: {}, rateLimit: { terpakai: { total: 1, ditolak: 0 } } }) });
+  if (u.includes('/api/providers')) return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, teks: { penyedia: 'bynara', adaKunci: true, kunci: 'sk-nr…uji' }, gambar: { siap: false }, suara: { stt: {}, tts: {} }, deploy: {}, penjadwal: {}, rateLimit: { terpakai: { total: 1, ditolak: 0 } } }) });
   req.continue();
 });
 

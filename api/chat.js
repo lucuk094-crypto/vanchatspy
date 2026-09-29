@@ -29,64 +29,39 @@
  *  model berikutnya dalam daftar — pengguna tidak ikut gagal.
  *
  *  KUOTA
- *    Akun ini memakai model ":free" OpenRouter: batasnya 50 permintaan
- *    per hari (bukan per mode). Kalau habis, server menjawab 429 dengan
- *    { kuota: true, pesan } berisi jam pengisian ulang (07.00 WIB).
+ *    Batas ditentukan paket akunmu di NaraRouter (mis. paket gratis: 7 juta
+ *    token/hari, 15 permintaan/menit). Kalau penyedia menjawab 429, server
+ *    meneruskannya apa adanya sebagai { kuota: true, pesan } — bukan jawaban palsu.
  *
  *  KUNCI API
- *    • Utama  : env OPENROUTER_KEY (bisa diatur di dashboard hosting)
- *    • Cadangan: KUNCI_BAWAAN di bawah — sudah terpasang, jadi paket ini
- *      langsung jalan tanpa setelan tambahan.
+ *    Hanya dari Environment Variable AI_API_KEY (di hosting) atau berkas .env.
+ *    TIDAK ADA kunci yang ditanam di dalam kode — supaya repo ini aman
+ *    dipublikasikan.
  * ════════════════════════════════════════════════════════════════════
  */
-
-const KUNCI_BAWAAN = "sk-or-v1-DIHAPUS-F27";
 
 /* lapisan bersama: penyedia AI yang bisa dikonfigurasi + pengaman permintaan */
 import { penyediaTeks } from "./_ai.js";
 import { periksaGambar as saringGambar, teksMasuk, audit, asalDiizinkan } from "./_aman.js";
 
-/* Model per mode. Semua ":free" — cocok dengan kuota akun ini. */
+/* Model cadangan kalau daftar model dari NaraRouter belum terbaca.
+   Daftar sungguhan selalu diambil dari penyedia itu sendiri (GET /models),
+   jadi yang muncul di Setelan = model yang boleh dipakai paketmu. */
 const ANTREAN = {
-  fast: [
-    "inclusionai/ling-3.0-flash-sante:free",   /* tercepat ~1,5 dtk */
-    "dots-studio/dots-3-note-preview:free",    /* ~3 dtk */
-    "deepseek/deepseek-v4-flash-0731:free",
-    "nvidia/nemotron-3.5-lightning:free",
-  ],
-  think: [
-    "dots-studio/dots-3-note-preview:free",    /* tulisan rapi + kode panjang */
-    "inclusionai/ling-3.0-flash-sante:free",
-    "nex-agi/nex-n2.5-pro:free",
-  ],
-  deep: [
-    "nex-agi/nex-n2.5-pro:free",
-    "dots-studio/dots-3-note-preview:free",
-    "deepseek/deepseek-v4-flash-0731:free",
-  ],
-  expert: [
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "nex-agi/nex-n2.5-pro:free",
-    "cohere/north-mini-code:free",
-    "deepseek/deepseek-v4-flash-0731:free",
-  ],
+  fast: ['agnes-2.5-flash', 'agnes-3-flash'],
+  think: ['agnes-3-flash', 'agnes-2.5-flash'],
+  deep: ['agnes-3-flash', 'deepseek-v4-flash', 'glm-5.3-flash'],
+  expert: ['deepseek-v4-pro', 'claude-sonnet-5', 'gpt-6-sol', 'glm-5.3'],
 };
 
-/* Model gratis yang bisa MELIHAT gambar (modalitas masukan: image).
-   Dipakai begitu pengguna melampirkan foto/screenshot. */
-const ANTREAN_VISI = [
-  "dots-studio/dots-3-note-preview:free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "qwen/qwen3.8-27b:free",
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-];
+/* Model yang bisa MELIHAT gambar. Diambil dari penyedia kalau ada;
+   AI_MODEL_VISI bisa dipakai untuk menentukannya sendiri (mis. gemini-3.8-flash-high). */
+const ANTREAN_VISI = ['agnes-3-flash', 'gemini-3.8-flash-high', 'gpt-6-luna'];
 
 const MAX_TOKENS = { fast: 1200, think: 2500, deep: 3000, expert: 4000 };
-/* Catatan: semua nama di atas adalah model ":free" (kuota akun ini 50/hari).
-   Kalau kamu memasang kunci berbayar sendiri, daftarkan model tambahan lewat
-   env AI_MODEL_IZIN (dipisah koma) — hanya model yang terdaftar di situ yang
-   boleh dipilih dari aplikasi, supaya tidak ada permintaan ke model asing. */
+/* Batas & model ditentukan paket akunmu di NaraRouter. Daftar model tambahan
+   bisa dibatasi lewat env AI_MODEL_IZIN (dipisah koma); AI_MODELS memaksa
+   urutan model yang dipakai aplikasi. */
 const SUHU = { fast: 0.7, think: 0.6, deep: 0.5, expert: 0.4 };
 const MODE_SAH = ["fast", "think", "deep", "expert"];
 
@@ -143,14 +118,14 @@ const json = (o, s, extra) =>
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...(extra || {}) },
   });
 
-/* ── kuota harian penyedia AI (50 permintaan/hari untuk model :free) ── */
+/* ── batas permintaan dari penyedia (mis. 429 «rate limit» / kuota) ── */
 function jamResetWIB(epoch) {
   try {
     const n = Number(epoch);
-    if (!n) return "07.00 WIB";
-    return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta", hour12: false })
+    if (!n) return "menit berikutnya";
+    return "pukul " + new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta", hour12: false })
       .format(new Date(n * 1000)).replace(":", ".") + " WIB";
-  } catch { return "07.00 WIB"; }
+  } catch { return "menit berikutnya"; }
 }
 function kuotaHabis(status, detail) {
   if (status === 429) return true;
@@ -163,9 +138,9 @@ function pesanKuota(detail) {
     const h = (j && j.error && j.error.metadata && j.error.metadata.headers) || {};
     reset = h["X-RateLimit-Reset"] || h["x-ratelimit-reset"] || "";
   } catch {}
-  return "kuota gratis harian sudah habis — batas 50 pesan/hari dari penyedia AI. " +
-    "Kuota terisi ulang otomatis pukul " + jamResetWIB(reset) + ". " +
-    "Sementara itu percakapan lama masih bisa dibaca, dan ruang kerja tetap bisa dipakai untuk berkas yang sudah ada.";
+  return "batas permintaan penyedia AI tercapai (paket akunmu di NaraRouter). " +
+    "Coba lagi " + jamResetWIB(reset) + " — atau naikkan paket di dasbor NaraRouter. " +
+    "Sementara itu percakapan lama masih bisa dibaca dan ruang kerja tetap jalan.";
 }
 
 /* kunci & alamat penyedia ditentukan di _ai.js — ganti AI_PROVIDER / AI_API_KEY
@@ -173,11 +148,10 @@ function pesanKuota(detail) {
 const kunciDipakai = (env) => penyediaTeks(env).kunci;
 const alamatPenyedia = (env) => penyediaTeks(env).dasar + "/chat/completions";
 
-/* ── daftar model dari penyedia lokal (9Router/Ollama/LM Studio) ───────
-   Diambil dari GET {dasar}/models supaya aplikasi memakai model yang
-   BENAR-BENAR ada di router itu (nama model OpenRouter seperti
-   "inclusionai/ling-3.0-flash-sante:free" tidak berlaku di 9Router).
-   Hasilnya disimpan 60 detik supaya tidak memanggil berulang. */
+/* ── daftar model dari penyedia (NaraRouter) ─────────────────────────
+   Diambil dari GET {dasar}/models milik NaraRouter, jadi aplikasi hanya
+   memakai model yang BENER-BENER diizinkan paket akunmu — bukan daftar
+   karangan. Hasilnya disimpan 60 detik supaya tidak memanggil berulang. */
 let cacheLokal = { dasar: "", ts: 0, daftar: [], ok: false, kode: 0 };
 /* pemeriksaan terakhir GAGAL karena kuncinya ditolak (bukan karena penyedia mati)?
    Dipakai supaya pesannya tidak menyesatkan ("pastikan sudah jalan") saat
@@ -185,7 +159,7 @@ let cacheLokal = { dasar: "", ts: 0, daftar: [], ok: false, kode: 0 };
 const kunciDitolakTerakhir = () => cacheLokal.kode === 401 || cacheLokal.kode === 403;
 async function daftarModelLokal(env) {
   const p = penyediaTeks(env);
-  if (!p.router) return null;   /* penyedia bergaya router: 9Router (lokal/tunnel/VPS), Ollama, LM Studio */
+  if (!p.router) return null;   /* penyedia yang daftar modelnya tidak dibaca dari penyedia itu */
   const kini = Date.now();
   /* hasil yang tersimpan hanya dipercaya kalau memang pernah BERHASIL;
      percobaan yang gagal tidak boleh dianggap "daftar kosong" (nanti model
@@ -193,10 +167,7 @@ async function daftarModelLokal(env) {
   if (cacheLokal.dasar === p.dasar && kini - cacheLokal.ts < 60000) return cacheLokal.ok ? cacheLokal.daftar : null;
   try {
     const h = { "Content-Type": "application/json" };
-    if (p.kunci) {
-      if (p.gaya === "anthropic") { h["x-api-key"] = p.kunci; h["anthropic-version"] = "2023-06-01"; }
-      else h.Authorization = "Bearer " + p.kunci;
-    }
+    if (p.kunci) h.Authorization = "Bearer " + p.kunci;
     const r = await fetch(p.dasar + "/models", {
       headers: h,
       signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
@@ -209,8 +180,8 @@ async function daftarModelLokal(env) {
     cacheLokal = { dasar: p.dasar, ts: kini, daftar, ok: daftar.length > 0, kode: 0 };
     return daftar.length ? daftar : null;
   } catch (e) {
-    /* router belum bisa dihubungi → coba lagi 5 detik kemudian (bukan menunggu 60 detik),
-       supaya begitu 9Router dinyalakan web langsung ikut aktif tanpa di-restart */
+    /* penyedia belum bisa dihubungi → coba lagi 5 detik kemudian (bukan menunggu 60 detik),
+       supaya begitu jaringan/penyedia normal lagi, web langsung jalan tanpa di-restart */
     cacheLokal = { dasar: p.dasar, ts: kini - 55000, daftar: [], ok: false, kode: Number((e && e.status) || 0) };
     return null;
   }
@@ -228,31 +199,24 @@ function pesanKunciDitolak(penyedia) {
     + " kalau baru diganti/di-rotasi, pakai kunci yang paling baru lalu coba lagi.";
 }
 
-/* pesan apa adanya saat penyedia lokal (9Router) belum jalan */
-function pesanLokalMati(penyedia, env) {
-  const namaTampil = penyedia.nama === "9router" ? "9Router" : penyedia.nama;
-  /* di hosting (Vercel) alamat 127.0.0.1/localhost menunjuk ke server hosting itu sendiri,
-     bukan ke komputer pengguna — jelaskan supaya tidak bingung */
-  const diHosting = !!(env && (env.VERCEL || env.HOSTING)) && penyedia.dasarLokal;
-  if (diHosting) {
-    return "Alamat " + penyedia.dasar + " tidak bisa dipakai dari hosting (Vercel): di sana "
-      + "127.0.0.1/localhost menunjuk ke server Vercel sendiri, bukan ke komputermu. "
-      + "Buka 9Router-mu ke internet dulu (mis. `cloudflared tunnel --url http://127.0.0.1:20128` "
-      + "atau named tunnel dengan domain tetap), lalu set di Vercel: "
-      + "AI_PROVIDER=9router · AI_BASE_URL=https://alamat-tunnel-mu/v1 · AI_API_KEY=<kunci 9Router>, "
-      + "dan deploy ulang. Panduan lengkap: DEPLOY.md bagian C.";
-  }
-  if (penyedia.dasarLokal) {
-    return "Tidak bisa menghubungi " + namaTampil + " di " + penyedia.dasar + ". "
-      + (penyedia.nama === "9router"
-        ? 'Jalankan 9Router dulu di CMD/terminal — tulis `9router` sampai muncul "Server ready" dan dashboard terbuka di http://localhost:20128/dashboard — lalu kirim ulang pesanmu.'
-        : "Pastikan penyedia AI lokal itu sudah jalan, lalu coba lagi.");
-  }
-  /* 9Router di mesin lain (VPS / rumah yang dibuka lewat tunnel) */
-  return "Tidak bisa menghubungi " + namaTampil + " di " + penyedia.dasar + ". "
-    + "Pastikan 9Router di alamat itu sedang jalan dan alamatnya berakhiran /v1"
-    + (penyedia.kunci ? "" : " — kalau 9Router itu memakai kunci, isi dulu AI_API_KEY")
-    + ". Kalau 9Router-mu ada di komputer sendiri, pakai http://127.0.0.1:20128/v1 dan jalankan web ini di komputer yang sama.";
+/* kunci belum dipasang sama sekali (bukan "ditolak penyedia") — pesannya dibedakan
+   supaya pengguna tahu langkah persisnya, bukan menebak kunci salah */
+function pesanKunciKosong(penyedia) {
+  return "kunci penyedia AI belum dipasang — percakapan butuh satu kunci NaraRouter. "
+    + "Buat kunci berawalan sk-nry- di halaman API keys dasbor NaraRouter (https://router.bynara.id/keys), "
+    + "lalu pasang sebagai AI_API_KEY di hosting paling lambat sebelum deploy ulang "
+    + "(Vercel: Settings → Environment Variables → Redeploy), atau jalankan lokal dengan: "
+    + "AI_PROVIDER=bynara AI_API_KEY=sk-nry-… node tools/server-uji.mjs. "
+    + "Alamat penyedia yang dipakai sekarang: " + penyedia.dasar + ".";
+}
+
+/* pesan apa adanya saat penyedia AI tidak bisa dihubungi */
+function pesanPenyediaMati(penyedia, env) {
+  const nama = penyedia.nama === 'bynara' ? 'NaraRouter' : penyedia.nama;
+  return 'Tidak bisa menghubungi penyedia AI (' + nama + ' di ' + penyedia.dasar + '). '
+    + 'Periksa (1) koneksi internet server ini, (2) alamat AI_BASE_URL kalau kamu mengubahnya, '
+    + 'dan (3) kunci AI_API_KEY masih berlaku. Percakapan lama tetap bisa dibaca — tidak ada jawaban palsu. '
+    + 'Cek cepat dari terminal: `node tools/cek-penyedia.mjs --url ' + penyedia.dasar + ' --key <kunci> --nama bynara`.';
 }
 
 /* pilih model yang paling masuk akal untuk tiap mode, dari nama modelnya */
@@ -558,67 +522,11 @@ function susunPesan(riwayat, prompt, opsi) {
   return pesan;
 }
 
-/* Ubah daftar pesan gaya-OpenAI menjadi bentuk yang dipahami API Anthropic:
-   system dipisah, gambar jadi blok "image" berisi base64, dan pesan berurutan
-   dengan peran sama digabung (Anthropic menuntut peran bergantian). */
-function pesanAntropis(pesan) {
-  const sistem = [];
-  const isi = [];
-  const dorong = (peran, bagian) => {
-    const akhir = isi[isi.length - 1];
-    if (akhir && akhir.role === peran) akhir.content = akhir.content.concat([{ type: "text", text: "\n\n" }], bagian);
-    else isi.push({ role: peran, content: bagian });
-  };
-  for (const m of Array.isArray(pesan) ? pesan : []) {
-    if (!m) continue;
-    if (m.role === "system") { if (typeof m.content === "string") sistem.push(m.content); continue; }
-    const peran = m.role === "assistant" ? "assistant" : "user";
-    if (typeof m.content === "string") { if (m.content.trim()) dorong(peran, [{ type: "text", text: m.content }]); continue; }
-    const bagian = [];
-    for (const b of Array.isArray(m.content) ? m.content : []) {
-      if (!b) continue;
-      if (b.type === "text" && String(b.text || "").trim()) { bagian.push({ type: "text", text: String(b.text) }); continue; }
-      if (b.type === "image_url") {
-        const url = String((b.image_url && b.image_url.url) || "");
-        const cocok = url.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
-        if (cocok) bagian.push({ type: "image", source: { type: "base64", media_type: cocok[1].toLowerCase(), data: cocok[2] } });
-        continue;
-      }
-      bagian.push(b);
-    }
-    if (bagian.length) dorong(peran, bagian);
-  }
-  return { sistem: sistem.join("\n\n"), pesan: isi };
-}
-
+/* Kirim ke NaraRouter (protokol OpenAI): /chat/completions + Authorization: Bearer. */
 function mintaKePenyedia({ model, pesan, mode, kunci, env, stream, signal }) {
   const p = penyediaTeks(env);
   const kepala = { "Content-Type": "application/json" };
-  if (p.gaya === "anthropic") {
-    /* Anthropic (dan relay Claude Code): x-api-key + anthropic-version, endpoint /messages */
-    if (kunci) kepala["x-api-key"] = kunci;
-    kepala["anthropic-version"] = "2023-06-01";
-    const ubah = pesanAntropis(pesan);
-    const isiA = {
-      model,
-      max_tokens: MAX_TOKENS[mode] || 1200,
-      temperature: SUHU[mode] ?? 0.6,
-      stream: !!stream,
-      messages: ubah.pesan,
-    };
-    if (ubah.sistem) isiA.system = ubah.sistem;
-    return fetch(p.dasar + "/messages", {
-      method: "POST",
-      signal,
-      headers: kepala,
-      body: JSON.stringify(isiA),
-    });
-  }
-  if (kunci) kepala.Authorization = `Bearer ${kunci}`;     /* 9Router boleh tanpa kunci */
-  if (p.nama === "openrouter") {
-    kepala["HTTP-Referer"] = env.APP_URL || "https://van-chat-spy.local";
-    kepala["X-Title"] = "Van Chat.SPY";
-  }
+  if (kunci) kepala.Authorization = `Bearer ${kunci}`;
   const isi = {
     model,
     temperature: SUHU[mode] ?? 0.6,
@@ -626,10 +534,6 @@ function mintaKePenyedia({ model, pesan, mode, kunci, env, stream, signal }) {
     stream: !!stream,
     messages: pesan,
   };
-  /* hanya OpenRouter: tanpa ini model penalaran memakai jatah token untuk
-     "berpikir" dan jawaban yang sampai ke pengguna bisa kosong. Router lokal
-     (9Router) tidak perlu — bahkan sebagian proxy menolak kolom asing. */
-  if (p.nama === "openrouter") isi.reasoning = { enabled: false };
   return fetch(alamatPenyedia(env), {
     method: "POST",
     signal,
@@ -652,14 +556,13 @@ async function galatPenyedia(r, env) {
   if (kuotaHabis(r.status, t)) throw new Error("KUOTA|" + pesanKuota(t));
   /* saldo/kredit penyedia habis → katakan apa adanya, jangan disamarkan */
   if (/insufficient balance|insufficient credit|no credit|out of credits|saldo|kredit habis|quota exceeded/i.test(t)) {
-    throw new Error("SALDO|saldo/kredit penyedia AI habis menurut jawaban penyedianya: \"" + pesan + "\". Isi ulang saldo di dasbor penyedia (untuk cc.freemodel.dev: halaman pembelian kredit), lalu coba lagi.");
+    throw new Error("SALDO|saldo/kredit penyedia AI habis menurut jawaban penyedianya: \"" + pesan + "\". Isi ulang kredit di dasbor NaraRouter (menu billing/top-up), lalu coba lagi.");
   }
   /* kunci ditolak (bukan soal saldo) → jangan bilang "sibuk"; suruh periksa kuncinya */
   if (r.status === 401 || r.status === 403) {
     throw new Error("KUNCI|kunci penyedia AI ditolak penyedianya: \"" + pesan + "\". Periksa AI_API_KEY (dan AI_BASE_URL) pada penyedia yang dipakai, lalu coba lagi.");
   }
-  /* 502/503/504 dari penyedia bergaya router = 9Router-nya sendiri yang tak menjawab
-     (lewat tunnel/alamat lain, gateway-nya sudah menjawab lebih dulu) */
+  /* 502/503/504 dari penyedia = gateway-nya sendiri yang tidak menjawab */
   if (env && penyediaTeks(env).router && (r.status === 502 || r.status === 503 || r.status === 504)) {
     throw new Error("ROUTERMATI|" + pesan);
   }
@@ -671,61 +574,29 @@ async function sekaliJalan(model, pesan, mode, kunci, env, signal) {
   const r = await mintaKePenyedia({ model, pesan, mode, kunci, env, stream: false, signal });
   if (!r.ok) return galatPenyedia(r, env);
   const d = await r.json();
-  let teks = "";
-  if (penyediaTeks(env).gaya === "anthropic") {
-    teks = (Array.isArray(d && d.content) ? d.content : [])
-      .filter((b) => b && (b.type === "text" || b.type === undefined))
-      .map((b) => String(b.text || "")).join("");
-  } else {
-    const c = d && d.choices && d.choices[0];
-    teks = (c && c.message && c.message.content) || (c && c.text) || "";
-  }
+  const c = d && d.choices && d.choices[0];
+  let teks = (c && c.message && c.message.content) || (c && c.text) || "";
+  /* sebagian model penalaran mengirim isi di beberapa bagian */
+  if (Array.isArray(teks)) teks = teks.map((b) => (b && (b.text || b.content)) || "").join("");
   if (!String(teks).trim()) throw new Error("jawaban kosong");
   return String(teks).trim();
 }
 
 /* ── jawaban mengalir: teruskan SSE penyedia ke browser ── */
-function aliranDari(upstream, model, ac, gaya) {
+function aliranDari(upstream, model, ac) {
   const enc = new TextEncoder();
   return new ReadableStream({
     async start(c) {
       c.enqueue(enc.encode("data: " + JSON.stringify({ model }) + "\n\n"));
       const rd = upstream.body.getReader();
       try {
-        if (gaya === "anthropic") {
-          /* SSE Anthropic (event: content_block_delta / delta.text) → bentuk OpenAI
-             supaya halaman tidak perlu tahu penyedianya siapa */
-          const dec = new TextDecoder();
-          let sisa = "";
-          for (;;) {
-            const { done, value } = await rd.read();
-            if (done) break;
-            sisa += dec.decode(value, { stream: true });
-            let potong;
-            while ((potong = sisa.indexOf("\n")) >= 0) {
-              const baris = sisa.slice(0, potong).trim();
-              sisa = sisa.slice(potong + 1);
-              if (!baris || baris.startsWith("event:") || !baris.startsWith("data:")) continue;
-              const isi = baris.slice(5).trim();
-              if (!isi || isi === "[DONE]") continue;
-              let j;
-              try { j = JSON.parse(isi); } catch { continue; }
-              if (j.type === "content_block_delta" && j.delta && typeof j.delta.text === "string") {
-                c.enqueue(enc.encode("data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: j.delta.text } }] }) + "\n\n"));
-              } else if (j.type === "error") {
-                c.enqueue(enc.encode("data: " + JSON.stringify({ error: (j.error && j.error.message) || "galat penyedia" }) + "\n\n"));
-              }
-            }
-          }
-        } else {
-          for (;;) {
-            const { done, value } = await rd.read();
-            if (done) break;
-            c.enqueue(value);
-          }
+        for (;;) {
+          const { done, value } = await rd.read();
+          if (done) break;
+          c.enqueue(value);
         }
       } catch (e) {
-        c.enqueue(enc.encode("data: " + JSON.stringify({ error: String(e && e.message || e) }) + "\n\n"));
+        c.enqueue(enc.encode("data: " + JSON.stringify({ error: String((e && e.message) || e) }) + "\n\n"));
       }
       c.enqueue(enc.encode("data: [DONE]\n\n"));
       try { c.close(); } catch {}
@@ -738,7 +609,7 @@ async function cobaStream(model, pesan, mode, kunci, env) {
   const ac = new AbortController();
   const r = await mintaKePenyedia({ model, pesan, mode, kunci, env, stream: true, signal: ac.signal });
   if (!r.ok || !r.body) return galatPenyedia(r, env);
-  return new Response(aliranDari(r, model, ac, penyediaTeks(env).gaya), {
+  return new Response(aliranDari(r, model, ac), {
     status: 200,
     headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
   });
@@ -749,10 +620,8 @@ async function tangani(request, env) {
   const c = cors(origin, env, request);
   const kunci = kunciDipakai(env);
   const penyedia = penyediaTeks(env);
-  /* penyedia lokal (9Router/Ollama/LM Studio) → pakai daftar model dari router;
-     penyedia awan → daftar bawaan OpenRouter */
-  /* penyedia bergaya router: cek dulu router-nya hidup atau tidak */
-  const lokalMati = penyedia.router && !adaModelPaksa(env) ? (await daftarModelLokal(env)) === null : false;
+  /* model selalu diambil dari NaraRouter (daftar milik akunmu) */
+  const penyediaMati = penyedia.router && !adaModelPaksa(env) ? (await daftarModelLokal(env)) === null : false;
   const antrean = penyedia.router ? await antreanLokal(env) : antreanMode(env);
   const antreanVisi = penyedia.router ? ((await visiLokal(env)) || antrean.fast || []) : ANTREAN_VISI;
 
@@ -773,22 +642,13 @@ async function tangani(request, env) {
       daftarModel: antrean, daftarVisi: antreanVisi, modelTambahan: tambahan(env),
       pesan: penyedia.router
         ? (lokalSiap
-          ? "siap — " + (penyedia.nama === "9router" ? "9Router" : penyedia.nama) + " di " + penyedia.dasar
-          : (penyedia.nama === "9router" ? "9Router" : penyedia.nama) + " di " + penyedia.dasar + " belum bisa dihubungi — "
-            + (penyedia.dasarLokal ? "jalankan dulu di terminal." : "pastikan 9Router di mesin itu hidup."))
+          ? "siap — " + (penyedia.nama === "bynara" ? "NaraRouter" : penyedia.nama) + " di " + penyedia.dasar
+          : "belum bisa menghubungi " + (penyedia.nama === "bynara" ? "NaraRouter" : penyedia.nama) + " di " + penyedia.dasar
+            + (kunci ? " — periksa koneksi, atau kunci AI_API_KEY masih berlaku." : " — kunci AI_API_KEY belum dipasang."))
         : (kunci ? "siap" : "kunci API belum dipasang"),
     }, 200, c);
   }
   if (request.method !== "POST") return json({ ok: false, pesan: "Gunakan GET atau POST" }, 405, c);
-  /* 9Router belum jalan → katakan apa adanya; begitu dinyalakan, pesan berikutnya langsung jalan */
-  if (lokalMati) {
-    if (kunciDitolakTerakhir()) {
-      audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
-      return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
-    }
-    audit("penyedia-lokal-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
-    return json({ ok: false, pesan: pesanLokalMati(penyedia, env), penyedia: { nama: penyedia.nama, alamat: penyedia.dasar, lokal: penyedia.lokal, router: penyedia.router, dasarLokal: penyedia.dasarLokal } }, 502, c);
-  }
 
   /* hanya halaman yang dikenal boleh memakai kuota AI ini */
   if (!asalDiizinkan(request, env)) {
@@ -799,13 +659,31 @@ async function tangani(request, env) {
   const ip = String(request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
   if (kenaBatas(ip)) return json({ ok: false, pesan: "Terlalu banyak permintaan — tunggu 1 menit lalu coba lagi." }, 429, c);
 
-  if (!kunci) return json({ ok: false, pesan: "Kunci API belum dipasang di server." }, 500, c);
 
   let body;
   try { body = JSON.parse(await request.text()); } catch { return json({ ok: false, pesan: "JSON tidak valid" }, 400, c); }
 
   const prompt = teksMasuk(body.prompt, 24000);
   if (!prompt.trim()) return json({ ok: false, pesan: "Pertanyaan masih kosong." }, 400, c);
+
+  /* gerbang penyedia dipasang SETELAH validasi masukan & asal: permintaan yang
+     memang ngawur tetap dijawab 400/403 apa pun keadaan penyedia AI */
+  if (penyediaMati) {
+    if (!penyedia.adaKunci) {
+      audit("kunci-kosong", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
+      return json({ ok: false, kunci: true, pesan: pesanKunciKosong(penyedia) }, 401, c);
+    }
+    if (kunciDitolakTerakhir()) {
+      audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
+      return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
+    }
+    audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, asal: "gerbang-awal" });
+    return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env), penyedia: { nama: penyedia.nama, alamat: penyedia.dasar, lokal: penyedia.lokal, router: penyedia.router, dasarLokal: penyedia.dasarLokal } }, 502, c);
+  }
+
+  /* jaring pengaman: kalau penyedia tidak bergaya router tetapi kuncinya kosong */
+  if (!kunci) return json({ ok: false, pesan: "Kunci API belum dipasang di server." }, 500, c);
+
 
   const mode = MODE_SAH.includes(body.mode) ? body.mode : "fast";
   /* validasi gambar: hanya data-URL gambar yang sah, ukuran & jumlah dibatasi */
@@ -889,12 +767,16 @@ async function tangani(request, env) {
       if (m.indexOf("KUNCI|") === 0) return json({ ok: false, kunci: true, pesan: m.slice(6) }, 401, c);
       /* penyedia lokal belum jalan → tidak ada gunanya mencoba model lain */
       if (m.indexOf("ROUTERMATI|") === 0 || (penyedia.router && /fetch failed|ECONNREFUSED|connect|network|Failed to fetch|timed out|timeout/i.test(m))) {
+        if (!penyedia.adaKunci) {
+          audit("kunci-kosong", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
+          return json({ ok: false, kunci: true, pesan: pesanKunciKosong(penyedia) }, 401, c);
+        }
         if (kunciDitolakTerakhir()) {
           audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
           return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
         }
-        audit("penyedia-lokal-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
-        return json({ ok: false, pesan: pesanLokalMati(penyedia, env) }, 502, c);
+        audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
+        return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env) }, 502, c);
       }
       terakhir = m;
       /* model bermasalah → lanjut ke model cadangan berikutnya */
@@ -904,7 +786,7 @@ async function tangani(request, env) {
 }
 
 /* diekspor supaya bisa diuji tanpa memanggil AI: node tools/uji-bentuk.mjs */
-export { perintahKetat, periksaJawaban, hitungKata, instruksiPerbaikan, susunPesan, jarakBentuk, teknologiDiminta, cocokTeknologi, blokKode, kunciTeknologi, antreanLokal, visiLokal, daftarModelLokal, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, tangani };
+export { perintahKetat, periksaJawaban, hitungKata, instruksiPerbaikan, susunPesan, jarakBentuk, teknologiDiminta, cocokTeknologi, blokKode, kunciTeknologi, antreanLokal, visiLokal, daftarModelLokal, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, pesanPenyediaMati, tangani };
 
 export const config = { runtime: "edge" };
 
@@ -914,10 +796,8 @@ function envProses(tambahanEnv) {
   const p = { ...dasar, ...(tambahanEnv || {}) };
   const kunci = {};
   for (const k of [
-    "AI_PROVIDER", "AI_BASE_URL", "AI_API_KEY", "AI_MODEL", "AI_MODELS", "AI_MODEL_VISI",
-    "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT",
-    "AI_GAYA", "AI_STYLE", "AI_ROUTER",
-    "ROUTER_API_KEY", "NINEROUTER_API_KEY", "OPENROUTER_KEY", "MODELS_JSON",
+    "AI_PROVIDER", "AI_BASE_URL", "AI_API_KEY", "BYNARA_API_KEY", "AI_MODEL", "AI_MODELS", "AI_MODEL_VISI",
+    "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT", "MODELS_JSON",
     "ALLOWED_ORIGINS", "APP_URL", "AI_MODEL_IZIN", "AI_CADANGAN",
     "VERCEL", "VERCEL_ENV", "VERCEL_URL", "HOSTING",
   ]) if (p[k] !== undefined) kunci[k] = p[k];

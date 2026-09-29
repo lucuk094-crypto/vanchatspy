@@ -1,21 +1,22 @@
 /*
  * uji-bynara.mjs — membuktikan Van Chat.SPY bisa memakai NaraRouter
- * (https://router.bynara.id — gateway OpenAI-compatible + Anthropic-compatible).
+ * (https://router.bynara.id — gateway multi-model, protokol OpenAI-compatible).
  *
  * Contoh panggilan resmi penyedianya:
  *   curl https://router.bynara.id/v1/chat/completions \
  *     -H "Authorization: Bearer $BYNARA_API_KEY" -H "Content-Type: application/json" \
  *     -d '{"model":"agnes-2.5-flash","messages":[{"role":"user","content":"Hello"}]}'
  *
- * Yang diperiksa (tanpa kuota — gateway ditiru oleh tools/mock-9router.mjs):
+ * Yang diperiksa (tanpa kuota — gateway ditiru oleh tools/mock-openai.mjs):
  *   1. nama penyedia "bynara" sudah kenal alamat bawaannya (tanpa AI_BASE_URL)
- *   2. daftar model dibaca dari penyedia itu sendiri (agnes-*, bukan daftar OpenRouter)
+ *   2. daftar model dibaca dari penyedia itu sendiri (agnes-*, bukan daftar bawaan)
  *   3. percakapan biasa lewat /v1/chat/completions
  *   4. perintah bentuk ("tepat tiga kata") tetap dipatuhi
  *   5. jawaban mengalir (SSE) bekerja
  *   6. foto benar-benar terkirim dan "dilihat"
  *   7. AI Builder menerima halaman dari penyedia yang sama
  *   8. kunci salah/kosong → jawaban jujur "kunci ditolak" (401 kunci:true), bukan "sibuk"
+ *   9. penyedia menyala BELAKANGAN → web aktif sendiri tanpa di-restart
  *
  *   node tools/uji-bynara.mjs          (RIUH=1 untuk melihat log anak proses)
  */
@@ -74,7 +75,7 @@ try {
   cek('daftar model diambil dari penyedia itu sendiri', p.router === true);
 
   /* 2. jalankan tiruan NaraRouter + server aplikasi */
-  jalankan('bynara', ['tools/mock-9router.mjs', '--port', String(PORT_PENYEDIA), '--butuh-kunci', KUNCI,
+  jalankan('bynara', ['tools/mock-openai.mjs', '--port', String(PORT_PENYEDIA), '--butuh-kunci', KUNCI,
     '--model-daftar', MODEL_BYNARA.join(',')]);
   jalankan('app', ['tools/server-uji.mjs'], {
     PORT: String(PORT_APP), AI_PROVIDER: 'bynara',
@@ -92,7 +93,7 @@ try {
   tulis('   model dari penyedia: ' + [...new Set(semuaModel)].slice(0, 6).join(', '));
   cek('penyedia dilaporkan sebagai bynara', info.penyedia.nama === 'bynara');
   cek('daftar model berasal dari penyedia itu (agnes-*)', semuaModel.some((m) => /agnes/i.test(m)));
-  cek('tidak ada model OpenRouter yang nyasar', !semuaModel.some((m) => /:free$/.test(m)));
+  cek('tidak ada model penyedia lain yang nyasar', !semuaModel.some((m) => /:free$|^(gh|kr|if|oc|cc)\//.test(m)));
 
   const kirim = (body) => fetch(URL_APP + 'api/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -125,6 +126,37 @@ try {
   })).json();
   tulis('   builder: ' + (bgn.ok ? bgn.bytes + ' bita dari ' + bgn.model : 'gagal — ' + String(bgn.pesan).slice(0, 60)));
   cek('AI Builder jalan lewat penyedia yang sama', bgn.ok === true && /<!DOCTYPE html/i.test(String(bgn.html || '')));
+
+  /* 8b. penyedia menyala belakangan → web pulih sendiri tanpa restart */
+  {
+    const appLambat = 'http://127.0.0.1:' + (PORT_APP + 3) + '/api/chat';
+    jalankan('app-tanpa-penyedia', ['tools/server-uji.mjs'], {
+      PORT: String(PORT_APP + 3), AI_PROVIDER: 'bynara',
+      AI_BASE_URL: 'http://127.0.0.1:' + (PORT_PENYEDIA + 1) + '/v1', AI_API_KEY: KUNCI,
+    });
+    await tunggu(1700);
+    const pra = await (await fetch(appLambat, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'halo', stream: false }),
+    })).json();
+    tulis('   sebelum penyedia hidup → "' + String(pra.pesan || '').slice(0, 90) + '"');
+    cek('sebelum hidup dijawab jujur (bukan jawaban palsu)', pra.ok === false && /Tidak bisa menghubungi penyedia AI/i.test(String(pra.pesan || '')));
+
+    jalankan('bynara-susulan', ['tools/mock-openai.mjs', '--port', String(PORT_PENYEDIA + 1), '--butuh-kunci', KUNCI,
+      '--model-daftar', MODEL_BYNARA.join(',')]);
+    const t0 = Date.now();
+    let siap = false;
+    for (let i = 0; i < 15; i++) {
+      await tunggu(1000);
+      const j = await (await fetch(appLambat, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'Sebut satu fakta singkat tentang kopi.', stream: false }),
+      })).json();
+      if (j && j.ok && String(j.text || '').length > 5) { siap = true; break; }
+    }
+    tulis('   setelah penyedia hidup → web jalan dalam ' + ((Date.now() - t0) / 1000).toFixed(1) + ' detik (tanpa restart)');
+    cek('web aktif sendiri tanpa di-restart setelah penyedia normal', siap);
+  }
 
   /* 8. kunci salah → jujur "kunci ditolak", bukan "sibuk" */
   jalankan('app-kunci-salah', ['tools/server-uji.mjs'], {

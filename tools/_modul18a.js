@@ -207,7 +207,7 @@
   function pakaiServer() {
     var p = SET.penyedia || {};
     var t = p.teks || {};
-    return '<div class="mini-it"><span><b>Penyedia teks: ' + esc(t.penyedia || 'openrouter') + '</b>'
+    return '<div class="mini-it"><span><b>Penyedia teks: ' + esc(t.penyedia || 'bynara') + '</b>'
       + '<small>' + esc(t.alamat || '') + ' · kunci ' + (t.adaKunci ? 'ada (' + esc(t.kunci || '') + ')' : 'belum ada')
       + (t.modelTetap ? ' · model tetap ' + esc(t.modelTetap) : '') + '</small></span></div>'
       + '<div class="mini-it"><span><b>Pembuat gambar: ' + esc((p.gambar && p.gambar.penyedia) || '(belum diatur)') + '</b>'

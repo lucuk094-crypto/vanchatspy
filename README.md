@@ -37,11 +37,15 @@ van-chat-spy/
    ├─ uji-bentuk.mjs     "respon AI sesuai perintah": lapis logika (tanpa kuota) + lapis AI sungguhan (--live)
    ├─ uji-arahan-proyek.mjs  arahan proyek benar-benar terkirim ke AI (tanpa kuota, penyedia ditiru)
    ├─ uji-live.mjs       uji dengan KUOTA sungguhan: bahasa, format ketat, visi, riset, builder
-   ├─ uji-tunnel.mjs     memeriksa link tunnel: halaman, logo, ikon, backend (Chromium lewat link)
-   ├─ buka-tunnel.sh     membuka link publik (cloudflared) + uji mandiri halaman/API
+   ├─ uji-bynara.mjs     uji alur NaraRouter (tiruan): model, streaming, foto, builder, kunci salah, pulih tanpa restart
+   ├─ mock-openai.mjs    tiruan gateway OpenAI-compatible untuk pengujian (tanpa kuota)
+   ├─ cek-penyedia.mjs   periksa penyedia AI (daftar model, kunci, percakapan uji)
    ├─ cek-impor-api.mjs  memastikan semua endpoint bisa diimpor (tidak ada nama ekspor salah)
    ├─ cek-ikon.mjs       memastikan semua nama ikon yang dipakai itu ada
-   └─ buat-logo.py       mengubah gambar logo (JPG latar hitam) → PNG transparan + favicon
+   ├─ buat-logo.py       mengubah gambar logo (JPG latar hitam) → PNG transparan + favicon
+   ├─ buat-contoh-berkas.py  membuat contoh DOCX/PDF/XLSX untuk uji lampiran berkas
+   ├─ _modul17.js · _modul18a.js · _modul19.js  modul halaman (dipakai index.html)
+   └─ contoh/            berkas contoh untuk uji (bukan bagian aplikasi)
 ```
 
 ## 1. Mencoba di komputer sendiri
@@ -62,50 +66,43 @@ npm run uji:tampilan        # uji tampilan & tombol nyata di Chromium
 Berkas backend yang dijalankan persis sama dengan yang nanti dipakai di
 hosting, jadi yang terlihat lokal = yang akan jalan setelah dipasang.
 
-### 1b. Memakai router AI lokal 9Router sebagai penyedia
+### 1b. Menyiapkan kunci penyedia AI (NaraRouter)
 
-Seluruh otak AI aplikasi (chat, streaming, mode berpikir, vision, AI Builder)
-bisa diambil dari **9Router** yang jalan di komputermu sendiri:
+Aplikasi ini bicara ke **NaraRouter** (https://router.bynara.id) — satu kunci
+untuk banyak model, dengan paket gratis untuk mulai. Tanpa kunci, aplikasi tetap
+bisa dibuka, tetapi setiap percakapan dijawab jujur «kunci NaraRouter belum
+dipasang» — tidak ada jawaban palsu.
 
 ```bash
-npm install -g 9router     # sekali saja
-9router                    # tunggu "Server ready" + dashboard :20128
-node tools/cek-9router.mjs # di folder proyek, terminal kedua → menulis tools/9router.json
-node tools/server-uji.mjs  # buka http://127.0.0.1:8131/ → Setelan → Model AI
+# 1. Buat kunci di https://router.bynara.id/keys  (berawalan sk-nry-…)
+# 2. Periksa kuncinya dari terminal (sekaligus menyimpan ke tools/penyedia.json):
+node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara --tulis
+# 3. Jalankan aplikasi:
+node tools/server-uji.mjs          # http://127.0.0.1:8131/  → Setelan → Model AI
 ```
 
-Di Windows cukup klik dua kali `tools\mulai-9router.bat` (dan `bash tools/mulai-9router.sh`
-di macOS/Linux): 9Router dibuka → ditunggu “Server ready” → setelan dicek → web dijalankan.
+Tanpa `--tulis`, cukup pakai environment variable:
+`AI_PROVIDER=bynara AI_API_KEY=sk-nry-XXXX node tools/server-uji.mjs`.
 
-Alternatif tanpa `cek-9router`: set `AI_PROVIDER=9router`
-(`AI_API_KEY` opsional, `AI_MODEL_FAST/THINK/DEEP/EXPERT/VISI` opsional).
-Daftar model dibaca langsung dari router (`GET /v1/models`, cache 60 detik);
-kalau router mati, jawabannya jujur — bukan jawaban palsu.
-Catatan: hosting cloud tidak bisa menjangkau `localhost:20128` milikmu —
-jalankan web di komputer yang sama, atau buka tunnel dari komputermu.
-Panduan lengkap + hasil ujinya: **`PANDUAN-9ROUTER.md`**.
-**Deploy di mana?** (komputer sendiri / VPS / cloud + tunnel / LAN, plus `Dockerfile`
-dan `docker-compose.yml`): **`DEPLOY.md`**.
-**Domain Cloudflare sendiri tanpa tunnel** (port forward 8443 + Caddy + DDNS + Vercel):
-**`PANDUAN-DOMAIN-CLOUDFLARE.md`**.
+Daftar model di Setelan diambil langsung dari akunmu (`GET /v1/models`), jadi
+yang muncul hanya model yang boleh dipakai paketmu. Kalau penyedia/jaringan
+sedang tidak bisa dihubungi, jawabannya jujur dan web mencoba lagi otomatis —
+begitu normal, percakapan langsung jalan tanpa perlu restart.
 
 ## 2. Memasang (Vercel)
 
-Kunci AI **sudah tertanam** di `api/chat.js` dan `api/builder.js`, jadi tidak
-ada setelan yang wajib diisi:
+**Tidak ada kunci di dalam kode.** Setelah repo ini di-import:
 
-1. Buka vercel.com → **Add New → Project** → tab *Deploy from a folder* (atau
-   pakai `npx vercel`), arahkan ke folder ini.
-2. Selesai — `/api/chat`, `/api/builder`, dan `/api/health` otomatis menjadi
-   Edge Function, sisanya berkas statis.
+1. Buka vercel.com → **Add New → Project** → pilih repo ini (tidak perlu build
+   step; `/api/*.js` otomatis menjadi Edge Function, sisanya berkas statis).
+2. Project → **Settings → Environment Variables**, isi:
+   `AI_PROVIDER=bynara` · `AI_API_KEY=sk-nry-…` (kunci NaraRouter-mu).
+   Opsional: `AI_MODEL_FAST`, `AI_MODEL_THINK`, `AI_MODEL_VISI`, `ALLOWED_ORIGINS`, `APP_URL`.
+3. **Deploy** — lalu buka webnya. Kalau env diubah belakangan, **redeploy**
+   supaya berlaku.
 
-Opsional (tidak wajib):
-`OPENROUTER_KEY` — memakai kunci milik sendiri (menimpa kunci bawaan),
-`APP_URL`, `ALLOWED_ORIGINS` (batasi asal permintaan), `MODELS_JSON`
-(ganti daftar model per mode).
-
-> `.vercelignore` sudah mengeluarkan folder `tools/` (berisi salinan kunci
-> untuk keperluan lokal) supaya tidak ikut terunggah.
+> `.vercelignore` mengeluarkan folder `tools/` (perkakas uji lokal) supaya tidak
+> ikut terunggah.
 
 ## 3. Logo
 
@@ -167,19 +164,18 @@ utama.
 
 Batas yang perlu diketahui (jujur):
 
-* **Kuota**: akun memakai model `:free` OpenRouter → **50 permintaan/hari** (lampiran & referensi tidak menambah hitungan pembayaran, tapi tiap jawaban = 1 permintaan).
+* **Kuota**: batas permintaan mengikuti **paket akunmu di NaraRouter** (paket gratis punya batas menit & token harian). Aplikasi tidak mengarang angka kuota — pesan dari penyedia ditampilkan apa adanya.
 * **Referensi Wikipedia**: artikel yang diambil adalah artikel Wikipedia itu sendiri — AI tidak menjelajah internet bebas, jadi untuk berita/angka terkini tetap bisa keliru. Fitur ini bisa dimatikan.
 * Riwayat disimpan di **browser** pengguna, bukan di server; hapus data browser = riwayat hilang (pakai Ekspor dulu bila perlu).
 * Bukan pembuat gambar: halaman/SVG dibuat lewat kode. Model pembuat gambar di penyedia AI semuanya berbayar, jadi tidak ada tombol "buat gambar" yang pura-pura jalan.
 * **Tugas terjadwal** berjalan saat aplikasi terbuka di browser. Tanpa server penyimpan tugas, halaman yang ditutup = tugas menunggu sampai dibuka lagi.
 * **Memori, proyek, dan riwayat** hidup di browser pengguna (localStorage), bukan di server.
-* **Rincian per poin** ada di tiga berkas: 19 daftar fitur → `FITUR-19-POIN.md`;
-  butir 8–14 (pesan · berkas · pustaka · pencarian) → **`PESAN-BERKAS-8-14.md`**;
-  butir **15–53** (riset mendalam · mode berpikir · gambar · suara · proyek ·
-  memori · tugas · plugin · AI Builder · editor kode · live preview · website
-  builder · deployment · pencarian global · bagikan · cabang · setelan ·
-  admin · sistem model · notifikasi · ekspor · keamanan) → **`BUTIR-15-53.md`**.
-  Laporan perbaikan "semua lulus & AI mengikuti perintah" → **`LAPORAN-F19.md`**.
+* **Jawaban AI jujur soal kuota/biaya**: aplikasi tidak pernah menampilkan jatah
+  kuota yang tidak diketahuinya; pesan batas/kuota dari penyedia diteruskan apa
+  adanya, dan percakapan lama tetap bisa dibaca.
+* Rincian riwayat pengerjaan (19 daftar fitur · butir 8–14 · butir 15–53 ·
+  laporan F19) tersimpan di folder lokal `dokumen-lama/` — **tidak** ikut
+  diunggah ke repo publik.
 * **Pencarian web**: penyedia bebas kunci itu ensiklopedia/forum/repositori —
   bukan mesin pencari umum. Google/Bing/Brave butuh kunci berbayar, dan HTML
   DuckDuckGo menolak permintaan otomatis. Isi `SEARCH_API_KEY` bila punya kunci
@@ -193,7 +189,7 @@ Batas yang perlu diketahui (jujur):
   "belum dipasang"** — lengkap dengan izin, endpoint, dan autentikasinya.
 * Kalau semua model cadangan sedang sibuk, jawaban gagal dengan pesan yang jelas — bukan diam-diam kosong.
 * **Perintah bentuk** ("tepat tiga kata", "maksimal 5 kata", "hanya daftar bernomor", "hanya kodenya") diperiksa di server dan diperbaiki otomatis sampai 3 putaran — **tepat**, **maksimal**, dan **minimal** dibedakan ("maksimal 8 kata" tidak lagi dianggap "harus pas 8"). Permintaan internal aplikasi (Builder, Riset, Perbaiki berkas) sengaja **tidak** lewat pemeriksa ini: jawabannya dipakai sebagai data (JSON/isi berkas), bukan sebagai jawaban pengguna. Kalau model tetap meleset, aplikasi **mengatakannya** lewat catatan di balon jawaban — tidak ada klaim palsu bahwa perintah sudah dipatuhi.
-* **Kuota gratis harian habis** ditampilkan apa adanya ("kuota gratis harian habis (dari penyedia) · terisi ulang 07.00 WIB"); percakapan lama tetap bisa dibaca dan ruang kerja tetap bisa dipakai.
+* **Batas permintaan penyedia tercapai** ditampilkan apa adanya ("batas penyedia tercapai (dari NaraRouter)"); percakapan lama tetap bisa dibaca dan ruang kerja tetap bisa dipakai.
 
 ## 5. Uji tampilan (bukti)
 
@@ -201,112 +197,42 @@ Uji memakai Chromium sungguhan; setiap tombol diklik dengan tetikus asli dan
 diperiksa dulu dengan `elementFromPoint` supaya tidak lolos palsu.
 
 ```bash
-# jalankan server di terminal lain, lalu:
-LD_LIBRARY_PATH=/tmp/libs/x/usr/lib/x86_64-linux-gnu:/tmp/libs/x/lib/x86_64-linux-gnu \
-PUPPETEER_CACHE_DIR=/tmp/pcache UJI_URL=http://127.0.0.1:8131/ \
-node tools/uji-tampilan.mjs
+# terminal 1
+npm run mulai                       # server di http://127.0.0.1:8131/
+
+# terminal 2
+npm run uji                         # backend & logika (tanpa kuota, tanpa browser)
+npm i puppeteer                     # sekali saja — mesin Chromium untuk uji tampilan
+npm run uji:tampilan                # klik tombol sungguhan di Chromium
 ```
 
-Seluruh rangkaian bisa dijalankan sekaligus (tanpa kuota AI kecuali `uji-live`):
+Rinciannya (bisa juga dijalankan satu per satu):
 
 ```bash
-node tools/smoke-18.mjs            # asap: 6 halaman + tombol kunci + nol galat JS
-node tools/uji-bentuk.mjs          # perintah bentuk: lapis logika (gratis)
-node tools/uji-arahan-proyek.mjs   # arahan proyek terkirim (tanpa kuota)
-node tools/uji-bagian-h.mjs        # butir 15–53 (penyedia AI ditiru)
-node tools/uji-tampilan.mjs        # tampilan A–G + ponsel + backend asli
-node tools/uji-rahasia.mjs         # keamanan
-node tools/uji-cari.mjs            # pencarian web sungguhan (tanpa kuota AI)
-node tools/uji-api.mjs             # kontrak endpoint
+node tools/uji-bentuk.mjs          # "respon AI sesuai perintah": lapis logika (gratis)
+node tools/uji-api.mjs             # kontrak endpoint (badan permintaan diperiksa)
+node tools/uji-bynara.mjs          # alur NaraRouter lengkap (gateway ditiru, tanpa kuota)
+node tools/uji-rahasia.mjs         # keamanan: kunci tidak bocor, asal asing ditolak
 node tools/cek-impor-api.mjs       # semua endpoint bisa diimpor
 node tools/cek-ikon.mjs            # semua nama ikon ada
-node tools/uji-9router.mjs         # penyedia lokal 9Router (router tiruan, tanpa kuota)
-node tools/uji-anthropic.mjs       # penyedia bergaya Anthropic (gateway tiruan, tanpa kuota)
-node tools/uji-bynara.mjs          # NaraRouter (router.bynara.id) — gateway OpenAI-compatible (tanpa kuota)
-node tools/cek-penyedia.mjs        # periksa penyedia AI APA PUN sebelum dipakai (--url --key)
-node tools/uji-9router-urutan.mjs  # web dibuka sebelum 9Router → aktif otomatis tanpa restart
-node tools/uji-9router-jauh.mjs    # 9Router di mesin lain (alamat jaringan / alamat publik)
-node tools/uji-proxy-caddy.mjs     # 9Router di belakang reverse proxy (Caddy sungguhan)
-node tools/uji-ddns.mjs            # skrip DDNS Cloudflare (tiruan API Cloudflare)
-node tools/uji-domain.mjs          # pemeriksa alamat publik 9Router (tanpa tunnel)
-node tools/uji-live.mjs            # KUOTA sungguhan (± 12 permintaan) — jalankan setelah 07.00 WIB
+node tools/cek-penyedia.mjs        # periksa penyedia (--url --key) sebelum dipakai
+node tools/uji-cari.mjs            # pencarian web sungguhan (tanpa kuota AI)
+node tools/uji-tampilan.mjs        # tampilan A–G + ponsel + backend asli
+node tools/uji-bagian-h.mjs        # butir 15–53 (penyedia AI ditiru)
+node tools/uji-arahan-proyek.mjs   # arahan proyek benar-benar terkirim
+node tools/smoke-18.mjs            # asap: 6 halaman + tombol kunci + nol galat JS
+node tools/uji-live.mjs            # KUOTA sungguhan (± 12 permintaan) — dengan kunci asli
 ```
 
-### Memakai NaraRouter (router.bynara.id)
+### Memakai NaraRouter (satu-satunya penyedia aplikasi ini)
+
+Petunjuk lengkap + hasil pemeriksaan endpoint-nya ada di
+**PANDUAN-PENYEDIA-BYNARA.md**. Ringkasnya:
 
 ```bash
-# 1. periksa kunci & model yang tersedia untuk akunmu
 node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara --tulis
-# 2. jalankan aplikasi dengan penyedia itu
-node tools/server-uji.mjs            # memakai tools/penyedia.json (kunci tidak ikut di zip)
-node tools/uji-bynara.mjs            # uji lengkap: model, streaming, foto, builder, kunci ditolak
-```
-Setara dengan env: `AI_PROVIDER=bynara` · `AI_API_KEY=sk-nry-…`
-(alamat bawaan `https://router.bynara.id/v1` sudah dikenal, jadi `AI_BASE_URL` boleh dikosongkan).
-Selengkapnya: **PANDUAN-PENYEDIA-BYNARA.md**.
-
-### Memakai penyedia bergaya Anthropic (mis. cc.freemodel.dev)
-
-Penyedia yang hanya melayani **Anthropic Messages API** (`POST /messages`) dipakai dengan
-`AI_GAYA=anthropic`; kalau nama penyedianya mengandung `anthropic`/`claude`/`freemodel`, gayanya
-terdeteksi otomatis. Periksa dan simpan setelannya lewat:
-
-```bash
-node tools/cek-penyedia.mjs --url https://cc.freemodel.dev/v1 --key KUNCI --nama freemodel
-node tools/cek-penyedia.mjs --url https://cc.freemodel.dev/v1 --key KUNCI --nama freemodel --tulis
-node tools/server-uji.mjs            # memakai tools/penyedia.json (kunci tidak ikut di zip)
-node tools/uji-anthropic.mjs         # uji lengkap gaya Anthropic: streaming, foto, builder, saldo habis
+npm run uji           # uji backend/logika (tanpa kuota, tanpa browser)
+npm i puppeteer       # sekali saja — untuk uji tampilan di Chromium
+npm run uji:tampilan  # uji tombol & tampilan sungguhan
 ```
 
-Selengkapnya: **PANDUAN-PENYEDIA-ANTHROPIC.md**.
-```
-
-Hasil terakhir: **semua lulus** (bagian A–G) — 3 kolom, 115 ikon SVG tersedia (90 dipakai), **logo gambar termuat**
-(lencana merek, papan sambutan, favicon, manifest), saran cepat, chip referensi
-+ saklarnya sinkron, **konteks referensi benar-benar terkirim ke `/api/chat`**,
-lembar pilih mode AI (4 pilihan + info pemakaian), streaming, tabel & blok kode
-berwarna, kartu berkas, pratinjau, tab kode/berkas, ukuran 390 px, unduhan nyata
-(berkas tersimpan di disk), tema terang, **rasio kontras balon 15,1:1**,
-pengaturan, pembatas geser, riwayat bertahan setelah muat ulang, jalur pembuat
-halaman, tampilan ponsel, dan backend asli (pesan kuota tampil benar).
-
-Bagian **E** menguji fitur baru secara utuh: memori, tugas terjadwal (dibuat →
-dijalankan otomatis → percakapan "Tugas: …"), proyek (arahan benar-benar ikut
-terkirim), alat hitung lokal, foto → vision, pustaka berkas + editor, riset
-dalam, dan penyematan percakapan. Bagian **F** menguji data versi lama
-(lampiran berbentuk objek, percakapan tanpa proyek) dan sakelar setelan.
-
-Backend diuji terpisah tanpa memakai kuota AI:
-
-```bash
-node tools/uji-api.mjs        # kontrak /api/chat (gambar, memori, proyek, mode)
-node tools/uji-cari.mjs       # /api/search pada penyedia sungguhan → bukti-uji/HASIL-UJI-CARI.txt
-node tools/uji-rahasia.mjs    # keamanan: kunci tidak bocor, asal asing ditolak (403), masukan divalidasi
-node tools/cek-impor-api.mjs  # semua endpoint bisa diimpor (menangkap nama ekspor yang salah)
-```
-
-Bagian **H** (`tools/uji-bagian-h.mjs`) menguji butir **15–53** satu per satu:
-riset mendalam 7 langkah + berkas laporan; mode berpikir + larangan menampilkan
-proses internal; AI Builder 3 berkas → jejak 10 langkah → konsol & jaringan
-benar-benar merekam isi iframe → diff Terima/Tolak/Batalkan → editor kode
-(cari/ganti/rapikan) → uji 8 pemeriksaan → build → **ZIP nyata (PK)** → deploy
-jujur; studio gambar dua arah (tanpa kunci / dengan kunci); tombol suara; lima
-kelompok pencarian global; tautan bagikan + halaman hanya-baca; proyek 7
-penghitung + instruksi otomatis; tugas terjadwal; plugin & izinnya; setelan 14
-menu; tiga unduhan ekspor; gerbang admin; pilihan model per mode yang benar-benar
-ikut dikirim; dan **nol galat JS**.
-
-Bagian **G** (butir 8–14) menguji: menu "+" 10 pilihan, pencarian web + sitasi,
-hapus hasil web, pesan alat + Ulangi Tool, pesan galat, blok kode (perbesar,
-jalankan **dan benar-benar dieksekusi**, galat kode dilaporkan), 10 tombol aksi
-pesan (bagikan, cabangkan, hapus, ulangi tool), lampiran DOCX + PDF benar-benar
-terbaca isinya, kamera (ambil ulang + kirim), tempelan kode panjang, halaman
-/library (tab, cari, urutkan, tag, ganti nama, pratinjau + 4 aksi, kembali).
-
-Presisi layar diuji pada **390×844 (ponsel), 1280×720, 1366×768, 1440×900,
-1920×1080** — semuanya tanpa gulir menyamping, kotak tulis & tombol mode selalu
-di dalam layar, pesan tidak tertutup kotak tulis, dan nol galat JS.
-Tangkapan layar: `bukti-uji/` (termasuk `10-laptop-…`, `11-laptop-…`,
-`12-pc-…`, `13-lembar-mode.png`, `30-vision.png`, `31-riset-dalam.png`,
-`32-pustaka-proyek.png`, `33-data-lama-setelan.png`), ringkasan teks:
-`bukti-uji/HASIL-UJI-TAMPILAN.txt` dan `bukti-uji/HASIL-UJI-API.txt`.

@@ -1,5 +1,5 @@
 perintah : node tools/uji-tampilan.mjs
-waktu    : 2026-09-29T16:59:06.934Z
+waktu    : 2026-09-29T17:22:05.466Z
 
 ══ A. tampilan (jawaban AI tiruan) ══
 kolom → riwayat 272px · percakapan 537px · ruang kerja 619px · tema dark
@@ -7,10 +7,10 @@ ikon → 128 SVG terpasang, sisa belum diproses: 0
 logo → lencana merek true · logo sambutan true · favicon assets/favicon-64.png · manifest true
 saran cepat → kotak tulis berisi "Buatkan halaman web: "
 referensi → chip aktif true · saklar di pengaturan ikut aktif true
-lembar mode → kepala: "Mode AIpemakaian hari ini 0/50 · sisa 50 permintaan · kuota diisi ulang 07.00 WIB"
+lembar mode → kepala: "Mode AIbatas permintaan mengikuti paket akunmu di NaraRouter (contoh paket gratis: 15 perm"
 lembar mode → pilihan: Normal — Ling 3.0 Flash · Berpikir — Dots 3 Note · Berpikir Mendalam — Nex 2.5 Pro · Expert (tambahan) — Nemotron 3 Super 120B
 mode dipilih → bilah atas "Berpikir" · kotak tulis "Berpikir"
-tombol mode aktif → warna garis oklab(0.623729 0.218656 0.121955 / 0.445412)
+tombol mode aktif → warna garis oklab(0.629194 0.21548 0.120184 / 0.430156)
 referensi → lencana di pesan pengguna true · konteks terkirim ke API true
 jawaban → pesan 2 · h1 true · li 3 · tabel true · blok kode 2 · token berwarna 18 · kartu berkas 2
 riwayat → 1 percakapan
@@ -22,7 +22,7 @@ ukuran perangkat → 390px
 unduh → index.html
 tema setelah tombol → light
 keterbacaan balon pengguna (tema light) → rasio kontras 15.13:1
-pengaturan → buka true · pemakaian 1 / 50 · percakapan 1 · berkas 2
+pengaturan → buka true · pemakaian 1 · percakapan 1 · berkas 2
 panel → ruang kerja tertutup true · riwayat tertutup true
 panel → riwayat ditampilkan lagi lewat tombol di bilah atas: true
 geser pembatas riwayat → 272px menjadi 362px
@@ -31,9 +31,9 @@ jalur pembuat halaman → kartu 1 · pratinjau 1140 karakter · judul "Buatkan h
 galat JS → tidak ada
 
 ══ B. backend asli ══
-backend asli → status panel: "server AI siap"
-backend asli → jawaban 214 karakter: "Tidak bisa mengambil jawabansaldo/kredit penyedia AI habis menurut jawaban penyedianya: \"Insufficient balance\". Isi ulang saldo di dasbor penyedia (un"
-galat JS (backend asli) → console: Failed to load resource: the server responded with a status of 402 (Payment Required)
+backend asli → status panel: "kunci AI belum dipasang"
+backend asli → jawaban 496 karakter: "Tidak bisa mengambil jawabankunci penyedia AI belum dipasang — percakapan butuh satu kunci NaraRouter. Buat kunci berawalan sk-nry- di halaman API key"
+galat JS (backend asli) → console: Failed to load resource: the server responded with a status of 401 (Unauthorized)
 
 ══ C. layar ponsel ══
 ponsel → riwayat tersembunyi true · lebar percakapan 390px · ruang kerja tertutup true
@@ -61,7 +61,7 @@ galat JS (ponsel) → tidak ada
 
 ══ E. proyek · memori · tugas · riset · visi · pustaka berkas ══
 memori → tersimpan 1 catatan: "Nama saya Rian, suka jawaban singkat"
-tugas → tersimpan 1 tugas: "Ringkasan ujiSebutkan satu fakta singkat tentang kopi · sekali · 29 Sep 2026, 17"
+tugas → tersimpan 1 tugas: "Ringkasan ujiSebutkan satu fakta singkat tentang kopi · sekali · 29 Sep 2026, 18"
 tugas dijalankan → percakapan "Tugas: Ringkasan uji" · 2 pesan · tercatat di riwayat true
 proyek → 2 baris daftar · aktif "Proyek Uji" · judul percakapan "Proyek Uji · Percakapan baru"
 proyek → arahan proyek terkirim ke API: true
@@ -77,7 +77,7 @@ pratinjau berisiko → kartu ditahan: true · iframe disembunyikan: true · sisa
    pesan: Pratinjau ditahan. Berkas ini berisi perulangan tanpa henti — macet.html baris 1 (while(true)). Kalau dijalankan, aplikasi bisa me
    pilih "Tampilkan tanpa skrip" → pratinjau tampil true · masih ada <script>: false · kartu tersembunyi: true
 riset dalam → bilah konfirmasi: Jalankan riset mendalam untuk “kopi dan kedai kopi”? Alur 7 langkah: rencana → cari sumber
-riset dalam → berkas "riset-mumx7p20stvjf.html" · pratinjau 8334 karakter · kartu hasil 5
+riset dalam → berkas "riset-mumy18ul20v0x.html" · pratinjau 8267 karakter · kartu hasil 5
 percakapan → sematan muncul di grup "Disematkan": true
 galat JS (fitur baru) → tidak ada
 
@@ -109,13 +109,13 @@ lampiran berkas → ["contoh.docx1003 B · dibaca AI","contoh.pdf453 B · dibaca
 isi berkas ke AI → DOCX terbaca: true · PDF terbaca: true
 kamera → modal terbuka · catatan: "Kamera tidak bisa dibuka: Requested device not found — kamu masih bisa"
 kamera → ambil ulang bekerja: true
-kamera → foto terkirim ke kotak tulis: ["kamera-16:59:01.jpg2.4 KB · dilihat AI"]
-tempel kode panjang → lampiran ["kamera-16:59:01.jpg","tempelan-panjang.txt"]
+kamera → foto terkirim ke kotak tulis: ["kamera-17:22:00.jpg2.4 KB · dilihat AI"]
+tempel kode panjang → lampiran ["kamera-17:22:00.jpg","tempelan-panjang.txt"]
 pustaka → halaman tampil true · tab ["Semua File","Gambar","Dokumen","Kode","Arsip"] · kartu 10
 pustaka → tab kode 10 kartu · urutan "Nama A–Z" · cari "catatan": 0 berkas (cari: catatan)
 pustaka → tag ditambahkan: ["penting"]
 pustaka → ganti nama: catatan-baru.html · ada: true
-pustaka → pratinjau: 6 info (HTML1.1 KBAI29 Sep 2026, 16.59Proyek: —#pentingGanti namaKe…)
+pustaka → pratinjau: 6 info (HTML1.1 KBAI29 Sep 2026, 17.21Proyek: —#pentingGanti namaKe…)
 pustaka → aksi pratinjau: ["Ganti nama","Ke percakapan","Unduh","Hapus"]
 pustaka → kembali ke percakapan: true
 galat JS (pesan & berkas) → tidak ada

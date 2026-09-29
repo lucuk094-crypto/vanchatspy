@@ -17,64 +17,37 @@ const AKAR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 8131);
 
 /* ── penyedia AI yang dipakai ────────────────────────────────────────────
-   Bisa diatur lewat Environment Variable (cara paling langsung), atau lewat
-   berkas tools/9router.json yang ditulis oleh `node tools/cek-9router.mjs`
-   setelah 9Router terbukti jalan. Contoh memakai 9Router (router AI lokal):
+   Bisa diatur lewat Environment Variable, atau lewat berkas tools/penyedia.json
+   yang ditulis oleh `node tools/cek-penyedia.mjs --tulis` setelah penyedia
+   terbukti jalan (berisi kunci → berkas itu tidak ikut repo/zip).
 
-     AI_PROVIDER=9router AI_API_KEY=xxxx node tools/server-uji.mjs
+     AI_PROVIDER=bynara AI_API_KEY=sk-nry-xxxx node tools/server-uji.mjs
 
-   Tanpa pengaturan apa pun, aplikasi memakai kunci bawaan OpenRouter seperti
-   sebelumnya — jadi tidak ada yang rusak kalau fitur ini tidak dipakai.
+   Tanpa kunci, aplikasi tetap jalan tetapi setiap percakapan dijawab jujur
+   "kunci NaraRouter belum dipasang" — bukan jawaban palsu.
 */
 function muatPenyedia() {
   const env = { ...process.env };
-  let catatan = 'OpenRouter (kunci bawaan paket)';
-  /* kalau pengguna sudah menentukan penyedia lewat environment, jangan ditimpa berkas */
+  let catatan = 'NaraRouter (tanpa kunci — isi AI_API_KEY)';
+  /* kalau penyedia sudah ditentukan lengkap lewat environment, pakai itu */
   if (process.env.AI_PROVIDER && process.env.AI_BASE_URL) {
     return { env, catatan: process.env.AI_PROVIDER + ' (dari environment)' };
   }
+  /* setelan lokal (opsional): tools/penyedia.json — dibuat oleh tools/cek-penyedia.mjs
+     (`--tulis`). Berisi kunci rahasia, jadi TIDAK ikut repo/zip. */
   let dariBerkas = null;
-  /* dua berkas setelan yang mungkin: penyedia.json (umum, mis. gateway Anthropic)
-     dan 9router.json (khusus 9Router). penyedia.json diutamakan. */
-  const berkasUmum = path.join(AKAR, 'tools', 'penyedia.json');
-  const berkas9 = path.join(AKAR, 'tools', '9router.json');
-  /* urutan berkas setelan bisa dipaksa lewat PENYEDIA_BERKAS=penyedia|9router
-     (dipakai oleh rangkaian uji supaya tidak bergantung isi folder). */
-  const pilihan = String(process.env.PENYEDIA_BERKAS || '').toLowerCase();
-  const urutan = pilihan === '9router' ? [berkas9]
-    : pilihan === 'penyedia' ? [berkasUmum]
-    : [berkasUmum, berkas9];
-  let berkas = urutan[0];
+  const berkas = path.join(AKAR, 'tools', 'penyedia.json');
   try {
-    for (const kandidat of urutan) {
-      if (fs.existsSync(kandidat)) { dariBerkas = JSON.parse(fs.readFileSync(kandidat, 'utf8')); berkas = kandidat; break; }
-    }
+    if (fs.existsSync(berkas)) dariBerkas = JSON.parse(fs.readFileSync(berkas, 'utf8'));
   } catch (e) { dariBerkas = null; }
-  if (dariBerkas && dariBerkas.url && dariBerkas.nama) {
-    /* berkas penyedia.json: nama + url + kunci + gaya (openai/anthropic) */
-    env.AI_PROVIDER = env.AI_PROVIDER || String(dariBerkas.nama);
-    env.AI_BASE_URL = env.AI_BASE_URL || String(dariBerkas.url).replace(/\/+$/, '');
-    if (!env.AI_API_KEY && dariBerkas.kunci) env.AI_API_KEY = dariBerkas.kunci;
-    if (!env.AI_GAYA && dariBerkas.gaya) env.AI_GAYA = String(dariBerkas.gaya);
-    const m = dariBerkas.model || {};
-    env.AI_MODEL_FAST = env.AI_MODEL_FAST || m.fast || '';
-    env.AI_MODEL_THINK = env.AI_MODEL_THINK || m.think || '';
-    catatan = dariBerkas.nama + ' (' + env.AI_BASE_URL + ')' + (dariBerkas.gaya === 'anthropic' ? ' · gaya Anthropic' : '') + (dariBerkas.dicek ? ' · terperiksa ' + dariBerkas.dicek : '');
-  } else if (dariBerkas && dariBerkas.url) {
-    env.AI_PROVIDER = env.AI_PROVIDER || '9router';
+  if (dariBerkas && dariBerkas.url) {
+    env.AI_PROVIDER = env.AI_PROVIDER || String(dariBerkas.nama || 'bynara');
     env.AI_BASE_URL = env.AI_BASE_URL || String(dariBerkas.url).replace(/\/+$/, '');
     if (!env.AI_API_KEY && dariBerkas.kunci) env.AI_API_KEY = dariBerkas.kunci;
     const m = dariBerkas.model || {};
     env.AI_MODEL_FAST = env.AI_MODEL_FAST || m.fast || '';
     env.AI_MODEL_THINK = env.AI_MODEL_THINK || m.think || '';
-    env.AI_MODEL_DEEP = env.AI_MODEL_DEEP || m.deep || '';
-    env.AI_MODEL_EXPERT = env.AI_MODEL_EXPERT || m.expert || '';
-    env.AI_MODEL_VISI = env.AI_MODEL_VISI || m.visi || '';
-    catatan = '9Router lokal (' + env.AI_BASE_URL + ')' + (dariBerkas.dicek ? ' · terperiksa ' + dariBerkas.dicek : '');
-  }
-  if (env.AI_PROVIDER || env.AI_BASE_URL) {
-    catatan = (env.AI_PROVIDER || 'penyedia sendiri') + ' → ' + (env.AI_BASE_URL || '(alamat bawaan)')
-      + (env.AI_API_KEY ? ' · kunci dipasang' : ' · tanpa kunci');
+    catatan = String(dariBerkas.nama || 'penyedia') + ' (' + env.AI_BASE_URL + ')' + (dariBerkas.dicek ? ' · terperiksa ' + dariBerkas.dicek : '');
   }
   return { env, catatan };
 }

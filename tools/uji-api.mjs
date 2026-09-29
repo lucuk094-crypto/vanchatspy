@@ -10,6 +10,13 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const AKAR = pathlibInit.resolve(pathlibInit.dirname(fileURLToPath(import.meta.url)), '..');
+
+/* pengujian ini memakai kunci tiruan + penyedia tiruan (fetch dicegat di bawah),
+   supaya jalur backend yang sungguhan ikut teruji — tanpa kuota asli */
+process.env.AI_PROVIDER = 'bynara';
+process.env.AI_BASE_URL = 'https://router.bynara.id/v1';
+process.env.AI_API_KEY = 'sk-nry-tiruan-untuk-uji';
+
 const { default: chat } = await import(pathlibInit.join(AKAR, 'api/chat.js'));
 
 const FOTO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -23,8 +30,14 @@ const cek = (nama, benar, ket) => {
 
 const asli = globalThis.fetch;
 let terakhir = null;
+/* tiruan NaraRouter: daftar model (GET /models) + jawaban (POST /chat/completions) */
+const MODEL_UJI = ['agnes-2.5-flash', 'agnes-3-flash', 'gemini-3.8-flash-high', 'deepseek-v4-flash', 'claude-sonnet-5'];
 globalThis.fetch = async (url, opsi) => {
-  if (String(url).includes('openrouter.ai')) {
+  if (String(url).includes('router.bynara.id')) {
+    if (String(url).endsWith('/models')) {
+      return new Response(JSON.stringify({ object: 'list', data: MODEL_UJI.map((id) => ({ id, object: 'model' })) }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     terakhir = JSON.parse(opsi.body);
     const balas = terakhir.stream
       ? new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: 'oke' } }] }) + '\n\ndata: [DONE]\n\n',
@@ -42,7 +55,7 @@ const panggil = (body) => chat(new Request('http://lokal/api/chat', {
 /* 1. percakapan biasa */
 terakhir = null;
 await panggil({ prompt: 'hai', mode: 'fast', stream: true });
-cek('percakapan biasa memakai model mode fast', /ling-3\.0-flash|dots-3-note|deepseek-v4-flash|nemotron-3\.5-lightning/.test(terakhir.model), terakhir.model);
+cek('percakapan biasa memakai model mode fast', /agnes-2\.5-flash|agnes-3-flash|deepseek-v4-flash/.test(terakhir.model), terakhir.model);
 cek('instruksi sistem dasar terkirim', /Van Chat\.SPY/.test(terakhir.messages[0].content));
 cek('jawaban mengalir (stream) aktif', terakhir.stream === true);
 
@@ -50,7 +63,7 @@ cek('jawaban mengalir (stream) aktif', terakhir.stream === true);
 terakhir = null;
 await panggil({ prompt: 'apa isi gambar ini?', mode: 'fast', stream: true, gambar: [FOTO] });
 const isiTerakhir = terakhir.messages[terakhir.messages.length - 1].content;
-cek('gambar memakai antrean model VISION', /nex-n2\.5-pro|dots-3-note|gemma-4-31b|ling-3\.0-flash-vl|gemma-4-26b/.test(terakhir.model), terakhir.model);
+cek('gambar memakai antrean model VISION', /gemini|claude|sonnet|vision|omni/i.test(terakhir.model), terakhir.model);
 cek('gambar dikirim sebagai image_url', Array.isArray(isiTerakhir) && isiTerakhir.some((b) => b.type === 'image_url' && /^data:image\//.test(b.image_url.url)));
 cek('teks pertanyaan tetap ikut', Array.isArray(isiTerakhir) && isiTerakhir[0].type === 'text');
 cek('saat ada gambar, jawaban dikirim utuh (bukan stream)', terakhir.stream === false);

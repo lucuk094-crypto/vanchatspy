@@ -1,4 +1,8 @@
-# Memakai NaraRouter (https://router.bynara.id)
+# NaraRouter (https://router.bynara.id) — satu-satunya penyedia Van Chat.SPY
+
+Aplikasi ini sekarang **hanya** bicara ke NaraRouter: satu kunci untuk banyak
+model (termasuk paket gratis). Penyedia lain sudah dilepas dari kodenya, jadi
+kalau onboarding di bawah ini diikuti, tidak ada setelan lain yang perlu diurus.
 
 Kode yang kamu kirim:
 
@@ -16,16 +20,18 @@ curl https://router.bynara.id/v1/chat/completions \
 | `POST /v1/chat/completions` tanpa kunci | **401** (sama) |
 | `POST /v1/chat/completions` dengan kunci palsu | **401** (sama) — jadi tidak ada celah "tanpa kunci" |
 | Protokol | **OpenAI-compatible**: `Authorization: Bearer <kunci>` + `POST /v1/chat/completions` (+ `/v1/responses`, `/v1/messages`, `/v1/embeddings`) |
+| Mode reasoning | `reasoning_effort` (`none`…`max`) — dipakai aplikasi untuk mode Berpikir/Dalam/Tingkat lanjut |
 | Halaman resmi | `router.bynara.id` — NaraRouter: gateway multi-model, ada **paket gratis** (Agnes 2.5 Flash, Agnes 3 Flash, Jev, Laguna S 2.1, Ling 3.0 Flash, Nemotron, MiMo Free, …) dengan **batas 7 juta token/hari** dan **15 permintaan/menit** |
 | Bentuk kunci | diawali **`sk-nry-`**, dibuat di halaman **API keys** (`router.bynara.id/keys`), hanya ditampilkan sekali |
 | Format streaming | SSE `data: {"choices":[{"delta":{"content":"…"}}]}` + `data: [DONE]` (sama seperti yang sudah dipakai aplikasi) |
 | Gambar | endpoint gambar terpisah: `https://api-images.bynara.id/v1/images/generations` |
 
-Kesimpulan: **endpoint ini bisa dipakai** — dan justru paling gampang dari semua
-penyedia yang pernah kamu berikan, karena protokolnya sama dengan yang sudah dipakai
-aplikasi (OpenAI-compatible) dan ada paket gratis. Yang belum ada hanyalah **kunci**:
-selama kunci belum diisi, setiap percakapan akan dijawab jujur
-«kunci penyedia AI ditolak penyedianya …» (bukan jawaban palsu).
+Kesimpulan: **endpoint ini bisa dipakai langsung** — protokolnya sama dengan yang
+sudah dipakai aplikasi (OpenAI-compatible), ada paket gratis, dan karena berupa
+layanan publik HTTPS, web-nya bisa langsung di-deploy ke Vercel tanpa server
+tambahan di rumah. Yang belum ada hanyalah **kunci**: selama kunci belum diisi,
+setiap percakapan dijawab jujur «kunci penyedia AI ditolak penyedianya …»
+(bukan jawaban palsu).
 
 ## 2. Yang sudah saya sambungkan ke aplikasi
 
@@ -34,14 +40,18 @@ selama kunci belum diisi, setiap percakapan akan dijawab jujur
 2. Penyedia ini termasuk **bergaya router** → daftar model dibaca dari
    `GET https://router.bynara.id/v1/models` milik **akunmu** (jadi model yang muncul
    persis yang boleh dipakai paketmu: `agnes-2.5-flash`, `agnes-3-flash`, … — bukan
-   daftar model OpenRouter).
+   daftar bawaan aplikasi).
 3. Pesan galat baru yang jujur: kunci salah/kosong →
    `{"ok":false,"kunci":true,"pesan":"kunci penyedia AI ditolak penyedianya (bynara di https://router.bynara.id/v1). Periksa AI_API_KEY — di NaraRouter kunci harus berawalan sk-nry- …"}` (HTTP 401).
    Sebelumnya keadaan ini bisa tertukar dengan «penyedia belum jalan/sibuk» — sekarang tidak.
-4. Uji otomatis baru `node tools/uji-bynara.mjs` → **SEMUA LULUS**
+4. Uji otomatis `node tools/uji-bynara.mjs` → **SEMUA LULUS**
    (bukti: `bukti-uji/HASIL-UJI-BYNARA.txt`): alamat bawaan, daftar model dari penyedia,
    percakapan, perintah bentuk “tepat tiga kata”, streaming SSE, foto (blok `image_url`),
-   AI Builder, dan kasus kunci salah.
+   AI Builder, kasus kunci salah, dan **pemulihan otomatis** — web yang dibuka sebelum
+   penyedia hidup akan jalan sendiri, tanpa restart.
+5. Fitur gambar (`/api/image/generate`) memakai endpoint gambar NaraRouter:
+   `IMAGE_PROVIDER=bynara`, `IMAGE_API_KEY=sk-nry-…`, model bawaan
+   `agnes-image-2.1-flash`. Tanpa kunci itu, tombolnya mengatakan apa adanya.
 
 ## 3. Langkah persis memakainya
 
@@ -50,10 +60,10 @@ selama kunci belum diisi, setiap percakapan akan dijawab jujur
 ```bash
 node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara --tulis
 ```
-`--tulis` menyimpan hasilnya ke `tools/penyedia.json` (berisi kunci → **tidak** ikut zip/deploy),
-sehingga menjalankan `node tools/server-uji.mjs` langsung memakai NaraRouter.
-Mau kembali ke penyedia lain: hapus berkas itu, atau jalankan dengan env
-(`AI_PROVIDER=openrouter node tools/server-uji.mjs` — env selalu menang).
+`--tulis` menyimpan hasilnya ke `tools/penyedia.json` (berisi kunci → **tidak** ikut
+zip/deploy, sudah ada di `.gitignore`), sehingga `node tools/server-uji.mjs` langsung
+memakai NaraRouter. Environment variable selalu menang atas berkas itu, jadi
+`AI_API_KEY=sk-nry-… node tools/server-uji.mjs` juga sah.
 
 ### B. Jalankan lokal
 
@@ -75,7 +85,8 @@ Vercel → **Settings → Environment Variables**, isi:
 | `AI_MODEL_VISI` | model penglihatan milik paketmu *(opsional — hanya kalau kartu modelnya menyebut vision)* |
 
 lalu **Redeploy** (perubahan env baru berlaku setelah deploy ulang).
-Karena NaraRouter berupa layanan publik HTTPS, **tidak perlu** PC menyala seperti 9Router.
+Karena NaraRouter berupa layanan publik HTTPS, **tidak perlu** PC/server di rumah
+menyala, tidak perlu tunnel, dan tidak ada router lokal yang dijalankan.
 
 ### D. Setara dengan env (lokal)
 
@@ -91,5 +102,6 @@ AI_PROVIDER=bynara AI_API_KEY=sk-nry-… node tools/server-uji.mjs
   (dashboard → API keys → rotate) lalu pakai yang baru.
 - Kunci hanya hidup di sisi server (env atau `tools/penyedia.json` yang di-abaikan Git).
   Periksa dengan `node tools/uji-rahasia.mjs` bila ingin memastikan kunci tidak bocor ke browser.
-- Batas paket gratis: 7 juta token/hari, 15 permintaan/menit. Untuk uji berbentuk jawaban
-  panjang (mis. `tools/uji-live.mjs`), jalankan saat kuota harian masih segar.
+- Batas paket gratis: 7 juta token/hari, 15 permintaan/menit. Untuk uji yang memakai kuota
+  sungguhan (`tools/uji-live.mjs`), jalankan saat jatah harian masih segar.
+- Panduan deploy untuk publik (Vercel/VPS) ada di **`DEPLOY.md`**.

@@ -1,15 +1,15 @@
 /*
- * cek-penyedia.mjs — pemeriksa PENYEDIA AI APA PUN (OpenAI-compatible atau
- * bergaya Anthropic), sebelum dipakai aplikasi. Mirip cek-9router.mjs, tapi
- * tidak terbatas pada router lokal.
+ * cek-penyedia.mjs — pemeriksa penyedia AI bergaya OpenAI-compatible
+ * (NaraRouter: https://router.bynara.id/v1) sebelum dipakai aplikasi:
+ * memeriksa daftar model, kunci, dan satu percakapan uji.
  *
  * Pakai:
- *   node tools/cek-penyedia.mjs --url https://cc.freemodel.dev/v1 --key KUNCI
- *   node tools/cek-penyedia.mjs --url ... --key ... --nama freemodel --gaya anthropic --tulis
- *   node tools/cek-penyedia.mjs --url ... --key ... --openai      (paksa gaya openai)
+ *   node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara
+ *   node tools/cek-penyedia.mjs --url ... --key ... --nama bynara --tulis
  *
  * --tulis menyimpan hasilnya ke tools/penyedia.json (dibaca otomatis oleh
- * tools/server-uji.mjs). Berkas itu berisi kunci rahasia → jangan dibagikan.
+ * tools/server-uji.mjs). Berkas itu berisi kunci rahasia → jangan dibagikan
+ * dan jangan di-commit (sudah masuk .gitignore).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,10 +30,9 @@ const URL_P = String(arg('url', process.env.AI_BASE_URL || '')).replace(/\/+$/, 
 const KUNCI = String(arg('key', process.env.AI_API_KEY || '')).trim();
 const NAMA = String(arg('nama', '')).trim();
 const TULIS = adaFlag('tulis');
-const GAYA_PAKSA = adaFlag('openai') ? 'openai' : adaFlag('anthropic') ? 'anthropic' : String(arg('gaya', 'auto')).toLowerCase();
 
 if (!URL_P) {
-  console.error('Butuh --url, mis.  node tools/cek-penyedia.mjs --url https://contoh.com/v1 --key KUNCI');
+  console.error('Butuh --url, mis.  node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara');
   process.exit(2);
 }
 
@@ -45,13 +44,11 @@ const cek = (nama, benar, ket) => {
   if (!benar) masalah++;
 };
 
-const kepalaUntuk = (gaya) => (gaya === 'anthropic'
-  ? { 'Content-Type': 'application/json', 'x-api-key': KUNCI, 'anthropic-version': '2023-06-01' }
-  : { 'Content-Type': 'application/json', ...(KUNCI ? { Authorization: 'Bearer ' + KUNCI } : {}) });
+const kepala = { 'Content-Type': 'application/json', Accept: 'application/json', ...(KUNCI ? { Authorization: 'Bearer ' + KUNCI } : {}) };
 
 async function ambil(url, opsi = {}) {
   try {
-    const r = await fetch(url, { ...opsi, headers: { ...kepalaUntuk(opsi.gaya || 'openai'), ...(opsi.headers || {}) }, signal: AbortSignal.timeout(20000) });
+    const r = await fetch(url, { ...opsi, headers: { ...kepala, ...(opsi.headers || {}) }, signal: AbortSignal.timeout(20000) });
     const t = await r.text();
     return { ok: r.ok, status: r.status, t };
   } catch (e) {
@@ -61,22 +58,14 @@ async function ambil(url, opsi = {}) {
 
 const pesanUji = 'Balas satu kata saja: halo';
 
-async function kirimUji(gaya) {
-  const badan = gaya === 'anthropic'
-    ? { model: '', max_tokens: 24, messages: [{ role: 'user', content: pesanUji }] }
-    : { model: '', max_tokens: 24, messages: [{ role: 'user', content: pesanUji }] };
-  return badan;   /* model diisi setelah daftar model terbaca */
-}
-
-tulis('══ memeriksa penyedia AI ══');
+tulis('══ memeriksa penyedia AI (OpenAI-compatible) ══');
 tulis('   alamat : ' + URL_P);
 /* jangan pernah menulis kunci utuh ke layar/berkas bukti — cukup 4 huruf awal */
 tulis('   kunci  : ' + (KUNCI ? KUNCI.slice(0, 4) + '…(' + KUNCI.length + ' karakter)' : '(tanpa kunci)'));
 tulis('');
 
-/* 1. daftar model — dicoba kedua gaya header kalau perlu */
-let gaya = GAYA_PAKSA === 'openai' ? 'openai' : GAYA_PAKSA === 'anthropic' ? 'anthropic' : 'openai';
-let daftar = await ambil(URL_P + '/models', { gaya });
+/* 1. daftar model */
+const daftar = await ambil(URL_P + '/models');
 let model = [];
 if (daftar.ok) {
   try {
@@ -86,65 +75,65 @@ if (daftar.ok) {
 }
 cek('daftar model terbaca (GET /models)', daftar.ok && model.length > 0, 'HTTP ' + daftar.status + ' · ' + model.length + ' model');
 if (model.length) tulis('   contoh: ' + model.slice(0, 6).join(', ') + (model.length > 6 ? ' …' : ''));
+if (daftar.status === 401 || daftar.status === 403) {
+  tulis('   catatan: kunci ditolak. Di NaraRouter, kunci harus berawalan sk-nry- dan dibuat di halaman API keys dasbor.');
+}
 
-/* 2. deteksi gaya: coba satu permintaan kecil di gaya yang dipilih, lalu gaya lain */
-const modelUji = model.find((m) => /haiku|mini|flash|small|lite/i.test(m)) || model[0] || 'model-uji';
-async function coba(g) {
-  const badan = g === 'anthropic'
-    ? { model: modelUji, max_tokens: 24, messages: [{ role: 'user', content: pesanUji }] }
-    : { model: modelUji, max_tokens: 24, messages: [{ role: 'user', content: pesanUji }] };
-  const jalur = g === 'anthropic' ? '/messages' : '/chat/completions';
-  const r = await ambil(URL_P + jalur, { method: 'POST', gaya: g, body: JSON.stringify(badan) });
+/* 2. percakapan uji */
+const modelUji = model.find((m) => /flash|mini|small|lite/i.test(m)) || model[0] || 'model-uji';
+async function coba(m) {
+  const badan = { model: m, max_tokens: 24, messages: [{ role: 'user', content: pesanUji }] };
+  const r = await ambil(URL_P + '/chat/completions', { method: 'POST', body: JSON.stringify(badan) });
   let teks = '';
   let galat = '';
   try {
     const j = JSON.parse(r.t);
-    if (j && j.content) teks = (Array.isArray(j.content) ? j.content : []).filter((b) => b && b.type === 'text').map((b) => b.text).join('');
-    else if (j && j.choices) teks = String((j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+    if (j && j.choices) teks = String((j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
     if (j && j.error) galat = typeof j.error === 'string' ? j.error : (j.error.message || '');
     if (!galat && j && j.type === 'error' && j.error) galat = j.error.message || '';
   } catch (e) { galat = String(r.t).slice(0, 120); }
-  return { gaya: g, status: r.status, ok: r.ok, teks, galat, mentah: r.t.slice(0, 300) };
-}
-
-let hasil = await coba(gaya);
-if (!hasil.ok && (hasil.status === 400 || hasil.status === 404 || hasil.status === 405) && GAYA_PAKSA === 'auto') {
-  const gayaLain = gaya === 'openai' ? 'anthropic' : 'openai';
-  tulis('   gaya ' + gaya + ' ditolak (HTTP ' + hasil.status + ') → mencoba gaya ' + gayaLain + '…');
-  const kedua = await coba(gayaLain);
-  if (kedua.ok || kedua.galat) { hasil = kedua; gaya = gayaLain; }
+  return { status: r.status, ok: r.ok, teks, galat, mentah: r.t.slice(0, 300) };
 }
 
 tulis('');
-tulis('2) percakapan uji via ' + (gaya === 'anthropic' ? 'POST /messages (gaya Anthropic)' : 'POST /chat/completions (gaya OpenAI)'));
+tulis('2) percakapan uji via POST /chat/completions (model: ' + modelUji + ')');
+const hasil = await coba(modelUji);
 if (hasil.ok && String(hasil.teks).trim()) {
   tulis('   jawaban: "' + String(hasil.teks).trim().slice(0, 80) + '"');
   cek('percakapan berhasil', true);
 } else {
   tulis('   jawaban penyedia: HTTP ' + hasil.status + ' · ' + (hasil.galat || hasil.mentah).slice(0, 160));
-  const saldo = /insufficient balance|insufficient credit|no credit|saldo|kredit habis/i.test(hasil.galat + ' ' + hasil.mentah);
+  const saldo = /insufficient balance|insufficient credit|no credit|saldo|kredit habis|quota/i.test(hasil.galat + ' ' + hasil.mentah);
   const kunciSalah = hasil.status === 401 || hasil.status === 403;
   if (saldo) {
-    cek('saldo/kredit penyedia habis — bukan salah setelan', false, 'isi ulang saldo di dasbor penyedia, lalu jalankan lagi');
+    cek('batas/saldo penyedia jadi penghalang — bukan salah setelan', false, 'tunggu batasnya lega atau naikkan paket di dasbor NaraRouter, lalu jalankan lagi');
   } else if (kunciSalah) {
-    cek('kunci ditolak penyedia', false, 'periksa --key (HTTP ' + hasil.status + ')');
+    cek('kunci ditolak penyedia', false, 'periksa --key (HTTP ' + hasil.status + ') — di NaraRouter kunci berawalan sk-nry-');
   } else {
     cek('percakapan berhasil', false, 'HTTP ' + hasil.status);
   }
 }
 
+/* 3. streaming (dipakai halaman chat) */
 tulis('');
-tulis('3) kesimpulan');
+tulis('3) streaming (SSE) — yang dipakai halaman chat');
+const str = await ambil(URL_P + '/chat/completions', {
+  method: 'POST', body: JSON.stringify({ model: modelUji, max_tokens: 32, stream: true, messages: [{ role: 'user', content: 'Sebut satu fakta singkat tentang kopi.' }] }),
+});
+const potongan = (str.t.match(/data:\s*\{/g) || []).length;
+cek('mengalir sebagai SSE (data: {...} + [DONE])', str.ok && potongan > 0 && /\[DONE\]/.test(str.t), 'HTTP ' + str.status + ' · ' + potongan + ' potongan');
+
+tulis('');
+tulis('4) kesimpulan');
 if (masalah === 0) {
   tulis('   ✓ penyedia siap dipakai. Setelan untuk aplikasi:');
-  tulis('     AI_PROVIDER = ' + (NAMA || 'penyedia'));
+  tulis('     AI_PROVIDER = ' + (NAMA || 'bynara'));
   tulis('     AI_BASE_URL = ' + URL_P);
   tulis('     AI_API_KEY  = (kunci di atas)');
-  if (gaya === 'anthropic') tulis('     AI_GAYA     = anthropic      ← penyedia ini memakai protokol Anthropic');
   if (TULIS) {
     const berkas = {
-      nama: NAMA || 'penyedia', url: URL_P, kunci: KUNCI, gaya,
-      model: { fast: model.find((m) => /haiku|mini|flash/i.test(m)) || model[0] || '', think: model.find((m) => /sonnet|glm|qwen/i.test(m)) || model[0] || '' },
+      nama: NAMA || 'bynara', url: URL_P, kunci: KUNCI,
+      model: { fast: model.find((m) => /flash/i.test(m)) || model[0] || '', think: model.find((m) => /agnes|glm|deepseek/i.test(m)) || model[0] || '' },
       jumlahModel: model.length, dicek: new Date().toLocaleString('id-ID'),
     };
     fs.writeFileSync(simpul, JSON.stringify(berkas, null, 2) + '\n');
@@ -156,9 +145,9 @@ if (masalah === 0) {
   tulis('   ✗ ada ' + masalah + ' masalah — perbaiki dulu sebelum dipakai di aplikasi.');
 }
 
-const kepala = 'HASIL CEK PENYEDIA AI\n' + new Date().toLocaleString('id-ID') + '\n' + '─'.repeat(58) + '\n';
+const kepalaBukti = 'HASIL CEK PENYEDIA AI (OpenAI-compatible)\n' + new Date().toLocaleString('id-ID') + '\n' + '─'.repeat(58) + '\n';
 try {
   const namafile = 'HASIL-CEK-PENYEDIA' + (NAMA ? '-' + NAMA.replace(/[^a-z0-9-]/gi, '').toUpperCase() : '') + '.txt';
-  fs.writeFileSync(path.join(AKAR, 'bukti-uji', namafile), kepala + catatan.join('\n') + '\n\n' + (masalah ? 'HASIL: ADA MASALAH' : 'HASIL: SEMUA BAIK') + '\n');
+  fs.writeFileSync(path.join(AKAR, 'bukti-uji', namafile), kepalaBukti + catatan.join('\n') + '\n\n' + (masalah ? 'HASIL: ADA MASALAH' : 'HASIL: SEMUA BAIK') + '\n');
 } catch (e) { /* abaikan */ }
 process.exit(masalah ? 1 : 0);

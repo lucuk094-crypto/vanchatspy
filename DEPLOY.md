@@ -1,228 +1,177 @@
-# Van Chat.SPY + 9Router — DI DEPLOY DI MANA?
+# Van Chat.SPY — DEPLOY DI MANA?
 
-Pertanyaan intinya: **9Router jalan di `localhost:20128`** (di komputer sendiri), sedangkan
-web ini bisa ditaruh di mana saja. Yang menentukan adalah **siapa yang menjalankan 9Router
-dan siapa yang menjalankan web-nya** — keduanya harus bisa saling menghubungi.
+Penyedia AI aplikasi ini **NaraRouter** (`https://router.bynara.id`) — sebuah
+gateway yang berjalan di internet. Artinya: **tidak ada server AI yang perlu
+kamu jalankan sendiri**, tidak ada router lokal, tidak ada tunnel. Yang kamu
+butuhkan cuma satu kunci API (`sk-nry-…`) dan tempat untuk menaruh halaman web
+ini.
 
-Ringkasan cepat:
+| Pilihan | Web di | Bisa dibuka dari HP/internet | Ribet | Catatan |
+|---|---|---|---|---|
+| **A. Komputer sendiri** | PC-mu (`npm run mulai`) | hanya di jaringan yang sama | ⭐ | cara tercepat untuk mencoba |
+| **B. Vercel** *(disarankan untuk publik)* | Vercel | **ya**, punya alamat HTTPS | ⭐ | cukup import repo + isi 2 env |
+| **C. VPS / Docker** | servermu | ya (domain + HTTPS) | ⭐⭐ | hidup 24 jam, kendali penuh |
 
-| Pilihan | 9Router di | Web di | Bisa dibuka dari HP/internet | Ribet | Catatan |
-|---|---|---|---|---|---|
-| **A. Satu komputer** (paling gampang) | PC-mu | PC-mu (`node tools/server-uji.mjs`) | hanya kalau tunnel dibuka | ⭐ | tidak ada setelan tambahan, kunci tidak wajib |
-| **B. VPS kecil / server sendiri** (paling “deploy” beneran) | VPS | VPS yang sama | ya (domain + HTTPS) | ⭐⭐⭐ | 9Router & web hidup 24 jam, tanpa PC nyala |
-| **C. Web di Vercel + 9Router di rumah lewat tunnel** | PC-mu (tunnel) | Vercel | ya | ⭐⭐ | **alamat localhost TIDAK bisa** — wajib alamat publik 9Router; PC harus nyala; jaga alamat & kunci |
-| **D. Satu jaringan (LAN)** | PC-mu | laptop/HP lain di Wi-Fi yang sama | ya, hanya di rumah/kantor | ⭐ | pakai alamat `http://IP-PC:20128/v1` |
-
-Semua pilihan memakai kunci env yang sama: `AI_PROVIDER=9router`, `AI_BASE_URL` (alamat
-9Router yang bisa dijangkau **dari tempat web berjalan**), `AI_API_KEY` (isi bila 9Router-mu
-memakai kunci), dan opsional `AI_MODEL_FAST/THINK/DEEP/EXPERT/VISI`.
+Setelan yang dipakai ketiganya **sama**: `AI_PROVIDER=bynara` + `AI_API_KEY=sk-nry-…`
+(`AI_BASE_URL` boleh dikosongkan — bawaannya `https://router.bynara.id/v1`).
 
 ---
 
-## 0-bis. Kalau penyedia AI-mu bukan gaya OpenAI (mis. cc.freemodel.dev)
+## 0. Sekali saja: siapkan & periksa kuncinya
 
-Ada penyedia yang **hanya** melayani protokol **Anthropic** (`POST /messages` + header
-`x-api-key`), bukan `/chat/completions` ala OpenAI. Untuk itu pasang:
+1. Buka <https://router.bynara.id/keys> → buat kunci (ditampilkan **sekali**, salin).
+2. Periksa dari terminal (sekaligus melihat model apa saja yang boleh dipakai paketmu):
 
-```
-AI_PROVIDER = freemodel
-AI_BASE_URL = https://cc.freemodel.dev/v1
-AI_API_KEY  = <kunci dari dasbor penyedia>
-AI_GAYA     = anthropic
-AI_MODEL_FAST  = claude-haiku-4-5-20251001
-AI_MODEL_THINK = claude-sonnet-5
+```bash
+node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX --nama bynara
 ```
 
-lalu **redeploy**. Aplikasi sudah bisa bicara gaya Anthropic (termasuk jawaban mengalir,
-foto sebagai blok `image`, dan pesan galat penyedia apa adanya). Rincian, hasil pemeriksaan,
-dan cara memeriksanya sendiri: **PANDUAN-PENYEDIA-ANTHROPIC.md**
-(`node tools/cek-penyedia.mjs --url … --key …`).
+Harapannya: `GET /v1/models` mengembalikan daftar model, dan percakapan uji
+dijawab (atau dijawab jujur kalau paketmu belum punya jatah). Tambahkan
+`--tulis` kalau ingin hasilnya disimpan ke `tools/penyedia.json` (berisi kunci →
+**tidak** ikut repo; sudah masuk `.gitignore`).
+
+> Kunci ini **jangan** ditulis di dalam kode, README, atau di-commit. Cukup di
+> environment variable.
 
 ---
 
-## A. Di komputer sendiri (default, tanpa setelan)
+## A. Di komputer sendiri
 
 ```bash
-9router                     # terminal 1 → tunggu "Server ready"
-node tools/server-uji.mjs   # terminal 2 → http://127.0.0.1:8131/
+npm run mulai            # → http://127.0.0.1:8131/
 ```
-Tidak perlu env apa pun: aplikasi otomatis memakai `http://127.0.0.1:20128/v1`.
-Kalau ingin dibuka dari HP tanpa memindahkan 9Router, tunnel **web-nya** saja:
+
+Lalu isi kunci dengan salah satu cara:
 
 ```bash
-cloudflared tunnel --url http://127.0.0.1:8131     # → https://….trycloudflare.com
-```
-Semua permintaan dari HP tetap dikerjakan di PC (9Router tetap di localhost) — ini cara
-paling aman karena **9Router tidak pernah terbuka ke internet**.
+# 1) environment variable (sekali jalan)
+AI_PROVIDER=bynara AI_API_KEY=sk-nry-XXXX npm run mulai
 
-## B. Di VPS / server sendiri (deploy sungguhan, hidup 24 jam)
-
-Tempat terbaik kalau ingin "benar-benar deploy": **9Router dan web di mesin yang sama**.
-Dua cara:
-
-**B1. Tanpa Docker** (paling cepat):
-```bash
-# di VPS (Ubuntu/Debian), sebagai user biasa
-npm install -g 9router            # lalu jalankan: 9router   (buka dashboard-nya lewat SSH port-forward)
-git clone <repo-mu> /opt/van-chat-spy && cd /opt/van-chat-spy
-node tools/cek-9router.mjs        # di VPS: alamat 127.0.0.1:20128 → tools/9router.json
-PORT=8131 node tools/server-uji.mjs
-```
-Buka dashboard 9Router dari komputermu lewat SSH tunnel kalau perlu:
-`ssh -L 20128:127.0.0.1:20128 user@vps` → buka `http://localhost:20128/dashboard`.
-Supaya tetap hidup: `pm2 start tools/server-uji.mjs --name van-chat-spy` (dan `pm2 start 9router`)
-atau unit systemd. Tambahkan Nginx/Caddy sebagai HTTPS di depan port 8131.
-
-**B2. Dengan Docker** (berkas sudah disediakan: `Dockerfile` + `docker-compose.yml`):
-```bash
-cp .env.example .env      # isi AI_API_KEY bila 9Router memakai kunci
-docker compose up -d      # → web di :8131, 9Router di :20128 (dua container, satu jaringan)
-```
-`docker-compose.yml` sudah mengisi `AI_BASE_URL=http://ninerouter:20128/v1`
-(nama service di jaringan Docker), jadi web menemukan 9Router tanpa alamat publik.
-
-> Kunci di VPS: dashboard 9Router ada di port 20128 — jangan dibuka mentah-mentah ke
-> internet. Cukup port web (di balik HTTPS) yang dibuka, 9Router biarkan internal.
-
-## C. Web di Vercel + 9Router di rumah lewat tunnel
-
-**Jawaban singkat untuk skenario ini:** kalau `AI_BASE_URL` diisi `http://127.0.0.1:20128/v1`
-(alamat localhost), **webnya jalan tetapi AI-nya tidak bisa dipakai** — Vercel akan menjawab
-jujur: *“Alamat http://127.0.0.1:20128/v1 tidak bisa dipakai dari hosting (Vercel): di sana
-127.0.0.1 menunjuk ke server Vercel sendiri, bukan ke komputermu.”*
-
-Sebabnya sederhana: `localhost`/`127.0.0.1` artinya “mesin ini”. Di komputermu itu komputermu;
-di Vercel itu server Vercel. Jadi yang harus dipasang bukan alamat localhost, melainkan
-**alamat publik 9Router** (tunnel atau VPS). Itu bisa, dan jalur ini sudah diuji
-(lihat “Bukti”: aplikasi menyambung ke `https://….trycloudflare.com/v1`, membaca 7 model,
-dan bercakap normal).
-
-### Resep langkah demi langkah (Windows)
-
-1. **Buka 9Router ke internet** (pilih salah satu):
-   - *Cepat, tanpa domain* (alamat berubah setiap kali dijalankan):
-     ```bat
-     winget install --id Cloudflare.cloudflared        :: sekali saja
-     cloudflared tunnel --url http://127.0.0.1:20128
-     ```
-     → catat alamat yang muncul, mis. `https://kata-kata-acak.trycloudflare.com`
-   - *Tetap, pakai domain sendiri* (disarankan; alamat tidak berubah):
-     ```bat
-     cloudflared tunnel login
-     cloudflared tunnel create van-chat-9router
-     cloudflared tunnel route dns van-chat-9router router.contoh.com
-     cloudflared tunnel run van-chat-9router
-     ```
-     dengan `%USERPROFILE%\.cloudflared\config.yml`:
-     ```yaml
-     tunnel: van-chat-9router
-     credentials-file: C:\Users\<namamu>\.cloudflared\<id-tunnel>.json
-     ingress:
-       - hostname: router.contoh.com
-         service: http://127.0.0.1:20128
-       - service: http_status:404
-     ```
-
-2. **Kunci di 9Router** — buka dashboard `http://localhost:20128/dashboard`, set
-   `REQUIRE_API_KEY=true`, salin kuncinya. (Tanpa ini, siapa pun yang tahu alamat tunnel
-   bisa memakai kuota modelmu.)
-
-3. **Environment Variables di Vercel** (Project → Settings → Environment Variables):
-   ```
-   AI_PROVIDER = 9router
-   AI_BASE_URL = https://kata-kata-acak.trycloudflare.com/v1     ← berakhiran /v1, bukan localhost
-   AI_API_KEY  = kunci dari dashboard 9Router
-   AI_MODEL_FAST  = gh/gpt-5-mini            ← opsional, tapi disarankan (lihat batas waktu)
-   AI_MODEL_THINK = kr/claude-sonnet-4.5     ← opsional
-   AI_MODEL_VISI  = vertex/gemini-3-flash    ← opsional (untuk foto)
-   ```
-   Lalu **deploy ulang** (`vercel --prod` atau tombol Redeploy) — perubahan env baru berlaku
-   setelah redeploy.
-
-4. **Periksa**: buka web Vercel-mu → **Setelan → Model AI**. Kalau berhasil, model yang
-   tertulis adalah nama dari 9Router (mis. `kr/…`, `gh/…`) dan tombol **Uji koneksi** hijau.
-   Kalau gagal, pesannya menyebut alamat mana yang dicoba — dari situ sudah jelas apa yang salah.
-
-### Yang harus kamu terima kalau memilih cara ini
-
-- **PC harus menyala** dan 9Router harus jalan setiap kali web Vercel-mu dipakai.
-- **Alamat quick tunnel berubah** setiap dijalankan → tiap kali berubah, `AI_BASE_URL` di Vercel
-  harus diganti + redeploy. Kalau tidak mau repot, pakai *named tunnel* dengan domain tetap.
-- **Batas waktu Vercel (Edge runtime):** respons pertama harus mulai keluar dalam **25 detik**
-  (kalau lewat, streaming gagal) dan streaming maksimal **300 detik**. Karena itu disarankan
-  model cepat untuk mode Normal — kalau PC-mu sedang lambat/9Router baru “bangun”, jawaban
-  panjang bisa terpotong.
-- **Vercel Hobby hanya untuk proyek pribadi/non-komersial.**
-- Catatan ke depan: Vercel menandai *Edge Functions* “deprecated for new projects”
-  (mengarahkan ke Vercel Functions + Node runtime). Selama masih jalan, kode ini aman dipakai;
-  untuk jangka panjang, pola yang paling awet tetap **B (VPS)** atau **A (di komputer sendiri)**.
-
-### C-bis. Tanpa tunnel sama sekali: domain Cloudflare + port forward
-
-Kalau kamu ingin **domain Cloudflare sendiri (bukan tunnel)**:
-
-```
-Vercel → https://router.contoh.com:8443/v1 → Cloudflare (proxy) → router rumah
-        → Caddy di PC (HTTPS, only /v1/*) → 9Router 127.0.0.1:20128
+# 2) file .env (dibaca kalau kamu memakai pm2/docker compose)
+cp .env.example .env     # lalu isi AI_API_KEY=sk-nry-XXXX
 ```
 
-Ringkasnya: DNS **A record proxied** ke IP publik rumah + **port forward 8443** +
-**Caddy** sebagai pintu masuk (dengan Cloudflare Origin Certificate) + **DDNS** karena
-IP rumah biasanya berubah. Syarat mutlak: ISP memberi **IP publik** (bukan CGNAT).
-Panduan langkah demi langkah (dengan tabel troubleshooting dan skrip pembantu):
-**`PANDUAN-DOMAIN-CLOUDFLARE.md`**.
+Buka **Setelan → Model AI** di aplikasinya: daftar model diambil langsung dari
+akunmu (`GET /v1/models`). Kalau daftarnya kosong atau jawabannya «kunci ditolak»,
+lihat bagian *Kalau bermasalah* di bawah.
 
-### Keamanan (penting untuk cara ini)
-
-Alamat tunnel = pintu terbuka ke 9Router-mu. Minimal: `REQUIRE_API_KEY=true` + kunci acak panjang.
-Lebih baik lagi: batasi dengan **Cloudflare Access** (hanya emailmu yang boleh lewat) atau
-blockir jalur `/dashboard` dari publik. Kalau tidak ingin mengurus ini semua, pilih B atau A.
-
-Saya sudah siapkan pembantu: `tools\buka-9router-tunnel.bat` — membuka tunnel ke port 20128
-lalu **mencetak langsung tiga baris env** (`AI_PROVIDER`, `AI_BASE_URL`, `AI_API_KEY`) untuk
-disalin ke Vercel.
-
-## D. Satu jaringan rumah/kantor (LAN)
-
-Kalau web-nya dijalankan di laptop lain atau di HP (mis. lewat Termux):
-```
-AI_PROVIDER = 9router
-AI_BASE_URL = http://192.168.1.10:20128/v1      ← IP PC yang menjalankan 9Router
-```
-1. Pastikan 9Router mendengarkan di alamat jaringan (bukan hanya 127.0.0.1) — cek dari
-   laptop lain: `node tools/cek-9router.mjs --url http://192.168.1.10:20128/v1`
-2. Izinkan port 20128 di firewall Windows: `New-NetFirewallRule -DisplayName "9Router" -Direction Inbound -LocalPort 20128 -Protocol TCP -Action Allow` (PowerShell **admin**).
-3. Jangan lakukan ini di Wi-Fi publik — tidak ada HTTPS di LAN.
+> Mau dibuka dari HP juga? Paling mudah: deploy ke Vercel (bagian B). Kalau tetap
+> ingin dari PC sendiri, jalankan web-nya di PC dan buka lewat **alamat LAN**
+> (`http://192.168.x.x:8131/`) — jangan lupa izinkan port 8131 di firewall.
+> Aplikasi ini tidak butuh tunnel: penyedia AI-nya sudah publik.
 
 ---
 
-## Bukti uji (dijalankan di repo ini, 29 Sep 2026)
+## B. Vercel (rekomendasi untuk dipakai publik)
 
-`node tools/uji-9router-jauh.mjs` → **SEMUA LULUS** (`bukti-uji/HASIL-UJI-9ROUTER-JAUH.txt`):
+Tidak ada build step. Semua berkas di `api/` otomatis menjadi Function,
+sisanya berkas statis.
 
-| Pemeriksaan | Hasil |
+1. **Push repo ini ke GitHub** (repo publik aman — di dalamnya tidak ada kunci).
+2. Vercel → **Add New → Project** → *Import Git Repository* → pilih repo ini.
+   Framework Preset: **Other**; biarkan Build/Output Command kosong.
+3. **Settings → Environment Variables**, tambahkan (untuk Production *dan* Preview):
+
+   | Nama | Nilai | Wajib |
+   |---|---|---|
+   | `AI_PROVIDER` | `bynara` | ya |
+   | `AI_API_KEY` | `sk-nry-…` (kuncimu) | ya |
+   | `AI_MODEL_FAST` / `AI_MODEL_THINK` / `AI_MODEL_VISI` | mis. `agnes-2.5-flash` | tidak |
+   | `ALLOWED_ORIGINS` / `APP_URL` | mis. `https://chat.contoh.com` | tidak |
+
+4. **Deploy** → buka alamat `https://<proyek>.vercel.app`.
+5. Cek `/api/health` — harus menjawab `penyedia: NaraRouter …` dan
+   `kunci: terpasang`.
+
+**Penting:** mengubah Environment Variable **tidak** mengubah deployment yang
+sudah jalan. Setelah mengubah env → **Redeploy** (Deployments → … → Redeploy).
+
+Catatan Vercel:
+
+* Paket **Hobby** hanya untuk penggunaan pribadi/non-komersial; fungsi Node
+  dibatasi ± 300 detik per permintaan — cukup untuk streaming jawaban.
+* Kalau memakai **domain sendiri**: Settings → Domains → ikuti instruksi DNS.
+  Tidak ada syarat lain, karena tidak ada router lokal yang perlu dijangkau.
+* Berkas `tools/` dan `dokumen-lama/` tidak ikut terunggah (lihat `.vercelignore`).
+
+---
+
+## C. VPS / Docker (hidup 24 jam)
+
+```bash
+# di VPS (Ubuntu/Debian)
+git clone <repo-mu> van-chat-spy && cd van-chat-spy
+cp .env.example .env         # isi AI_API_KEY=sk-nry-XXXX
+docker compose up -d         # → http://<ip-vps>:8131
+```
+
+Tanpa Docker pun bisa:
+
+```bash
+npm install -g pm2
+AI_API_KEY=sk-nry-XXXX pm2 start tools/server-uji.mjs --name van-chat-spy
+pm2 save
+```
+
+Supaya ada HTTPS, taruh reverse proxy (Caddy paling singkat) di depannya:
+
+```
+chat.contoh.com {
+    reverse_proxy 127.0.0.1:8131
+}
+```
+
+Isi `ALLOWED_ORIGINS=https://chat.contoh.com` dan `APP_URL=https://chat.contoh.com`
+di `.env` kalau webnya dipakai dari domain itu.
+
+---
+
+## Keamanan (berlaku di semua pilihan)
+
+* Kunci NaraRouter hidup **hanya di environment variable** server. Halaman web
+  tidak pernah menerima kunci — `/api/providers` hanya mengirim versi tersamar
+  (`sk-nr…cdef`).
+* Jangan pernah menaruh kunci di `index.html`, `assets/*`, README, atau commit.
+* Kalau kunci sempat bocor (mis. terkirim di chat/screenshot): hapus di
+  <https://router.bynara.id/keys> lalu buat yang baru.
+* Aplikasi **menolak** permintaan dari asal (Origin) asing; isi
+  `ALLOWED_ORIGINS` bila webnya dibuka dari domain lain.
+
+## Batas & biaya (jujur)
+
+* Kuota/token mengikuti **paket akunmu di NaraRouter** (ada paket gratis dengan
+  batas permintaan per menit & token harian; detailnya di halaman *Pricing*).
+  Aplikasi tidak mengarang angka kuota — pesan dari penyedia diteruskan apa adanya.
+* Fitur yang butuh kunci tambahan (gambar AI, suara AI) hanya aktif kalau
+  `IMAGE_API_KEY` / `TTS_API_KEY` / `STT_API_KEY` diisi. Tanpa itu, tombolnya
+  mengatakan apa adanya (gambar lewat kode, suara lewat Web Speech bawaan browser).
+* Hosting Vercel Hobby = penggunaan pribadi/non-komersial.
+
+## Bukti uji (repo ini, 29–30 Sep 2026)
+
+| Berkas | Isinya |
 |---|---|
-| 9Router di alamat jaringan (bukan localhost) | ✓ `http://169.254.0.21:20130/v1 → HTTP 200` |
-| 9Router di alamat publik HTTPS (tunnel) | ✓ `https://….trycloudflare.com/v1 → HTTP 200` |
-| Web dijalankan dengan `AI_BASE_URL` ke alamat itu | ✓ penyedia `alamat=https://….trycloudflare.com/v1`, `dasarLokal=false`, `modelDariRouter=true` |
-| Daftar model tetap dari 9Router (bukan penyedia lain) | ✓ memakai `gh/gpt-5-mini` dari 7 model router |
-| Perintah bentuk “tepat tiga kata” lewat 9Router jauh | ✓ `"Kopi adalah minuman."` |
-| 9Router mati di balik tunnel | ✓ pesan jujur *“Tidak bisa menghubungi 9Router di https://…”* (bukan jawaban palsu, bukan menyuruh `9router` di CMD lokal) |
-| Skenario “di-deploy di Vercel” (`VERCEL=1`, alamat publik) | ✓ penyedia dibaca dari env, model dari router, percakapan jalan — lihat `bukti-uji/HASIL-UJI-9ROUTER-JAUH.txt` |
-| Skenario “di-deploy di Vercel” + `AI_BASE_URL` localhost | ✓ pesan jelas: *“Alamat http://127.0.0.1:20128/v1 tidak bisa dipakai dari hosting (Vercel) …”* — lihat `bukti-uji/HASIL-UJI-9ROUTER-URUTAN.txt` |
+| `bukti-uji/HASIL-UJI-BYNARA.txt` | alur NaraRouter lengkap: daftar model dari penyedia (`agnes-*`), percakapan, streaming (7 potongan + `[DONE]`), visi, builder, kunci salah → jujur «kunci ditolak», dan pemulihan otomatis |
+| `bukti-uji/HASIL-CEK-PENYEDIA-BYNARA.txt` | hasil `tools/cek-penyedia.mjs` ke `router.bynara.id` |
+| `bukti-uji/` (lainnya) | tangkapan layar & hasil uji tampilan/butir 15–53 |
 
-Catatan jujur: sandbox uji ini tidak punya 9Router asli, jadi dipakai `tools/mock-9router.mjs`
-(tiruan dengan protokol sama: `/v1/models` + `/v1/chat/completions` biasa & SSE). Selain itu,
-DNS sandbox lambat mengenali hostname tunnel baru (Cloudflare sempat menjawab 530 lalu 200),
-karena itu uji menunggu sampai alamat publik benar-benar menjawab — di komputer/HP biasa
-DNS sudah benar sejak awal.
+Catatan jujur: di sandbox uji tidak ada akun NaraRouter (tidak ada kunci), jadi
+alur penyedia ditiru oleh `tools/mock-openai.mjs` dengan protokol yang sama
+(`GET /v1/models` + `POST /v1/chat/completions` biasa & SSE). Endpoint aslinya
+sendiri sudah diperiksa langsung: tanpa kunci selalu menjawab
+`401 {"error":{"type":"unauthorized","message":"A valid API key is required."}}`.
 
 ## Kalau bermasalah, cek berurutan
 
-1. `node tools/cek-9router.mjs --url <alamat-yang-dipakai-web>/v1 --key <kunci>` → semua ✓?
-2. Baris saat web dijalankan: `penyedia AI: 9router → <alamat>` dan `✓ 9router terjangkau (200) — N model terdaftar`.
-3. Kalau ✗: pastikan **alamat itu memang bisa dijangkau dari mesin tempat web berjalan**
-   (`curl <alamat>/v1/models`) — localhost hanya berarti di mesin yang sama.
-4. Kalau 401/403: 9Router memakai kunci → isi `AI_API_KEY`.
-5. Kalau 502/503/504: tunnel/gateway-nya jalan tapi 9Router-nya mati → aplikasi akan
-   menampilkan pesan jujur “Tidak bisa menghubungi 9Router di …”.
+1. `node tools/cek-penyedia.mjs --url https://router.bynara.id/v1 --key sk-nry-XXXX` → semua ✓?
+2. Buka **Setelan → Model AI** di aplikasi: ada daftar model → kunci & jaringan beres.
+3. Jawaban «kunci penyedia AI ditolak penyedianya» → kunci salah/terpotong, atau
+   sudah dihapus di NaraRouter. Periksa juga spasi/newline yang ikut tersalin.
+4. Jawaban «Tidak bisa menghubungi penyedia AI» → jaringan atau NaraRouter sedang
+   tidak bisa dihubungi. Aplikasi mencoba lagi otomatis; begitu normal, percakapan
+   langsung jalan **tanpa restart**.
+5. Pesan batas/kuota dari penyedia → tunggu sebentar atau tingkatkan paketnya.
+6. Di Vercel: sudah **redeploy** setelah mengubah env?
+7. Daftar model kosong padahal kunci benar → paket akunmu mungkin belum punya
+   model untuk mode itu; pilih model lain di Setelan → Model AI.
