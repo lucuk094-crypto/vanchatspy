@@ -13,7 +13,7 @@
  *  untuk menjawab "kenapa tidak bisa menghubungi penyedia AI?" tanpa menebak.
  * ════════════════════════════════════════════════════════════════════
  */
-import { penyediaTeks } from "./_ai.js";
+import { penyediaTeks, teksDariSSE } from "./_ai.js";
 
 /* Model cadangan (daftar sungguhan diambil dari NaraRouter oleh /api/chat). */
 const MODEL = {
@@ -63,25 +63,43 @@ async function ujiPenyedia(mintaChat) {
   /* 2. percakapan sangat pendek (opsional, memakai sedikit kuota) */
   if (mintaChat) {
     const t0 = Date.now();
-    try {
-      const model = (hasil.model && hasil.model.contoh && hasil.model.contoh[0]) || MODEL.fast;
-      const r = await fetch(p.dasar + "/chat/completions", {
-        method: "POST",
-        headers: h,
-        signal: AbortSignal.timeout(25000),
-        body: JSON.stringify({ model, max_tokens: 8, messages: [{ role: "user", content: "Balas satu kata: halo" }] }),
-      });
-      const teks = await r.text();
-      let jawab = "", galat = "";
+    /* kandidat: beberapa model pertama dari daftar + model bawaan. Sebagian
+       gateway menyebut model yang kredensialnya tidak aktif, jadi satu model
+       mati tidak boleh langsung dianggap "penyedia bermasalah". */
+    const kandidat = [].concat((hasil.model && hasil.model.contoh) || [], [MODEL.fast]).filter(Boolean).slice(0, 3);
+    const dicoba = [];
+    let hasilTerakhir = null;
+    for (const model of kandidat) {
       try {
-        const j = JSON.parse(teks);
-        jawab = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "");
-        galat = String((j.error && (j.error.message || j.error)) || "");
-      } catch (e) { galat = teks.slice(0, 200); }
-      hasil.percakapan = { ok: r.ok && !!jawab, status: r.status, ms: Date.now() - t0, model, jawaban: jawab.slice(0, 80), galat: galat.slice(0, 200) };
-    } catch (e) {
-      hasil.percakapan = { ok: false, status: 0, ms: Date.now() - t0, galat: String((e && e.message) || e), nama: String((e && e.name) || "") };
+        const r = await fetch(p.dasar + "/chat/completions", {
+          method: "POST",
+          headers: h,
+          signal: AbortSignal.timeout(25000),
+          /* stream:false dikirim EKSPLISIT: sebagian gateway mengalir kalau field ini tidak ada */
+          body: JSON.stringify({ model, stream: false, max_tokens: 12, messages: [{ role: "user", content: "Balas satu kata: halo" }] }),
+        });
+        const teks = await r.text();
+        let jawab = "", galat = "";
+        try {
+          const j = JSON.parse(teks);
+          jawab = String((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "");
+          if (Array.isArray(jawab)) jawab = jawab.join("");
+          galat = String((j.error && (j.error.message || j.error)) || "");
+        } catch (e) {
+          /* jawaban mengalir (SSE) walau diminta JSON → satukan potongannya */
+          const sse = teksDariSSE(teks);
+          if (sse.teks) jawab = sse.teks;
+          else galat = teks.slice(0, 200);
+        }
+        dicoba.push(model + (jawab ? ": ok" : ": gagal"));
+        hasilTerakhir = { ok: r.ok && !!jawab, status: r.status, ms: Date.now() - t0, model, jawaban: String(jawab).slice(0, 80), galat: galat.slice(0, 200) };
+        if (hasilTerakhir.ok) break;   /* sudah ada yang berhasil → cukup */
+      } catch (e) {
+        dicoba.push(model + ": galat");
+        hasilTerakhir = { ok: false, status: 0, ms: Date.now() - t0, model, galat: String((e && e.message) || e), nama: String((e && e.name) || "") };
+      }
     }
+    if (hasilTerakhir) hasil.percakapan = Object.assign(hasilTerakhir, { dicoba });
   }
   /* kesimpulan jujur */
   const m = hasil.model || {};
@@ -110,7 +128,7 @@ export default async function (request) {
     return json({
       ok: hasil.model.ok || !!(hasil.percakapan && hasil.percakapan.ok),
       service: "van-chat-spy",
-      penyedia: "NaraRouter (https://router.bynara.id)",
+      penyedia: penyediaTeks(process.env).label + " (" + penyediaTeks(process.env).dasar + ")",
       keyConfigured: !!kunci,
       waktu: new Date().toISOString(),
       uji: hasil,
@@ -121,7 +139,7 @@ export default async function (request) {
     ok: true,
     service: "van-chat-spy",
     versi: "1.0",
-    penyedia: "NaraRouter (https://router.bynara.id)",
+    penyedia: penyediaTeks(process.env).label + " (" + penyediaTeks(process.env).dasar + ")",
     keyConfigured: !!kunci,
     kunciDari: kunci ? "env (AI_API_KEY)" : "belum dipasang",
     model: MODEL,

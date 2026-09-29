@@ -41,7 +41,7 @@
  */
 
 /* lapisan bersama: penyedia AI yang bisa dikonfigurasi + pengaman permintaan */
-import { penyediaTeks } from "./_ai.js";
+import { teksDariSSE, penyediaTeks } from "./_ai.js";
 import { periksaGambar as saringGambar, teksMasuk, audit, asalDiizinkan } from "./_aman.js";
 
 /* Model cadangan kalau daftar model dari NaraRouter belum terbaca.
@@ -138,8 +138,8 @@ function pesanKuota(detail) {
     const h = (j && j.error && j.error.metadata && j.error.metadata.headers) || {};
     reset = h["X-RateLimit-Reset"] || h["x-ratelimit-reset"] || "";
   } catch {}
-  return "batas permintaan penyedia AI tercapai (paket akunmu di NaraRouter). " +
-    "Coba lagi " + jamResetWIB(reset) + " — atau naikkan paket di dasbor NaraRouter. " +
+  return "batas permintaan penyedia AI tercapai (paket akunmu di penyedianya). " +
+    "Coba lagi " + jamResetWIB(reset) + " — atau naikkan paket akunmu di dasbor penyedia. " +
     "Sementara itu percakapan lama masih bisa dibaca dan ruang kerja tetap jalan.";
 }
 
@@ -152,7 +152,7 @@ const alamatPenyedia = (env) => penyediaTeks(env).dasar + "/chat/completions";
    Diambil dari GET {dasar}/models milik NaraRouter, jadi aplikasi hanya
    memakai model yang BENER-BENER diizinkan paket akunmu — bukan daftar
    karangan. Hasilnya disimpan 60 detik supaya tidak memanggil berulang. */
-let cacheLokal = { dasar: "", ts: 0, daftar: [], ok: false, kode: 0, sebab: "", ms: 0 };
+let cacheLokal = { dasar: "", ts: 0, daftar: [], visi: [], ok: false, kode: 0, sebab: "", ms: 0 };
 
 /* alasan kegagalan terakhir (untuk pesan jujur: timeout? HTTP berapa? DNS?) */
 const sebabLokalTerakhir = () => cacheLokal.sebab || "";
@@ -189,17 +189,21 @@ async function daftarModelLokal(env) {
     });
     if (!r.ok) throw Object.assign(new Error("HTTP " + r.status), { status: r.status });
     const j = await r.json();
-    const daftar = (j.data || j.models || [])
-      .map((m) => String((m && (m.id || m.name)) || "").trim())
-      .filter(Boolean).slice(0, 80);
-    cacheLokal = { dasar: p.dasar, ts: kini, daftar, ok: daftar.length > 0, kode: 0, sebab: "", ms: Date.now() - t0 };
+    const butir = (j.data || j.models || []).filter(Boolean);
+    const daftar = butir.map((m) => String(m.id || m.name || "").trim()).filter(Boolean).slice(0, 200);
+    /* kalau gateway menyebut kemampuan modelnya (capabilities.vision), pakai itu —
+       lebih tepat daripada menebak dari namanya */
+    const visi = butir
+      .filter((m) => m && m.capabilities && (m.capabilities.vision === true || m.capabilities.imageInput === true))
+      .map((m) => String(m.id || m.name || "").trim()).filter(Boolean).slice(0, 40);
+    cacheLokal = { dasar: p.dasar, ts: kini, daftar, visi, ok: daftar.length > 0, kode: 0, sebab: "", ms: Date.now() - t0 };
     if (!daftar.length) { cacheLokal.sebab = "penyedia menjawab, tetapi daftar model untuk paketmu kosong"; return null; }
     return daftar;
   } catch (e) {
     /* penyedia belum bisa dihubungi → coba lagi 5 detik kemudian (bukan menunggu 60 detik),
        supaya begitu jaringan/penyedia normal lagi, web langsung jalan tanpa di-restart */
     cacheLokal = {
-      dasar: p.dasar, ts: kini - 55000, daftar: [], ok: false,
+      dasar: p.dasar, ts: kini - 55000, daftar: [], visi: [], ok: false,
       kode: Number((e && e.status) || 0), sebab: sebabDari(e, Date.now() - t0), ms: Date.now() - t0,
     };
     return null;
@@ -210,7 +214,11 @@ async function daftarModelLokal(env) {
    Kalau daftar model belum selesai dalam 2,5 detik, percakapan tetap jalan
    memakai daftar bawaan — probe-nya terus berjalan di latar dan hasilnya
    tersimpan untuk permintaan berikutnya. */
-const DAFTAR_CEPAT_MS = 800;   /* tunggu paling lama 0,8 detik; sisanya jalur bawaan */
+/* Tunggu paling lama 4,5 detik untuk daftar model pada PERCAKAPAN PERTAMA.
+   Ini penting: nama model harus yang benar-benar ada di gateway (kalau tidak,
+   permintaannya ditolak). Setelah daftar terbaca (disimpan 60 detik), tidak ada
+   penundaan sama sekali. Kalau gagal, percakapan tetap dicoba apa adanya. */
+const DAFTAR_CEPAT_MS = 4500;
 let janjiCari = null;
 async function daftarModelCepat(env, ms = DAFTAR_CEPAT_MS) {
   if (cacheLokal.dasar === penyediaTeks(env).dasar && cacheLokal.ok) return cacheLokal.daftar;
@@ -228,29 +236,33 @@ const adaModelPaksa = (env) => ["AI_MODELS", "AI_MODEL", "AI_MODEL_FAST", "AI_MO
 
 /* kunci ditolak penyedia (alamatnya menjawab, kuncinya salah) */
 function pesanKunciDitolak(penyedia) {
-  return "kunci penyedia AI ditolak penyedianya (" + penyedia.nama + " di " + penyedia.dasar
-    + "). Periksa AI_API_KEY — di NaraRouter kunci harus berawalan sk-nry- dan diambil dari halaman API keys di dasbor;"
-    + " kalau baru diganti/di-rotasi, pakai kunci yang paling baru lalu coba lagi.";
+  return "kunci penyedia AI ditolak penyedianya (" + (penyedia.label || penyedia.nama) + " di " + penyedia.dasar
+    + "). Periksa AI_API_KEY — kuncinya harus yang terbaru dari dasbor penyedia"
+    + (penyedia && penyedia.kustom ? "" : " (di NaraRouter kunci berawalan sk-nry-)")
+    + "; kalau baru diganti/di-rotasi, pakai kunci yang paling baru lalu coba lagi.";
 }
 
 /* kunci belum dipasang sama sekali (bukan "ditolak penyedia") — pesannya dibedakan
    supaya pengguna tahu langkah persisnya, bukan menebak kunci salah */
 function pesanKunciKosong(penyedia) {
-  return "kunci penyedia AI belum dipasang — percakapan butuh satu kunci NaraRouter. "
-    + "Buat kunci berawalan sk-nry- di halaman API keys dasbor NaraRouter (https://router.bynara.id/keys), "
+  const kustom = !!(penyedia && penyedia.kustom);
+  return "kunci penyedia AI belum dipasang — percakapan butuh satu kunci API untuk "
+    + (penyedia && penyedia.label ? penyedia.label : "penyedia AI") + ". "
+    + (kustom
+      ? "Isi AI_API_KEY dengan kunci dari gateway yang kamu pakai di " + penyedia.dasar + " "
+      : "Buat kunci berawalan sk-nry- di halaman API keys dasbor NaraRouter (https://router.bynara.id/keys), ")
     + "lalu pasang sebagai AI_API_KEY di hosting paling lambat sebelum deploy ulang "
-    + "(Vercel: Settings → Environment Variables → Redeploy), atau jalankan lokal dengan: "
-    + "AI_PROVIDER=bynara AI_API_KEY=sk-nry-… node tools/server-uji.mjs. "
+    + "(Vercel: Settings → Environment Variables → Redeploy). "
     + "Alamat penyedia yang dipakai sekarang: " + penyedia.dasar + ".";
 }
 
 /* pesan apa adanya saat penyedia AI tidak bisa dihubungi */
 function pesanPenyediaMati(penyedia, env, sebab) {
-  const nama = penyedia.nama === 'bynara' ? 'NaraRouter' : penyedia.nama;
+  const nama = penyedia.label || penyedia.nama;
   const ubahAlamat = String((env && env.AI_BASE_URL) || '').trim();
   return 'Tidak bisa menghubungi penyedia AI (' + nama + ' di ' + penyedia.dasar + ').'
     + (sebab ? ' Penyebab: ' + sebab + '.' : '')
-    + (ubahAlamat ? ' AI_BASE_URL diisi "' + ubahAlamat + '" — coba kosongkan dulu (bawaannya sudah https://router.bynara.id/v1).' : '')
+    + (ubahAlamat ? ' AI_BASE_URL diisi "' + ubahAlamat + '" — kalau gateway itu tidak menjawab, kosongkan dulu supaya kembali ke bawaan.' : '')
     + ' Periksa koneksi internet server ini dan kunci AI_API_KEY masih berlaku. '
     + 'Percakapan lama tetap bisa dibaca — tidak ada jawaban palsu. '
     + 'Diagnosa cepat: buka /api/health?uji=1 di browser, atau dari terminal: '
@@ -271,6 +283,42 @@ function pilihModelMode(mode, daftar, env) {
   const kena = rx ? daftar.filter((d) => rx.test(d)) : [];
   return kena[0] || daftar[0] || "";
 }
+/* Model yang TERBUKTI berhasil (per mode) — diingat selama proses hidup.
+   Banyak gateway menyebut puluhan model padahal sebagian tidak punya
+   kredensial aktif; percobaan pertama bisa jadi kena yang mati, dan setelah
+   ketemu yang jalan, permintaan berikutnya langsung memakai itu. */
+const modelTerbukti = { fast: "", think: "", deep: "", expert: "" };
+
+/* Model yang baru saja gagal karena memang tidak tersedia di gateway itu
+   (503 "unavailable for free", 404 "no active credentials", dsb). Ditahan
+   5 menit supaya percakapan berikutnya tidak mencoba yang sama berulang kali. */
+const TIDAK_ADA_MS = 5 * 60 * 1000;
+const modelTidakAda = new Map();
+const catatTidakAda = (m) => { if (m) modelTidakAda.set(String(m), Date.now()); };
+const baruMati = (m) => { const t = modelTidakAda.get(String(m)); return !!t && (Date.now() - t) < TIDAK_ADA_MS; };
+const RX_MODEL_MATI = /unavailable|not available|no active credentials|does not exist|model not found|unknown model|tidak tersedia|no endpoints|invalid model/i;
+const catatTerbukti = (mode, model) => { if (model && modelTerbukti[mode] !== model) modelTerbukti[mode] = model; };
+
+/* Susun urutan kandidat model untuk satu mode (dipakai percakapan & builder):
+   1) model yang pernah berhasil, 2) pilihan cerdas untuk mode itu, 3) sisa
+   daftar penyedia. Model yang baru terbukti tidak tersedia ditaruh paling
+   belakang supaya tidak membuang waktu di percobaan berikutnya. */
+export function kandidatModel(env, daftar, mode = "fast", maks = 8) {
+  const semua = [].concat(daftar || []).map((m) => String(m || "").trim()).filter(Boolean);
+  const ingat = modelTerbukti[mode];
+  const utama = pilihModelMode(mode, semua, env);
+  const ekstra = tambahan(env);
+  const urut = [];
+  const dorong = (m) => { if (m && semua.includes(m) && !urut.includes(m)) urut.push(m); };
+  if (ingat) dorong(ingat);
+  ekstra.forEach(dorong);
+  if (utama) dorong(utama);
+  semua.forEach(dorong);
+  const hidup = urut.filter((m) => !baruMati(m));
+  const mati = urut.filter((m) => baruMati(m));
+  return hidup.concat(mati).slice(0, maks);
+}
+
 /* antrean model: khusus untuk penyedia lokal — model pilihan lebih dulu,
    sisanya jadi cadangan bila model itu gagal */
 async function antreanLokal(env, cepat = false) {
@@ -282,7 +330,7 @@ async function antreanLokal(env, cepat = false) {
   for (const mode of ["fast", "think", "deep", "expert"]) {
     if (jelas.length) { hasil[mode] = jelas.slice(0, 8); continue; }
     const utama = pilihModelMode(mode, daftar, env);
-    hasil[mode] = utama ? [utama].concat(daftar.filter((d) => d !== utama).slice(0, 3)) : daftar.slice(0, 3);
+    hasil[mode] = kandidatModel(env, daftar, mode, 8);
   }
   return hasil;
 }
@@ -291,6 +339,9 @@ async function visiLokal(env, cepat = false) {
   const daftar = cepat ? await daftarModelCepat(env) : await daftarModelLokal(env);
   if (!daftar || !daftar.length) return null;
   if (env.AI_MODEL_VISI) return [String(env.AI_MODEL_VISI)];
+  /* gateway yang menyebut kemampuan modelnya sendiri (capabilities.vision) → pakai itu */
+  const dariPenyedia = (cacheLokal.visi || []).filter((m) => daftar.includes(m));
+  if (dariPenyedia.length) return dariPenyedia.slice(0, 6);
   const kena = daftar.filter((d) => /vl|vision|omni|multimodal|gemini|gpt-4|gpt-5|sonnet|claude|dots|qwen.*vl|llava|pixtral/i.test(d));
   return kena.length ? kena.slice(0, 5) : daftar.slice(0, 3);
 }
@@ -611,7 +662,17 @@ async function galatPenyedia(r, env) {
 async function sekaliJalan(model, pesan, mode, kunci, env, signal) {
   const r = await mintaKePenyedia({ model, pesan, mode, kunci, env, stream: false, signal });
   if (!r.ok) return galatPenyedia(r, env);
-  const d = await r.json();
+  const mentah = await r.text();
+  let d = null;
+  try { d = JSON.parse(mentah); } catch (e) {
+    /* gateway ini menjawab dengan aliran SSE walau diminta stream:false */
+    if (/^\s*data:/m.test(mentah)) {
+      const sse = teksDariSSE(mentah);
+      if (sse.teks) return sse.teks;
+      throw new Error("jawaban kosong (aliran tanpa isi)");
+    }
+    throw new Error("jawaban penyedia bukan JSON: " + mentah.replace(/\s+/g, " ").slice(0, 120));
+  }
   const c = d && d.choices && d.choices[0];
   let teks = (c && c.message && c.message.content) || (c && c.text) || "";
   /* sebagian model penalaran mengirim isi di beberapa bagian */
@@ -674,7 +735,7 @@ async function tangani(request, env) {
     return json({
       ok: true, ready: penyedia.router ? lokalSiap : !!kunci, modes: utama, model: utama.fast,
       penyedia: {
-        nama: penyedia.nama, alamat: penyedia.dasar, lokal: penyedia.lokal,
+        nama: penyedia.nama, label: penyedia.label, kustom: penyedia.kustom, alamat: penyedia.dasar, lokal: penyedia.lokal,
         router: penyedia.router, dasarLokal: penyedia.dasarLokal, gaya: penyedia.gaya,
         modelDariRouter: penyedia.router && lokalSiap,
       },
@@ -682,8 +743,8 @@ async function tangani(request, env) {
       daftarModel: antrean, daftarVisi: antreanVisi, modelTambahan: tambahan(env),
       pesan: penyedia.router
         ? (lokalSiap
-          ? "siap — " + (penyedia.nama === "bynara" ? "NaraRouter" : penyedia.nama) + " di " + penyedia.dasar
-          : "belum bisa menghubungi " + (penyedia.nama === "bynara" ? "NaraRouter" : penyedia.nama) + " di " + penyedia.dasar
+          ? "siap — " + penyedia.label + " di " + penyedia.dasar
+          : "belum bisa menghubungi " + penyedia.label + " di " + penyedia.dasar
             + (kunci ? " — periksa koneksi, atau kunci AI_API_KEY masih berlaku." : " — kunci AI_API_KEY belum dipasang."))
         : (kunci ? "siap" : "kunci API belum dipasang"),
     }, 200, c);
@@ -746,23 +807,28 @@ async function tangani(request, env) {
   audit("permintaan-chat", { mode, gambar: gambar.length, ip, stream: inginStream, internal, ketat: aturanKetatAwal.map((a) => a.jenis) });
   /* pilihan model dari pengguna (Setelan → Model AI), hanya dari daftar yang sah */
   const pilihModel = teksMasuk(body.model, 120);
-  const sahModel = new Set([].concat(antrean.fast, antrean.think, antrean.deep, antrean.expert, antreanVisi, tambahan(env)));
+  const sahModel = new Set([].concat(
+    (cacheLokal && cacheLokal.daftar) || [], antrean.fast, antrean.think, antrean.deep, antrean.expert, antreanVisi, tambahan(env),
+  ));
   let kandidat = adaGambar ? antreanVisi : (antrean[mode] || antrean.fast);
   if (pilihModel && sahModel.has(pilihModel)) {
     kandidat = [pilihModel].concat(kandidat.filter((m) => m !== pilihModel));
     audit("model-dipilih", { mode, model: pilihModel, ip });
   }
   let terakhir = "tidak diketahui";
+  let galatRouter = 0, galatLain = 0;
 
   for (const model of kandidat) {
     try {
       if (inginStream) {
         const r = await cobaStream(model, pesan, mode, kunci, env);
+        if (r.ok) catatTerbukti(mode, model);
         const kepala = new Headers(r.headers);
         Object.entries(c).forEach(([k, v]) => kepala.set(k, v));
         return new Response(r.body, { status: 200, headers: kepala });
       }
       let teks = await sekaliJalan(model, pesan, mode, kunci, env);
+      catatTerbukti(mode, model);
       let diperbaiki = 0, bentukTidakPas = false, alasanTidakPas = "";
       if (aturanKetatAwal.length) {
         let hasil = periksaJawaban(teks, aturanKetatAwal);
@@ -804,28 +870,49 @@ async function tangani(request, env) {
       if (m.indexOf("KUOTA|") === 0) return json({ ok: false, kuota: true, pesan: m.slice(6) }, 429, c);
       if (m.indexOf("SALDO|") === 0) return json({ ok: false, saldo: true, pesan: m.slice(6) }, 402, c);
       if (m.indexOf("KUNCI|") === 0) return json({ ok: false, kunci: true, pesan: m.slice(6) }, 401, c);
-      /* penyedia lokal belum jalan → tidak ada gunanya mencoba model lain */
+      /* Masalah tingkat-penyedia (tidak bisa dihubungi / gateway menjawab 502-504).
+         SENGAJA tidak langsung berhenti: banyak gateway mengembalikan 503 hanya
+         untuk model tertentu yang kredensialnya tidak aktif, sementara model
+         lain normal. Semua kandidat dicoba dulu; kalau memang SEMUANYA gagal
+         karena alasan ini, barulah dilaporkan sebagai penyedia bermasalah. */
+      if (RX_MODEL_MATI.test(m)) catatTidakAda(model);
       if (m.indexOf("ROUTERMATI|") === 0 || (penyedia.router && /fetch failed|ECONNREFUSED|connect|network|Failed to fetch|timed out|timeout/i.test(m))) {
-        if (!penyedia.adaKunci) {
-          audit("kunci-kosong", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
-          return json({ ok: false, kunci: true, pesan: pesanKunciKosong(penyedia) }, 401, c);
-        }
-        if (kunciDitolakTerakhir()) {
-          audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
-          return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
-        }
-        audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip, sebab: sebabLokalTerakhir() });
-        return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env, sebabLokalTerakhir()) }, 502, c);
+        galatRouter++;
+        terakhir = m.indexOf("ROUTERMATI|") === 0 ? m.slice(11) : m;
+        continue;
       }
+      galatLain++;
       terakhir = m;
       /* model bermasalah → lanjut ke model cadangan berikutnya */
     }
   }
-  return json({ ok: false, pesan: "Semua model sedang sibuk (" + terakhir + "). Coba lagi sebentar." }, 502, c);
+  /* semua kandidat gagal, dan semuanya karena masalah tingkat-penyedia
+     (tidak bisa dihubungi / 502-504) → laporkan penyedia yang bermasalah */
+  if (galatRouter > 0 && galatLain === 0) {
+    if (!penyedia.adaKunci) {
+      audit("kunci-kosong", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
+      return json({ ok: false, kunci: true, pesan: pesanKunciKosong(penyedia) }, 401, c);
+    }
+    if (kunciDitolakTerakhir()) {
+      audit("kunci-ditolak", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip });
+      return json({ ok: false, kunci: true, pesan: pesanKunciDitolak(penyedia) }, 401, c);
+    }
+    audit("penyedia-mati", { penyedia: penyedia.nama, alamat: penyedia.dasar, ip, sebab: sebabLokalTerakhir(), percobaan: galatRouter });
+    return json({ ok: false, pesan: pesanPenyediaMati(penyedia, env, sebabLokalTerakhir()) }, 502, c);
+  }
+  /* kandidat gagal karena alasan model (mis. tidak punya kredensial aktif di
+     gateway itu) → katakan apa adanya, sertakan galat terakhir penyedia */
+  const bersih = String(terakhir || "").replace(/\s+/g, " ").slice(0, 160);
+  return json({
+    ok: false,
+    pesan: "Tidak ada model yang bisa dipakai dari " + penyedia.label + ". Galat terakhir dari penyedia: " + bersih
+      + ". Buka /api/health?uji=1 untuk diagnosa, atau pilih model lain di Setelan → Model AI"
+      + (penyedia.kustom ? " (sebagian model di gateway ini memang tidak punya kredensial aktif)." : "."),
+  }, 502, c);
 }
 
 /* diekspor supaya bisa diuji tanpa memanggil AI: node tools/uji-bentuk.mjs */
-export { perintahKetat, periksaJawaban, hitungKata, instruksiPerbaikan, susunPesan, jarakBentuk, teknologiDiminta, cocokTeknologi, blokKode, kunciTeknologi, antreanLokal, visiLokal, daftarModelLokal, daftarModelCepat, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, pesanPenyediaMati, sebabLokalTerakhir, tangani };
+export { catatTidakAda, baruMati, RX_MODEL_MATI, catatTerbukti, modelTerbukti, perintahKetat, periksaJawaban, hitungKata, instruksiPerbaikan, susunPesan, jarakBentuk, teknologiDiminta, cocokTeknologi, blokKode, kunciTeknologi, antreanLokal, visiLokal, daftarModelLokal, daftarModelCepat, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, pesanPenyediaMati, sebabLokalTerakhir, tangani };
 
 export const config = { runtime: "edge" };
 

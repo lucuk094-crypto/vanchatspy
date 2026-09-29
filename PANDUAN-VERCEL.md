@@ -147,6 +147,39 @@ yang sudah jalan. Setiap kali mengganti/menambah env →
 | "batas permintaan penyedia tercapai" | batas paket (mis. 15 permintaan/menit) | tunggu sebentar, atau naikkan paket |
 | Daftar model kosong padahal kunci benar | paket akunmu belum punya model untuk mode itu | pilih model lain di Setelan |
 | Perubahan env tidak berefek | deployment belum di-redeploy | Redeploy |
+| "Tidak ada model yang bisa dipakai dari …" | gateway itu menyebut model yang kredensialnya tidak aktif | pilih model lain di Setelan → Model AI, atau kosongkan `AI_BASE_URL` |
+
+---
+
+## 5b. Memakai gateway AI lain (opsional, untuk yang mau)
+
+Bawaannya aplikasi memakai **NaraRouter** dan kamu **tidak perlu** mengisi
+`AI_BASE_URL`. Bagian ini hanya untuk yang memang ingin menunjuk ke gateway
+OpenAI-compatible lain (router sendiri, layanan lain, dsb.).
+
+```env
+AI_BASE_URL=https://alamat-gateway-kamu/v1
+AI_API_KEY=kunci-dari-gateway-itu
+AI_PROVIDER=bynara            # protokolnya OpenAI-compatible → biarkan seperti ini
+AI_MODEL_FAST=...             # opsional, pilih model yang ADA di daftar gateway itu
+```
+
+Yang perlu kamu tahu (hasil uji nyata, bukan teori):
+
+* Aplikasi membaca daftar model dari **gateway itu sendiri** (`GET /models`). Kalau
+  gateway menyebut 90 model tapi hanya 5 yang punya kredensial aktif, aplikasi akan
+  **menyisir kandidat** sampai ketemu yang jalan, lalu **mengingat** model itu untuk
+  percakapan berikutnya (dan menahan model yang baru gagal selama 5 menit).
+  Percakapan pertama bisa terasa lebih lama (beberapa detik); setelah itu normal.
+* Aliran jawaban tanpa baris penutup `data: [DONE]` **tidak** membuat aplikasi
+  menggantung — aplikasi berhenti saat aliran ditutup. Kalau sebuah gateway tetap
+  mengalir walau diminta `stream:false`, jawabannya tetap dipadukan dengan benar.
+* Nama model harus yang **benar-benar ada** di daftar gateway itu. Nama model dari
+  penyedia lain akan ditolak, dan aplikasi akan mengatakannya apa adanya.
+* Untuk kembali ke NaraRouter: **kosongkan `AI_BASE_URL`**, lalu **Redeploy**.
+* Alamat tunnel gratis (mis. `*.trycloudflare.com`, host acak sejenis) bersifat
+  **sementara** — begitu hostnya mati, percakapan akan gagal. Jangan dipakai untuk
+  hal yang harus jalan terus.
 
 ---
 

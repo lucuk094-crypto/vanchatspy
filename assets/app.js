@@ -1462,6 +1462,14 @@
   $('btnSettings').addEventListener('click', function () { isiSetelan(); $('setModal').hidden = false; });
   $('btnMode').addEventListener('click', function () { isiMode(); $('modeModal').hidden = false; });
   $('btnModeC').addEventListener('click', function () { isiMode(); $('modeModal').hidden = false; });
+  /* nama penyedia yang sebenarnya (bynara / gateway kustom) untuk tulisan di layar */
+  function labelPenyedia() {
+    var t = SET.penyedia && SET.penyedia.teks;
+    if (!t) return 'penyedia AI';
+    if (t.label) return t.label;                                  /* dari server: nama yang jujur */
+    if (t.penyedia === 'bynara' || t.penyedia === 'nararouter') return 'NaraRouter';
+    return t.penyedia || 'penyedia AI';
+  }
   function tandaKuotaHabis(habis) {
     SET.pakai = SET.pakai || { tanggal: '', jumlah: 0 };
     SET.pakai.habis = !!habis;    /* batas asli ditentukan paket NaraRouter — kita hanya mencatat apa yang dikatakan penyedia */
@@ -1473,10 +1481,10 @@
   function ringkasKuota() {
     var habis = !!(SET.pakai && SET.pakai.habis);
     var pakai = (SET.pakai && SET.pakai.jumlah) || 0;
-    if (habis) return 'batas penyedia tercapai (dari NaraRouter) · tunggu sebentar atau naikkan paket di dasbor';
+    if (habis) return 'batas penyedia tercapai (dari ' + labelPenyedia() + ') · tunggu sebentar atau naikkan paket di dasbor';
     return pakai
-      ? 'pemakaian hari ini ' + pakai + ' permintaan · batas mengikuti paket akunmu di NaraRouter'
-      : 'batas permintaan mengikuti paket akunmu di NaraRouter (contoh paket gratis: 15 permintaan/menit)';
+      ? 'pemakaian hari ini ' + pakai + ' permintaan · batas mengikuti paket akunmu di ' + labelPenyedia()
+      : 'batas permintaan mengikuti paket akunmu di ' + labelPenyedia();
   }
   function isiMode() {
     var kepala = '<div class="mode-kepala"><span class="art-ic">' + ic('activity', 17) + '</span>'
@@ -2990,12 +2998,12 @@
         + '</section>'
 
         + '<section class="hal-sec"><h3>' + ic('cpu', 16) + 'Model AI</h3>'
-        + '<p class="note">Model per mode berpikir bisa kamu ganti sendiri. Daftar ini diambil dari server (<code>GET /api/chat</code>), dan server mengambilnya dari <b>NaraRouter</b> (<code>GET /v1/models</code>) — jadi yang tampil hanya model yang boleh dipakai paket akunmu. Penyedia: <b>bynara</b> · kunci di server lewat env <code>AI_API_KEY</code> (tidak pernah ditanam di halaman). Batas jumlah & tarif mengikuti paket di dasbor NaraRouter.</p>'
+        + '<p class="note">Model per mode berpikir bisa kamu ganti sendiri. Daftar ini diambil dari server (<code>GET /api/chat</code>), dan server mengambilnya dari penyedia yang aktif (<code>GET /v1/models</code>) — jadi yang tampil hanya model yang benar-benar tersedia untukmu. Penyedia yang dipakai sekarang: <b>' + esc(labelPenyedia()) + '</b> · kunci hidup di server lewat env <code>AI_API_KEY</code> (tidak pernah ditanam di halaman). Batas jumlah & tarif mengikuti paket akunmu di penyedia itu.</p>'
         + barisSet('Normal', MODE.fast.ket, '<select class="sel" id="set18M_fast">' + opsiModel(modelUntukMode('fast')) + '</select>')
         + barisSet('Berpikir', MODE.think.ket, '<select class="sel" id="set18M_think">' + opsiModel(modelUntukMode('think')) + '</select>')
         + barisSet('Berpikir Mendalam', MODE.deep.ket, '<select class="sel" id="set18M_deep">' + opsiModel(modelUntukMode('deep')) + '</select>')
         + barisSet('Expert (tambahan)', MODE.expert.ket, '<select class="sel" id="set18M_expert">' + opsiModel(modelUntukMode('expert')) + '</select>')
-        + barisSet('Penyedia teks aktif', 'hanya status yang tampil — kunci tidak pernah ke browser', '<span class="pill-note">' + esc((SET.penyedia && SET.penyedia.teks && SET.penyedia.teks.penyedia) || 'memuat…') + '</span>')
+        + barisSet('Penyedia teks aktif', 'hanya status yang tampil — kunci tidak pernah ke browser', '<span class="pill-note">' + esc(labelPenyedia()) + '</span>')
         + barisSet('Uji koneksi', 'memanggil GET /api/chat tanpa memakai kuota', '<button class="btn" id="set18UjiModel">' + ic('activity', 15) + 'Uji koneksi</button>')
         + '</section>'
 
@@ -3465,7 +3473,7 @@
     { nama: 'Pembaca Berkas', ikon: 'file-text', desk: 'DOCX, XLSX, PPTX, PDF, ZIP, teks/kode dibaca di browser.', penyedia: 'bawaan', izin: ['baca berkas yang kamu pilih saja'], endpoint: 'internal (BERKAS.baca)', auth: '—', aksi: ['Read'] },
     { nama: 'Pustaka Berkas', ikon: 'folder', desk: 'Menyimpan berkas hasil di browser + metadata, tag, proyek.', penyedia: 'bawaan', izin: ['penyimpanan lokal browser'], endpoint: 'internal', auth: '—', aksi: ['Storage'] },
     { nama: 'AI Builder + Kotak Pasir', ikon: 'hammer', desk: 'Membangun proyek multi-berkas dan menjalankannya di iframe terisolasi.', penyedia: 'bawaan', izin: ['jalankan kode di iframe sandbox (tanpa akses halaman)'], endpoint: '/api/builder · /api/chat', auth: 'kunci AI di server', aksi: ['Build', 'Preview', 'Test'] },
-    { nama: 'Pembuat Gambar', ikon: 'image', desk: 'Membuat gambar dari prompt (rasio & kualitas) lewat NaraRouter.', penyedia: 'IMAGE_PROVIDER=bynara', izin: ['jaringan keluar ke api-images.bynara.id', 'dihitung per kredit paket akunmu'], endpoint: '/api/image/generate', auth: 'IMAGE_API_KEY', aksi: ['Generate'] },
+    { nama: 'Pembuat Gambar', ikon: 'image', desk: 'Membuat gambar dari prompt (rasio & kualitas) lewat penyedia gambar yang dipasang.', penyedia: 'IMAGE_PROVIDER + IMAGE_API_KEY', izin: ['jaringan keluar ke penyedia gambar', 'dihitung per kredit paket akunmu'], endpoint: '/api/image/generate', auth: 'IMAGE_API_KEY', aksi: ['Generate'] },
     { nama: 'Penyimpanan Plugin (GitHub/Kalender/DB)', ikon: 'database', desk: 'Belum dipasang: butuh akun & izin tiap layanan, dan berjalan di backend.', penyedia: '—', izin: ['belum ada'], endpoint: '—', auth: '—', aksi: ['—'], mati: true },
   ];
   function pluginAktif() { return PLUGIN.filter(function (p) { return !p.mati; }); }
@@ -3545,7 +3553,7 @@
         + '<section class="hal-sec"><h3>' + ic('gauge', 16) + 'Penggunaan</h3>'
         + '<div class="mini-list">'
         + '<div class="mini-it"><span><b>Percakapan</b><small>' + sesi.length + ' obrolan · ' + sesi.reduce(function (n, s) { return n + (s.messages ? s.messages.length : 0); }, 0) + ' pesan</small></span></div>'
-        + '<div class="mini-it"><span><b>Pemakaian AI hari ini</b><small>' + ((SET.pakai && SET.pakai.jumlah) || 0) + ' permintaan (batas mengikuti paket NaraRouter)</small></span></div>'
+        + '<div class="mini-it"><span><b>Pemakaian AI hari ini</b><small>' + ((SET.pakai && SET.pakai.jumlah) || 0) + ' permintaan (batas mengikuti paket ' + esc(labelPenyedia()) + ')</small></span></div>'
         + '<div class="mini-it"><span><b>Penyimpanan browser</b><small>± ' + (pakai.total / 1024).toFixed(1) + ' KB</small></span></div>'
         + '</div></section>'
         + '<section class="hal-sec"><h3>' + ic('plug', 16) + 'Model · Provider · Plugin</h3>'

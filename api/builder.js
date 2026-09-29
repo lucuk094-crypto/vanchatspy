@@ -36,9 +36,9 @@ const json = (o, s, extra) =>
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...(extra || {}) },
   });
 
-import { asalDiizinkan } from "./_aman.js";
-import { penyediaTeks } from "./_ai.js";
-import { daftarModelLokal, daftarModelCepat, pilihModelMode, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, sebabLokalTerakhir } from "./chat.js";
+import { asalDiizinkan, audit } from "./_aman.js";
+import { penyediaTeks, teksDariSSE } from "./_ai.js";
+import { daftarModelLokal, daftarModelCepat, kandidatModel, catatTidakAda, catatTerbukti, RX_MODEL_MATI, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, sebabLokalTerakhir } from "./chat.js";
 
 /* daftar model untuk membangun halaman: diambil dari NaraRouter (GET /models),
    supaya yang dipakai benar-benar model yang diizinkan paket akunmu */
@@ -48,9 +48,9 @@ async function kandidatBangun(env) {
   const daftar = await daftarModelCepat(env, 1500);   /* builder: tunggu seperlunya saja */
   if (daftar && daftar.length) {
     if (jelas.length) return jelas.slice(0, 6);
-    const pilih = [pilihModelMode("deep", daftar, env), pilihModelMode("think", daftar, env), pilihModelMode("fast", daftar, env)].filter(Boolean);
-    const unik = [...new Set(pilih)];
-    return unik.concat(daftar.filter((d) => !unik.includes(d)).slice(0, 3));
+    /* urutan yang sama dengan percakapan: model terbukti didahulukan, model yang
+       baru terbukti tidak tersedia di gateway itu ditaruh paling belakang */
+    return kandidatModel(env, daftar, "deep", 10);
   }
   /* daftar model dari penyedia belum terbaca (lambat/gagal sesaat) → JANGAN menyerah:
      pakai model dari setelan, lalu daftar bawaan. Kalau penyedianya memang tak bisa
@@ -60,7 +60,7 @@ async function kandidatBangun(env) {
 }
 
 const pesanRouterMati = (p) => {
-  const nama = p.nama === "bynara" ? "NaraRouter" : p.nama;
+  const nama = p.label || p.nama;
   const sebab = sebabLokalTerakhir();
   return "Tidak bisa menghubungi penyedia AI (" + nama + " di " + p.dasar + ") untuk membangun halaman."
     + (sebab ? " Penyebab: " + sebab + "." : "")
@@ -110,6 +110,9 @@ function kuotaHabis(status, detail) {
   return /free-models-per-day|rate limit exceeded|insufficient credits|quota/i.test(String(detail || ""));
 }
 
+/* batas waktu satu percobaan model saat membangun halaman */
+const BATAS_MODEL_MS = 90000;
+
 async function bangunSatu(model, prompt, mode, p, env) {
   const kepala = { "Content-Type": "application/json" };
   if (p.kunci) kepala.Authorization = `Bearer ${p.kunci}`;
@@ -117,6 +120,8 @@ async function bangunSatu(model, prompt, mode, p, env) {
     model,
     temperature: SUHU[mode] ?? 0.4,
     max_tokens: MAX_TOKENS[mode] || 6000,
+    /* dikirim EKSPLISIT: sebagian gateway mengalirkan jawaban kalau field ini kosong */
+    stream: false,
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: String(prompt || "").slice(0, 12000) },
@@ -125,9 +130,12 @@ async function bangunSatu(model, prompt, mode, p, env) {
   const alamat = p.dasar + "/chat/completions";
   let r;
   try {
-    r = await fetch(alamat, { method: "POST", headers: kepala, body: JSON.stringify(badan) });
+    /* batas waktu per model: kalau satu model menggantung, pindah ke kandidat berikutnya */
+    r = await fetch(alamat, { method: "POST", headers: kepala, body: JSON.stringify(badan), signal: AbortSignal.timeout(BATAS_MODEL_MS) });
   } catch (e) {
-    throw new Error("LOKAL|" + pesanRouterMati(p) + " (" + String((e && e.message) || e).slice(0, 80) + ")");
+    const em = String((e && e.message) || e);
+    if (/aborted|timeout|timed out/i.test(em)) throw new Error("waktu habis menunggu model (" + Math.round(BATAS_MODEL_MS / 1000) + " detik)");
+    throw new Error("LOKAL|" + pesanRouterMati(p) + " (" + em.slice(0, 80) + ")");
   }
   if (!r.ok) {
     const t = await r.text();
@@ -152,11 +160,18 @@ async function bangunSatu(model, prompt, mode, p, env) {
         const h = (j && j.error && j.error.metadata && j.error.metadata.headers) || {};
         reset = h["X-RateLimit-Reset"] || h["x-ratelimit-reset"] || "";
       } catch {}
-      throw new Error("KUOTA|batas permintaan penyedia AI tercapai (paket NaraRouter). Coba lagi " + jamResetWIB(reset) + ", atau naikkan paket di dasbor NaraRouter.");
+      throw new Error("KUOTA|batas permintaan penyedia AI tercapai (paket akunmu). Coba lagi " + jamResetWIB(reset) + ", atau naikkan paket di dasbor penyedia.");
     }
     throw new Error(pesan);
   }
-  const d = await r.json();
+  const mentah = await r.text();
+  let d = null;
+  try { d = JSON.parse(mentah); } catch (e) {
+    /* gateway ini menjawab aliran SSE walau diminta stream:false */
+    const sse = teksDariSSE(mentah);
+    if (sse.teks) d = { choices: [{ message: { content: sse.teks } }] };
+    else throw new Error("jawaban penyedia bukan JSON: " + mentah.replace(/\s+/g, " ").slice(0, 120));
+  }
   const c = d && d.choices && d.choices[0];
   let teks = (c && c.message && c.message.content) || (c && c.text) || "";
   if (Array.isArray(teks)) teks = teks.map((b) => (b && (b.text || b.content)) || "").join("");
@@ -184,7 +199,7 @@ async function tangani(request, env) {
   if (!asalDiizinkan(request, env)) {
     return json({ ok: false, pesan: "Permintaan dari alamat asal yang tidak dikenal ditolak." }, 403, c);
   }
-  if (!kunci) return json({ ok: false, kunci: true, pesan: "Kunci NaraRouter belum dipasang di server (AI_API_KEY)." }, 401, c);
+  if (!kunci) return json({ ok: false, kunci: true, pesan: "Kunci penyedia AI belum dipasang di server (AI_API_KEY)." }, 401, c);
 
   let body;
   try { body = JSON.parse(await request.text()); } catch { return json({ ok: false, pesan: "JSON tidak valid" }, 400, c); }
@@ -204,8 +219,11 @@ async function tangani(request, env) {
   let terakhir = "tidak diketahui";
   let pesanJujur = "";
   for (const model of kandidat) {
+    const t0 = Date.now();
     try {
       const html = await bangunSatu(model, prompt, mode, p, env);
+      catatTerbukti("deep", model);   /* model ini terbukti bisa → dipakai dulu lain kali */
+      audit("bangun-model", { model, ok: true, ms: Date.now() - t0 });
       return json({ ok: true, html, model, mode, bytes: html.length, penyedia: p.nama }, 200, c);
     } catch (e) {
       const m = String((e && e.message) || e);
@@ -213,12 +231,19 @@ async function tangani(request, env) {
       if (m.indexOf("SALDO|") === 0) return json({ ok: false, saldo: true, pesan: m.slice(6) }, 402, c);
       if (m.indexOf("KUNCI|") === 0) return json({ ok: false, kunci: true, pesan: m.slice(6) }, 401, c);
       if (m.indexOf("LOKAL|") === 0) { pesanJujur = m.slice(6); continue; }
+      if (RX_MODEL_MATI.test(m)) catatTidakAda(model);   /* jangan dicoba lagi 5 menit */
+      audit("bangun-model", { model, ok: false, ms: Date.now() - t0, galat: String(m).replace(/\s+/g, " ").slice(0, 120) });
       terakhir = m;
     }
   }
   if (!terakhir || terakhir === "tidak diketahui") terakhir = "penyedia tidak menjawab";
   if (pesanJujur) return json({ ok: false, pesan: pesanJujur, penyedia: { nama: p.nama, alamat: p.dasar } }, 502, c);
-  return json({ ok: false, pesan: "Semua model sedang sibuk (" + terakhir + "). Coba lagi sebentar." }, 502, c);
+  const bersih = String(terakhir).replace(/\s+/g, " ").slice(0, 160);
+  return json({
+    ok: false,
+    pesan: "Tidak ada model yang bisa dipakai dari " + (p.label || p.nama) + " untuk membangun halaman. Galat terakhir dari penyedia: "
+      + bersih + ". Buka /api/health?uji=1 untuk diagnosa, atau pilih model lain di Setelan → Model AI.",
+  }, 502, c);
 }
 
 export const config = { runtime: "edge" };

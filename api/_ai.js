@@ -43,13 +43,54 @@ const ALAMAT_GAMBAR = {
 };
 ;
 
+/* Sebagian gateway mengabaikan stream:false dan tetap menjawab dengan aliran SSE.
+   Fungsi ini menyatukan potongan-potongan itu menjadi teks utuh supaya jawaban
+   tidak dianggap gagal hanya karena bentuknya mengalir. */
+export function teksDariSSE(teks) {
+  let utuh = "", model = "", alasan = "";
+  for (const baris of String(teks || "").split(/\r?\n/)) {
+    const b = baris.trim();
+    if (!b.startsWith("data:")) continue;
+    const isi = b.slice(5).trim();
+    if (!isi || isi === "[DONE]") continue;
+    try {
+      const j = JSON.parse(isi);
+      if (j && j.model) model = String(j.model);
+      const c = j && j.choices && j.choices[0];
+      if (!c) continue;
+      const d = c.delta || c.message || {};
+      const bagian = d.content;
+      if (typeof bagian === "string") utuh += bagian;
+      else if (Array.isArray(bagian)) utuh += bagian.map((x) => (x && (x.text || x.content)) || "").join("");
+      if (c.finish_reason) alasan = String(c.finish_reason);
+    } catch (e) { /* potongan rusak → lewati */ }
+  }
+  return { teks: utuh.trim(), model, sesuai: true, alasan };
+}
+
+/* nama tampilan yang JUJUR: kalau AI_BASE_URL menunjuk ke gateway lain (bukan
+   NaraRouter), jangan mengaku ini NaraRouter — sebut host-nya apa adanya. */
+function namakanTampilan(nama, dasar, alamatBawaan) {
+  const host = (() => { try { return new URL(dasar).host; } catch (e) { return dasar; } })();
+  const bawaan = (() => { try { return new URL(alamatBawaan).host; } catch (e) { return ''; } })();
+  if (nama === 'bynara' || nama === 'nararouter') {
+    if (!bawaan || host === bawaan) return 'NaraRouter';
+    return 'gateway OpenAI-compatible di ' + host;   /* jujur: bukan NaraRouter */
+  }
+  return nama;
+}
+
 export function penyediaTeks(env = {}) {
   const nama = String(env.AI_PROVIDER || 'bynara').toLowerCase();
   const dasar = String(env.AI_BASE_URL || ALAMAT[nama] || ALAMAT.bynara).replace(/\/+$/, '');
   /* kunci: AI_API_KEY (dan BYNARA_API_KEY sebagai alias kalau kamu suka nama itu) */
   const kunci = String(env.AI_API_KEY || env.BYNARA_API_KEY || '').trim();
+  const label = namakanTampilan(nama, dasar, ALAMAT[nama] || ALAMAT.bynara);
+  const kustom = (() => { try { return new URL(dasar).host !== new URL(ALAMAT[nama] || ALAMAT.bynara).host; } catch (e) { return false; } })();
   return {
     nama,
+    label,        /* untuk pesan ke pengguna */
+    kustom,       /* true = dipakai gateway lain lewat AI_BASE_URL */
     dasar,
     kunci,
     adaKunci: !!kunci,
@@ -68,7 +109,8 @@ export function penyediaGambar(env = {}) {
   const kunci = String(env.IMAGE_API_KEY || '').trim();
   const dasar = String(env.IMAGE_BASE_URL || ALAMAT_GAMBAR[nama] || ALAMAT[nama] || 'https://api-images.bynara.id/v1').replace(/\/+$/, '');
   const model = String(env.IMAGE_MODEL || (ALAMAT_GAMBAR[nama] ? 'agnes-image-2.1-flash' : 'gpt-image-1'));
-  return { nama, dasar, kunci, model, siap: !!nama && !!kunci };
+  const label = nama ? namakanTampilan(nama, dasar, ALAMAT_GAMBAR[nama] || ALAMAT[nama] || '') : '';
+  return { nama, label, dasar, kunci, model, siap: !!nama && !!kunci };
 }
 
 export function penyediaSuara(env = {}, jenis = 'tts') {
@@ -263,11 +305,11 @@ export function daftarProvider(env = {}) {
   const samarkan = (k) => (k ? k.slice(0, 6) + '…' + k.slice(-4) : '');
   return {
     teks: {
-      penyedia: t.nama, alamat: t.dasar, adaKunci: t.adaKunci, kunci: samarkan(t.kunci),
-      modelTetap: env.AI_MODEL || null, lokal: t.lokal,
-      catatan: t.nama === 'bynara'
-        ? 'NaraRouter (https://router.bynara.id) — model yang tampil diambil dari daftar model milik akunmu.'
-        : null,
+      penyedia: t.nama, label: t.label, alamat: t.dasar, adaKunci: t.adaKunci, kunci: samarkan(t.kunci),
+      modelTetap: env.AI_MODEL || null, lokal: t.lokal, kustom: t.kustom,
+      catatan: t.kustom
+        ? 'Gateway OpenAI-compatible pilihanmu (' + t.dasar + ') — daftar model dibaca dari gateway itu sendiri.'
+        : 'NaraRouter (https://router.bynara.id) — model yang tampil diambil dari daftar model milik akunmu.',
     },
     gambar: { penyedia: g.nama || '(belum diatur)', model: g.model, siap: g.siap, kunci: samarkan(g.kunci) },
     suara: { stt: { penyedia: s.nama || '(bawaan browser)', siap: s.siap }, tts: { penyedia: v.nama || '(bawaan browser)', siap: v.siap, suara: v.suara } },

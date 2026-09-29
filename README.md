@@ -239,3 +239,11 @@ npm i puppeteer       # sekali saja — untuk uji tampilan di Chromium
 npm run uji:tampilan  # uji tombol & tampilan sungguhan
 ```
 
+**Gateway OpenAI-compatible lain?** Boleh. Isi `AI_BASE_URL` + `AI_API_KEY`
+(lihat *PANDUAN-VERCEL.md § 5b*). Aplikasi membaca daftar model dari gateway itu,
+menyisir kandidat sampai ketemu model yang benar-benar aktif, lalu mengingatnya —
+jadi gateway yang daftar modelnya "ramai tapi separuh mati" tetap bisa dipakai.
+Kosongkan `AI_BASE_URL` untuk kembali ke NaraRouter. Uji nyata gateway pihak
+ketiga (percakapan, streaming, foto, builder) ada di
+`bukti-uji/HASIL-UJI-GATEWAY-KUSTOM.txt`.
+

@@ -177,3 +177,8 @@ sendiri sudah diperiksa langsung: tanpa kunci selalu menjawab
 6. Di Vercel: sudah **redeploy** setelah mengubah env?
 7. Daftar model kosong padahal kunci benar → paket akunmu mungkin belum punya
    model untuk mode itu; pilih model lain di Setelan → Model AI.
+8. Memakai gateway OpenAI-compatible lain (opsional): isi `AI_BASE_URL` +
+   `AI_API_KEY`. Kalau gateway itu menyebut banyak model tapi sebagian tidak punya
+   kredensial aktif, aplikasi menyisir kandidat dan mengingat yang berhasil
+   (percakapan pertama bisa lebih lama beberapa detik). Kosongkan `AI_BASE_URL`
+   untuk kembali ke NaraRouter.
