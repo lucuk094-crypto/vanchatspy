@@ -14,8 +14,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
-const require = createRequire('/tmp/u/package.json');
-const puppeteer = require('puppeteer');
+/* Puppeteer dipakai untuk uji di browser sungguhan.
+   Di komputer sendiri cukup:  npm i puppeteer   (di folder proyek).
+   Di sandbox uji, puppeteer bisa ada di /tmp/u — lewat PUPPETEER_DIR. */
+const PUPPETEER_DIR = process.env.PUPPETEER_DIR || '/tmp/u';
+const puppeteer = (() => {
+  const kandidat = [createRequire(import.meta.url), createRequire(PUPPETEER_DIR + '/package.json')];
+  for (const r of kandidat) { try { return r('puppeteer'); } catch (e) {} }
+  console.error('Puppeteer tidak ditemukan. Pasang dulu:  npm i puppeteer   (di folder proyek ini)');
+  process.exit(2);
+})();
 
 const URL_UJI = process.env.UJI_URL || 'http://127.0.0.1:8131/';
 const SHOT = process.env.SHOT_DIR || '/home/user/van-chat-spy/bukti-uji';

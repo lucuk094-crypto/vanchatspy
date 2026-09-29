@@ -51,6 +51,14 @@ cd van-chat-spy
 node tools/server-uji.mjs          # lalu buka http://127.0.0.1:8131/
 ```
 
+Uji otomatis (tanpa kuota AI) — dijalankan dari folder proyek:
+
+```bash
+npm run uji                 # 12 rangkaian uji backend/logika (tanpa browser)
+npm i puppeteer             # sekali saja, untuk uji yang memakai browser sungguhan
+npm run uji:tampilan        # uji tampilan & tombol nyata di Chromium
+```
+
 Berkas backend yang dijalankan persis sama dengan yang nanti dipakai di
 hosting, jadi yang terlihat lokal = yang akan jalan setelah dipasang.
 

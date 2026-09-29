@@ -1,5 +1,5 @@
 UJI PENYEDIA GAYA ANTHROPIC (cc.freemodel.dev dan sejenisnya)
-29/9/2026, 16.52.49
+29/9/2026, 16.57.17
 ──────────────────────────────────────────────────────────
 ══ uji: penyedia bergaya ANTHROPIC (seperti cc.freemodel.dev) ══
    penyedia: {"nama":"freemodel","alamat":"http://127.0.0.1:20140/v1","lokal":true,"router":true,"dasarLokal":true,"gaya":"anthropic","modelDariRouter":true}

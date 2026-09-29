@@ -1,0 +1,23 @@
+{
+  "name": "van-chat-spy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Van Chat.SPY — asisten AI mandiri: halaman 3 kolom, ruang kerja berkas, AI Builder dengan kotak pasir, riwayat lengkap, penyedia AI bisa diganti (OpenRouter, NaraRouter, 9Router lokal, gateway Anthropic).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "mulai": "node tools/server-uji.mjs",
+    "uji": "node tools/uji-bentuk.mjs && node tools/uji-api.mjs && node tools/cek-impor-api.mjs && node tools/cek-ikon.mjs && node tools/uji-rahasia.mjs && node tools/uji-bynara.mjs && node tools/uji-anthropic.mjs && node tools/uji-9router.mjs && node tools/uji-9router-urutan.mjs && node tools/uji-ddns.mjs && node tools/uji-domain.mjs",
+    "uji:tampilan": "node tools/uji-tampilan.mjs && node tools/uji-bagian-h.mjs && node tools/uji-arahan-proyek.mjs && node tools/smoke-18.mjs",
+    "cek:penyedia": "node tools/cek-penyedia.mjs"
+  },
+  "keywords": [
+    "ai",
+    "chat",
+    "openai-compatible",
+    "router",
+    "vercel"
+  ]
+}

@@ -1,5 +1,5 @@
 UJI 9ROUTER DI BELAKANG REVERSE PROXY (Caddy sungguhan)
-29/9/2026, 16.29.08
+29/9/2026, 16.59.59
 ──────────────────────────────────────────────────────────
 ══ uji: 9Router di belakang reverse proxy (Caddy) ══
    alamat uji: https://router.contoh.com:8443/v1  (nama domain diarahkan ke PC ini)

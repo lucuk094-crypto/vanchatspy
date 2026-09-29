@@ -1,5 +1,5 @@
 UJI URUTAN 9ROUTER (web dulu, router belakangan)
-29/9/2026, 16.27.10
+29/9/2026, 16.57.53
 ──────────────────────────────────────────────────────────
 ══ uji: urutan "9Router dulu, atau web dulu?" ══
    status di aplikasi: "9Router di http://127.0.0.1:20129/v1 belum bisa dihubungi — jalankan dulu di terminal."
@@ -7,8 +7,8 @@ UJI URUTAN 9ROUTER (web dulu, router belakangan)
    kirim pesan sebelum router hidup → "Tidak bisa menghubungi 9Router di http://127.0.0.1:20129/v1. Jalankan 9Router dulu di CMD/terminal — tulis `9r"
   ✓ pesan sebelum router hidup dijawab jujur (tanpa jawaban palsu) — Tidak bisa menghubungi 9Router di http://127.0.0.1:20129/v1.
    …menyalakan 9Router sekarang…
-   setelah 9Router hidup → web jalan dalam 5.0 detik (tanpa restart)
-  ✓ web langsung aktif tanpa di-restart — 5.0 detik
+   setelah 9Router hidup → web jalan dalam 5.1 detik (tanpa restart)
+  ✓ web langsung aktif tanpa di-restart — 5.1 detik
    status terbaru: modelDariRouter=true · model "gh/gpt-5-mini"
   ✓ daftar model ikut terisi otomatis setelah router hidup
   ✓ yang dipakai benar-benar model dari router (bukan nama model penyedia lain) — gh/gpt-5-mini
