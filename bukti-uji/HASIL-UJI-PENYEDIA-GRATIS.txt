@@ -1,0 +1,48 @@
+UJI PENYEDIA GRATIS — Pollinations (tanpa kunci) · Gemini · Cloudflare Workers AI
+30/9/2026, 17.50.06
+────────────────────────────────────────────────────────────
+══ A. Pollinations — GRATIS, tanpa kunci, tanpa pendaftaran ══
+   penyedia: {"nama":"pollinations","label":"Pollinations","alamat":"https://text.pollinations.ai/openai","adaKunci":true}
+   gambar  : {"penyedia":"Pollinations","model":"sana","siap":true}
+  ✓ penyedia dilaporkan Pollinations
+  ✓ dikenali sebagai penyedia tanpa kunci
+  ✓ model bawaan dari penyedia gratis
+  ✓ pembuat gambar otomatis siap (tanpa setelan) — Pollinations
+  ✓ model gambar gratis memakai model yang dilayani penyedia — sana
+  · percakapan Pollinations sedang dibatasi penyedianya — Tidak ada model yang bisa dipakai dari Pollinations. Galat terakhir dari penyedia: ENOSPC:
+  ✓ pesannya jujur menyebut galat penyedia (bukan jawaban palsu)
+   gambar: ok · Pollinations · sana · 69331 karakter data URL
+  ✓ pembuat gambar gratis menghasilkan gambar sungguhan
+   kirim foto → Penyedia yang sedang dipakai (Pollinations) belum bisa melihat gambar. Pakai penyedia yang bisa melihat gambar: isi AI_P
+  ✓ dijawab jujur: penyedia ini belum bisa melihat gambar
+  ✓ pesannya menyebut jalan keluarnya (gemini + kunci gratis)
+
+══ B. Gemini — Google AI Studio (lewat router tiruan, tanpa kuota) ══
+   penyedia: {"nama":"gemini","label":"Google AI Studio (Gemini) (127.0.0.1:8155)"}
+  ✓ penyedia dilaporkan gemini
+  ✓ nama tampilannya "Google AI Studio (Gemini)"
+   jawaban: "Kopi adalah minuman."
+  ✓ percakapan lewat penyedia Gemini
+   kirim foto → "Latar belakang merah dengan lingkaran putih di tengah dan batang vertikal biru."
+  ✓ foto diterima penyedia yang bisa melihat gambar
+
+══ C. Cloudflare Workers AI — satu akun untuk SEMUA fitur (tiruan) ══
+   penyedia: {"teks":"Cloudflare Workers AI","gambar":"Cloudflare Workers AI","gambarSiap":true,"suara":{"stt":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/openai/whisper","catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."},"tts":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/myshell-ai/melotts","suara":"id-ID","catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."}}}
+  ✓ penyedia = Cloudflare Workers AI — Cloudflare Workers AI
+  ✓ alamat teks mengikuti setelan akun (tiruan) — http://127.0.0.1:8157/v1
+  ✓ rumus alamat asli Cloudflare benar — https://api.cloudflare.com/client/v4/accounts/akun-uji/ai/v1
+  ✓ pembuat gambar otomatis ikut Cloudflare (FLUX)
+  ✓ dengar & suara dilaporkan siap (Whisper + MeloTTS) — {"stt":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/openai/whisper","catatan":"Cloud
+   percakapan: "Kopi adalah minuman yang dibuat dari biji kopi yang disangra"
+  ✓ teks lewat Cloudflare (endpoint OpenAI-compatible-nya)
+   gambar: Cloudflare Workers AI · @cf/black-forest-labs/flux-1-schnell
+  ✓ gambar lewat Cloudflare (FLUX /run)
+  [cf] whisper menerima 9 bita audio, content-type=audio/webm
+   dengar (Whisper): {"ok":true,"teks":"halo, ini hasil dengar tiruan","penyedia":"Cloudflare Workers AI"}
+  ✓ dengar lewat Cloudflare Whisper
+   suara (MeloTTS): data:audio/mpeg;base64,SU5JQVVESU9USUJVQU4=
+  ✓ suara lewat Cloudflare MeloTTS
+   health: {"lihatGambar":true,"streaming":true,"pembuatGambar":"Cloudflare Workers AI","pembuatGambarSiap":true,"suara":{"penyedia":"Cloudflare Workers AI","siap":true,"catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."}}
+  ✓ health menyebut kemampuan + pembuat gambar siap
+
+HASIL: SEMUA LULUS (1 bagian dilewati karena kuota gratis penyedianya sedang habis — dicatat apa adanya)

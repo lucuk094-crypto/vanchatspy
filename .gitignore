@@ -17,5 +17,5 @@ __pycache__/
 # ── berkas besar / khusus sandbox (tidak perlu ikut repo) ─────────────────
 # paket .deb untuk menyiapkan Chromium di sandbox uji
 tools/deb/
-# tangkapan layar uji (ada di berkas ZIP, bukan di repo)
+# tangkapan layar uji (ada di ruang kerja untuk diperiksa — tidak ikut repo maupun ZIP)
 bukti-uji/*.png

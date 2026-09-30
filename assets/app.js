@@ -2940,7 +2940,7 @@
       + '<small>' + esc(t.alamat || '') + ' · kunci ' + (t.adaKunci ? 'ada (' + esc(t.kunci || '') + ')' : 'belum ada')
       + (t.modelTetap ? ' · model tetap ' + esc(t.modelTetap) : '') + '</small></span></div>'
       + '<div class="mini-it"><span><b>Pembuat gambar: ' + esc((p.gambar && p.gambar.penyedia) || '(belum diatur)') + '</b>'
-      + '<small>' + ((p.gambar && p.gambar.siap) ? 'siap · ' + esc(p.gambar.model) : 'butuh IMAGE_PROVIDER + IMAGE_API_KEY') + '</small></span></div>'
+      + '<small>' + ((p.gambar && p.gambar.siap) ? 'siap · ' + esc(p.gambar.model) : 'belum aktif — biarkan IMAGE_PROVIDER kosong untuk Pollinations (gratis, tanpa kunci)') + '</small></span></div>'
       + '<div class="mini-it"><span><b>Suara: ' + esc(((p.suara && p.suara.tts && p.suara.tts.penyedia) || 'bawaan browser')) + '</b>'
       + '<small>' + ((p.suara && p.suara.tts && p.suara.tts.siap) ? 'suara AI aktif' : 'memakai Web Speech API browser') + '</small></span></div>'
       + '<div class="mini-it"><span><b>Deployment: ' + esc((p.deploy && p.deploy.penyedia) || '(belum diatur)') + '</b>'
@@ -3473,7 +3473,7 @@
     { nama: 'Pembaca Berkas', ikon: 'file-text', desk: 'DOCX, XLSX, PPTX, PDF, ZIP, teks/kode dibaca di browser.', penyedia: 'bawaan', izin: ['baca berkas yang kamu pilih saja'], endpoint: 'internal (BERKAS.baca)', auth: '—', aksi: ['Read'] },
     { nama: 'Pustaka Berkas', ikon: 'folder', desk: 'Menyimpan berkas hasil di browser + metadata, tag, proyek.', penyedia: 'bawaan', izin: ['penyimpanan lokal browser'], endpoint: 'internal', auth: '—', aksi: ['Storage'] },
     { nama: 'AI Builder + Kotak Pasir', ikon: 'hammer', desk: 'Membangun proyek multi-berkas dan menjalankannya di iframe terisolasi.', penyedia: 'bawaan', izin: ['jalankan kode di iframe sandbox (tanpa akses halaman)'], endpoint: '/api/builder · /api/chat', auth: 'kunci AI di server', aksi: ['Build', 'Preview', 'Test'] },
-    { nama: 'Pembuat Gambar', ikon: 'image', desk: 'Membuat gambar dari prompt (rasio & kualitas) lewat penyedia gambar yang dipasang.', penyedia: 'IMAGE_PROVIDER + IMAGE_API_KEY', izin: ['jaringan keluar ke penyedia gambar', 'dihitung per kredit paket akunmu'], endpoint: '/api/image/generate', auth: 'IMAGE_API_KEY', aksi: ['Generate'] },
+    { nama: 'Pembuat Gambar', ikon: 'image', desk: 'Membuat gambar dari prompt (rasio & kualitas). Bawaannya Pollinations — gratis, tanpa kunci (gambar bertanda air); Cloudflare Workers AI (FLUX, tanpa tanda air) bila token diisi.', penyedia: 'Pollinations (bawaan, gratis) · atau IMAGE_PROVIDER + IMAGE_API_KEY', izin: ['jaringan keluar ke penyedia gambar', 'dihitung per kuota penyedia gambar'], endpoint: '/api/image/generate', auth: '(Pollinations: tanpa kunci) IMAGE_API_KEY bila memakai penyedia lain', aksi: ['Generate'] },
     { nama: 'Penyimpanan Plugin (GitHub/Kalender/DB)', ikon: 'database', desk: 'Belum dipasang: butuh akun & izin tiap layanan, dan berjalan di backend.', penyedia: '—', izin: ['belum ada'], endpoint: '—', auth: '—', aksi: ['—'], mati: true },
   ];
   function pluginAktif() { return PLUGIN.filter(function (p) { return !p.mati; }); }
@@ -4660,7 +4660,7 @@
   var imgRasio = '1:1', imgKualitas = 'standar', imgTerakhir = null, imgPromptTerakhir = '';
   function imgSiapkan() {
     var s = SET.penyedia && SET.penyedia.gambar;
-    $('imgStatus').textContent = s && s.siap ? ('siap · ' + (s.penyedia || '') + ' · ' + (s.model || '')) : 'butuh kunci — memakai jalur kode SVG';
+    $('imgStatus').textContent = s && s.siap ? ('siap · ' + (s.penyedia || '') + ' · ' + (s.model || '')) : 'belum aktif — memakai jalur kode SVG (biarkan IMAGE_PROVIDER kosong untuk Pollinations gratis)';
     $('imgCatatan').innerHTML = s && s.siap
       ? 'Penyedia gambar aktif. Hasilnya bisa disimpan ke pustaka, diunduh, atau dimasukkan ke proyek.'
       : 'Pembuat gambar AI belum aktif (butuh IMAGE_PROVIDER + IMAGE_API_KEY milikmu). Sambil menunggu, tombol <b>Buat gambar</b> akan menawarkan gambar <b>SVG</b> yang benar-benar jadi berkas — bukan gambar palsu.';

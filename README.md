@@ -151,8 +151,8 @@ utama.
 | **Riset mendalam (butir 15)** | **nyata** — 7 langkah berstatus (rencana → sumber → kumpulkan → analisis → bandingkan → periksa → laporan), sumber dari `/api/search`, hasilnya berkas `riset-*.html` dengan sitasi `[n]` |
 | **AI Builder (butir 24–25)** | **nyata** — 10 langkah, proyek multi-berkas, pratinjau di iframe terisolasi, konsol & jaringan, uji otomatis, build, ZIP, deploy (butuh penyedia), dan **diff Terima/Tolak/Batalkan** sebelum perubahan besar |
 | **Code editor (butir 28)** | **nyata** — nomor baris, sorot sintaks (JS/TS/React/Next/HTML/CSS/Python/JSON/SQL…), cari, ganti, ganti semua, rapikan, salin, unduh |
-| **Studio gambar (butir 17)** | **nyata bila kunci diisi** — prompt, rasio, kualitas, buat ulang, simpan ke Pustaka, unduh, tambah ke Proyek |
-| **Mode suara (butir 18)** | **nyata lewat browser** — Mikrofon · Mulai Voice · Berhenti · Mute · Speaker; alur bicara → STT → AI → TTS |
+| **Studio gambar (butir 17)** | **nyata — gratis tanpa kunci** — prompt, rasio, kualitas, buat ulang, simpan ke Pustaka, unduh, tambah ke Proyek. Bawaannya **Pollinations** (gratis, ada tanda air, ±1 gambar/15 detik); dengan Cloudflare Workers AI memakai FLUX tanpa tanda air. Kalau penyedia menolak, pesannya diteruskan apa adanya — tidak ada gambar palsu |
+| **Mode suara (butir 18)** | **nyata** — Mikrofon · Mulai Voice · Berhenti · Mute · Speaker; alur bicara → STT → AI → TTS. Bawaan memakai **Web Speech API browser**; kalau `STT_PROVIDER`/`TTS_PROVIDER=cloudflare` diisi, dengar memakai Whisper dan suara memakai MeloTTS di server |
 | **Proyek · memori · tugas · plugin (butir 19–23)** | **nyata** — 7 penghitung, instruksi otomatis ke AI, 4 kategori memori, penjadwal (server bila KV diisi), 6 plugin dengan izin tertulis |
 | **Pencarian global (butir 36)** | **nyata** — `Ctrl+Shift+K`, hasil berkelompok: Obrolan · Pesan · Proyek · File · Builder |
 | **Bagikan & cabang (butir 37–38)** | **nyata** — tautan hanya-baca + masa berlaku, atau mode Pribadi; cabang obrolan tidak mengubah percakapan asli |
@@ -174,7 +174,7 @@ Batas yang perlu diketahui (jujur):
 * **Kuota**: batas permintaan mengikuti **paket akunmu di 9Router** (paket gratis punya batas menit & token harian). Aplikasi tidak mengarang angka kuota — pesan dari penyedia ditampilkan apa adanya.
 * **Referensi Wikipedia**: artikel yang diambil adalah artikel Wikipedia itu sendiri — AI tidak menjelajah internet bebas, jadi untuk berita/angka terkini tetap bisa keliru. Fitur ini bisa dimatikan.
 * Riwayat disimpan di **browser** pengguna, bukan di server; hapus data browser = riwayat hilang (pakai Ekspor dulu bila perlu).
-* Bukan pembuat gambar: halaman/SVG dibuat lewat kode. Model pembuat gambar di penyedia AI semuanya berbayar, jadi tidak ada tombol "buat gambar" yang pura-pura jalan.
+* **Pembuat gambar** memakai penyedia yang benar-benar gratis: Pollinations (bawaan, tanpa kunci, ada tanda air) atau Cloudflare Workers AI FLUX (gratis 10.000 neuron/hari, butuh API token). Kalau kuotanya penuh, aplikasi mencoba ulang 3× lalu **mengatakan gagal** — bukan gambar palsu.
 * **Tugas terjadwal** berjalan saat aplikasi terbuka di browser. Tanpa server penyimpan tugas, halaman yang ditutup = tugas menunggu sampai dibuka lagi.
 * **Memori, proyek, dan riwayat** hidup di browser pengguna (localStorage), bukan di server.
 * **Jawaban AI jujur soal kuota/biaya**: aplikasi tidak pernah menampilkan jatah
@@ -187,10 +187,12 @@ Batas yang perlu diketahui (jujur):
   bukan mesin pencari umum. Google/Bing/Brave butuh kunci berbayar, dan HTML
   DuckDuckGo menolak permintaan otomatis. Isi `SEARCH_API_KEY` bila punya kunci
   resmi → otomatis dipakai lebih dulu.
-* **Buat gambar**: jalur AI-nya lengkap (`/api/image/generate`, `IMAGE_PROVIDER` +
-  `IMAGE_API_KEY`, rasio & kualitas, simpan ke Pustaka, tambah ke Proyek). Tanpa
-  kunci, tombolnya **mengatakannya apa adanya** dan menawarkan gambar lewat kode
-  (SVG/HTML/canvas) — bukan gambar AI palsu.
+* **Buat gambar**: jalur AI-nya lengkap (`/api/image/generate`, rasio & kualitas,
+  simpan ke Pustaka, tambah ke Proyek). Tanpa setelan apa pun sudah **hidup**: Pollinations
+  gratis (tanpa kunci, ada tanda air, kuota ±1 permintaan/15 detik). Untuk gambar tanpa tanda air
+  dan kuota lebih longgar, pakai Cloudflare Workers AI (`AI_PROVIDER=cloudflare` +
+  `CF_ACCOUNT_ID` + `CF_API_TOKEN`). Kalau `IMAGE_PROVIDER=off`, tombolnya **mengatakan
+  apa adanya** dan menawarkan gambar lewat kode (SVG/HTML/canvas) — bukan gambar AI palsu.
 * **Plugin pihak ketiga** tidak dipasang (butuh server + kotak pasir); menu
   "Plugin" menampilkan **6 alat bawaan yang benar-benar jalan + 1 yang ditandai
   "belum dipasang"** — lengkap dengan izin, endpoint, dan autentikasinya.
@@ -231,7 +233,16 @@ node tools/smoke-18.mjs            # asap: 6 halaman + tombol kunci + nol galat 
 node tools/uji-live.mjs            # KUOTA sungguhan (± 12 permintaan) — dengan kunci asli
 ```
 
-### Memakai 9Router (satu-satunya penyedia aplikasi ini)
+### Penyedia GRATIS (opsional) — mana yang menutup semua fitur
+
+Bawaan aplikasi tidak perlu diubah: percakapan lewat 9Router, gambar lewat Pollinations (gratis, tanpa kunci).
+Kalau mau **semua fitur gratis dari satu akun** (teks + lihat foto + buat gambar FLUX + dengar + bicara):
+**Cloudflare Workers AI**, 10.000 neuron/hari tanpa kartu → ikuti langkahnya di
+[`PANDUAN-PENYEDIA-GRATIS.md`](PANDUAN-PENYEDIA-GRATIS.md).
+Pilihan lain: Google AI Studio (Gemini) untuk percakapan/vision gratis, Groq untuk percakapan cepat + Whisper.
+Cek kemampuan yang sedang aktif: `GET /api/health` → blok `kemampuan`.
+
+### Memakai 9Router (penyedia bawaan aplikasi ini)
 
 Petunjuk lengkap + hasil pemeriksaan endpoint-nya ada di
 **PANDUAN-PENYEDIA-9ROUTER.md**. Ringkasnya:

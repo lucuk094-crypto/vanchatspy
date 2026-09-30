@@ -13,7 +13,7 @@
  *  untuk menjawab "kenapa tidak bisa menghubungi penyedia AI?" tanpa menebak.
  * ════════════════════════════════════════════════════════════════════
  */
-import { penyediaTeks, teksDariSSE } from "./_ai.js";
+import { penyediaTeks, teksDariSSE, modelBawaan, penyediaGambar, penyediaSuara } from "./_ai.js";
 
 /* Model cadangan (daftar sungguhan diambil dari 9Router oleh /api/chat). */
 const MODEL = {
@@ -66,7 +66,9 @@ async function ujiPenyedia(mintaChat) {
     /* kandidat: beberapa model pertama dari daftar + model bawaan. Sebagian
        gateway menyebut model yang kredensialnya tidak aktif, jadi satu model
        mati tidak boleh langsung dianggap "penyedia bermasalah". */
-    const kandidat = [].concat((hasil.model && hasil.model.contoh) || [], [MODEL.fast]).filter(Boolean).slice(0, 3);
+    const bawaan = (typeof modelBawaan === "function" ? modelBawaan(env, "fast") : []) || [];
+    const kandidat = [].concat((hasil.model && hasil.model.contoh) || [], bawaan, [MODEL.fast]).filter(Boolean)
+      .filter((m, i, a) => a.indexOf(m) === i).slice(0, 3);
     const dicoba = [];
     let hasilTerakhir = null;
     for (const model of kandidat) {
@@ -119,7 +121,10 @@ export default async function (request) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (request.method !== "GET") return json({ ok: false, pesan: "Gunakan GET" }, 405);
 
-  const kunci = String(process.env.AI_API_KEY || process.env.NINE_API_KEY || "").trim();
+  const penyediaInfo = penyediaTeks(process.env);
+  const gambarInfo = penyediaGambar(process.env);
+  const suaraInfo = penyediaSuara(process.env, "tts");
+  const kunci = penyediaInfo.kunci || String(process.env.AI_API_KEY || process.env.NINE_API_KEY || "").trim();
 
   /* ?uji=1 / ?uji=chat → diagnosa sungguhan ke penyedia */
   const param = new URL(request.url).searchParams.get("uji");
@@ -131,6 +136,13 @@ export default async function (request) {
       penyedia: penyediaTeks(process.env).label + " (" + penyediaTeks(process.env).dasar + ")",
       keyConfigured: !!kunci,
       waktu: new Date().toISOString(),
+      kemampuan: {
+        lihatGambar: penyediaInfo.visi !== false,
+        streaming: penyediaInfo.stream !== false,
+        pembuatGambar: gambarInfo.label,
+        pembuatGambarSiap: !!gambarInfo.siap,
+        suara: { penyedia: suaraInfo.label, siap: !!suaraInfo.siap, catatan: suaraInfo.catatan },
+      },
       uji: hasil,
     }, 200);
   }
@@ -139,18 +151,29 @@ export default async function (request) {
     ok: true,
     service: "van-chat-spy",
     versi: "1.0",
-    penyedia: penyediaTeks(process.env).label + " (" + penyediaTeks(process.env).dasar + ")",
+    penyedia: penyediaInfo.label + " (" + penyediaInfo.dasar + ")",
+    penyediaNama: penyediaInfo.nama,
     keyConfigured: !!kunci,
     kunciDari: kunci ? "env (AI_API_KEY)" : "belum dipasang",
     model: MODEL,
+    kemampuan: {
+      lihatGambar: penyediaInfo.visi !== false,
+      streaming: penyediaInfo.stream !== false,
+      gratis: !!penyediaInfo.gratis,
+      catatanPenyedia: penyediaInfo.catatanPenyedia,
+      pembuatGambar: gambarInfo.label,
+      pembuatGambarSiap: !!gambarInfo.siap,
+      pembuatGambarCatatan: gambarInfo.catatan,
+      suara: { penyedia: suaraInfo.label, siap: !!suaraInfo.siap, catatan: suaraInfo.catatan },
+    },
     fitur: {
       chat: true,
-      streaming: true,
+      streaming: penyediaInfo.stream !== false,
       builder: true,
       riwayat: "browser (localStorage)",
-      suara: "bawaan browser (Web Speech API)",
-      batas: "sesuai paket akun 9Router + pengaman 60 permintaan/menit per IP",
+      suara: suaraInfo.siap ? "penyedia (" + suaraInfo.label + ") + bawaan browser" : "bawaan browser (Web Speech API)",
+      batas: "sesuai paket " + penyediaInfo.label + " + pengaman 60 permintaan/menit per IP",
     },
-    pesan: kunci ? "siap dipakai" : "kunci API belum dipasang",
+    pesan: (kunci || penyediaInfo.adaKunci) ? "siap dipakai" : "kunci API belum dipasang",
   }, 200);
 }

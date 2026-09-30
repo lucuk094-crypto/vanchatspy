@@ -1,0 +1,37 @@
+BUKTI UJI LANGSUNG — F32: penyedia GRATIS + gambar tanpa kunci
+waktu : 2026-09-30 17:55:18 UTC
+server: http://127.0.0.1:8131 (node tools/server-uji.mjs, kunci dari .env.local — tidak ikut repo)
+
+1) GET /api/providers — penyedia teks + gambar + suara
+   teks   : 9Router | https://rqacwx8.abc-tunnel.us/v1 | kunci tersamar: sk-682…73ed
+   gambar : Pollinations | model sana | siap: True
+   suara  : stt (bawaan browser) / tts (bawaan browser)
+
+2) GET /api/health — blok kemampuan baru
+   {"lihatGambar": true, "streaming": true, "gratis": false, "catatanPenyedia": "9Router — banyak model; sebagian paketnya gratis.", "pembuatGambar": "Pollinations", "pembuatGambarSiap": true, "pembuatGambarCatatan": "GRATIS tanpa kunci (Pollinations, model sana). Gambarnya diberi tanda air kecuali kamu mendaftar di auth.pollinations.ai.", "suara": {"penyedia": "", "siap": false, "catatan": "Belum diatur — aplikasi memakai suara bawaan browser."}}
+
+3) Percakapan (stream:false)
+   ok: True | model: kr/claude-haiku-4.5 | jawab: Kopi adalah minuman yang dibuat dari biji kopi yang telah dibakar dan diseduh dengan air panas.
+
+4) Jawaban mengalir (stream:true)
+   data: {"model":"kr/claude-haiku-4.5"}  data: {"choices":[{"delta":{"content":"Mera"}}]}  data: {"choices":[{"delta":{"content":"h, "}}]}  data: {"choices":[{"delta":{"content":"biru, hijau."}}]}  data: [DONE]  
+
+5) Builder halaman web
+   ok: True | bita kode: 20494 | model: kr/claude-sonnet-4.5
+
+6) BUAT GAMBAR GRATIS (Pollinations, tanpa kunci)
+   percobaan 1 → ok: True | penyedia: Pollinations | model: sana | panjang data URL: 66991 | pesan: None
+   percobaan 2 → ok: False | penyedia: None | model: None | panjang data URL: 0 | pesan: Pollinations belum bisa membuat gambar sekarang (kuota gratis Pollinat
+
+7) Kirim foto (vision) lewat 9Router
+   ok: False | model: None | jawab/pesan: batas permintaan penyedia AI tercapai (paket akunmu di penyedianya). Coba lagi menit berikutnya — at
+
+8) Kirim foto ke penyedia TANPA vision (Pollinations di port 8132) → harus jujur
+   HTTP 400 · Penyedia yang sedang dipakai (Pollinations) belum bisa melihat gambar. Pakai penyedia yang bisa melihat gambar: isi AI_PROVIDER=gemini + AI_API_KEY kunci gratis dari aistudio.google.com (atau AI_PROVIDER=9router), lalu c
+   (bukti lengkap: HASIL-UJI-PENYEDIA-GRATIS.txt bagian A3)
+
+CATATAN JUJUR:
+  · Gambar gratis memakai Pollinations (kuota anonim ±1 permintaan/15 detik, ada tanda air).
+  · Kalau kuota Pollinations penuh, aplikasi mencoba 3× lalu MENGAKUI gagal — tidak ada gambar palsu.
+  · Kalau paket akun 9Router sedang kena batas, pesannya diteruskan apa adanya (lihat bagian 7).
+  · Kunci 9Router hanya ada di .env.local (git-ignored) — tidak ikut repo, zip, maupun dokumen ini.

@@ -41,7 +41,7 @@
  */
 
 /* lapisan bersama: penyedia AI yang bisa dikonfigurasi + pengaman permintaan */
-import { teksDariSSE, bersihkanPikir, buatPenyaringPikir, penyediaTeks } from "./_ai.js";
+import { teksDariSSE, bersihkanPikir, buatPenyaringPikir, penyediaTeks, modelBawaan } from "./_ai.js";
 import { periksaGambar as saringGambar, teksMasuk, audit, asalDiizinkan } from "./_aman.js";
 
 /* Model cadangan kalau daftar model dari 9Router belum terbaca.
@@ -348,14 +348,27 @@ async function visiLokal(env, cepat = false) {
 }
 
 function antreanMode(env) {
-  if (!env.MODELS_JSON) return ANTREAN;
+  /* penyedia selain 9Router punya daftar modelnya sendiri (mis. Google AI Studio,
+     Pollinations, Groq) → pakai itu sebagai dasar supaya mode tetap jalan walaupun
+     GET /models belum terbaca. */
+  const dasar = (penyediaTeks(env).nama === "9router"
+    ? ANTREAN
+    : {
+        fast: modelBawaan(env, "fast"),
+        think: modelBawaan(env, "think"),
+        deep: modelBawaan(env, "deep"),
+        expert: modelBawaan(env, "expert"),
+      });
+  const isiAda = [].concat(dasar.fast, dasar.think, dasar.deep, dasar.expert).filter(Boolean).length > 0;
+  const dasarPakai = isiAda ? dasar : ANTREAN;
+  if (!env.MODELS_JSON) return dasarPakai;
   try {
     const ubah = JSON.parse(env.MODELS_JSON);
-    if (!ubah || typeof ubah !== "object") return ANTREAN;
-    const hasil = { ...ANTREAN };
+    if (!ubah || typeof ubah !== "object") return dasarPakai;
+    const hasil = { ...dasarPakai };
     for (const k of Object.keys(ubah)) hasil[k] = Array.isArray(ubah[k]) ? ubah[k] : [ubah[k]];
     return hasil;
-  } catch { return ANTREAN; }
+  } catch { return dasarPakai; }
 }
 
 /* susun pesan: system (+ memori & proyek) + giliran sebelumnya + pertanyaan */
@@ -752,7 +765,9 @@ async function tangani(request, env) {
      probe yang lambat; untuk GET (halaman Setelan) boleh menunggu sepenuhnya. */
   const cepat = request.method === "POST";
   const antrean = penyedia.router ? await antreanLokal(env, cepat) : antreanMode(env);
-  const antreanVisi = penyedia.router ? ((await visiLokal(env, cepat)) || antrean.fast || []) : ANTREAN_VISI;
+  const antreanVisi = penyedia.visi === false
+    ? []
+    : (penyedia.router ? ((await visiLokal(env, cepat)) || antrean.fast || []) : (antrean.fast && antrean.fast.length ? antrean.fast : ANTREAN_VISI));
 
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: c });
 
@@ -828,8 +843,20 @@ async function tangani(request, env) {
   const MINTA_KODE = /\b(kode|kodenya|code|fungsi|function|method|metode|skrip|script|class|kelas|komponen|component|query|sql|program|aplikasi|api|endpoint|html|css|refactor|perbaiki|debug|error|bug|implementasi|algoritma|snippet|contoh|tulis)\b/i;
   const teknologiProyek = MINTA_KODE.test(String(prompt || "")) ? teknologiDiminta(body.proyek, prompt) : "";
   if (teknologiProyek) aturanKetatAwal.push({ jenis: "teknologi", nama: teknologiProyek });
-  /* permintaan ketat diperiksa dulu → dikirim utuh (bukan mengalir) supaya bisa diperbaiki */
-  const inginStream = body.stream !== false && !adaGambar && aturanKetatAwal.length === 0;
+  /* Penyedia yang modelnya belum bisa melihat gambar (mis. Pollinations tanpa
+     kunci) → katakan apa adanya, jangan mengirim gambar ke model yang salah. */
+  if (adaGambar && penyedia.visi === false) {
+    return json({
+      ok: false,
+      pesan: "Penyedia yang sedang dipakai (" + penyedia.label + ") belum bisa melihat gambar. "
+        + "Pakai penyedia yang bisa melihat gambar: isi AI_PROVIDER=gemini + AI_API_KEY kunci gratis dari aistudio.google.com "
+        + "(atau AI_PROVIDER=9router), lalu coba lagi. Pertanyaan tanpa gambar tetap bisa dijawab seperti biasa.",
+    }, 400, c);
+  }
+  /* permintaan ketat diperiksa dulu → dikirim utuh (bukan mengalir) supaya bisa diperbaiki
+     (penyedia tanpa streaming — mis. Pollinations — juga dikirim utuh) */
+  const inginStream = body.stream !== false && !adaGambar && aturanKetatAwal.length === 0
+    && penyedia.stream !== false;
   if (saring.catatan) audit("gambar-disaring", { catatan: saring.catatan, ip });
   const pesan = susunPesan(body.riwayat, prompt, { gambar, memori: body.memori, proyek: body.proyek });
   audit("permintaan-chat", { mode, gambar: gambar.length, ip, stream: inginStream, internal, ketat: aturanKetatAwal.map((a) => a.jenis) });
@@ -850,6 +877,17 @@ async function tangani(request, env) {
     try {
       if (inginStream) {
         const r = await cobaStream(model, pesan, mode, kunci, env);
+        /* sebagian penyedia mengabaikan stream:true dan menjawab JSON biasa →
+           jangan diteruskan sebagai aliran kosong, ambil isinya apa adanya */
+        const ct = String(r.headers.get("content-type") || "");
+        if (r.ok && ct && ct.indexOf("text/event-stream") < 0) {
+          const sse = teksDariSSE(await r.text());
+          if (sse.teks) {
+            catatTerbukti(mode, model);
+            return json({ ok: true, text: bersihkanPikir(sse.teks), model, mode }, 200, c);
+          }
+          throw new Error("jawaban kosong dari " + model);
+        }
         if (r.ok) catatTerbukti(mode, model);
         const kepala = new Headers(r.headers);
         Object.entries(c).forEach(([k, v]) => kepala.set(k, v));

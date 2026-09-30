@@ -37,7 +37,7 @@ const json = (o, s, extra) =>
   });
 
 import { asalDiizinkan, audit } from "./_aman.js";
-import { penyediaTeks, teksDariSSE, bersihkanPikir } from "./_ai.js";
+import { penyediaTeks, teksDariSSE, bersihkanPikir, modelBawaan } from "./_ai.js";
 import { daftarModelLokal, daftarModelCepat, kandidatModel, catatTidakAda, catatTerbukti, RX_MODEL_MATI, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, sebabLokalTerakhir } from "./chat.js";
 
 /* daftar model untuk membangun halaman: diambil dari 9Router (GET /models),
@@ -56,7 +56,9 @@ async function kandidatBangun(env) {
      pakai model dari setelan, lalu daftar bawaan. Kalau penyedianya memang tak bisa
      dihubungi, percobaannya sendiri yang gagal dan pesannya menyebut sebabnya. */
   const dariSetelan = [...new Set([env.AI_MODEL_DEEP, env.AI_MODEL_THINK, env.AI_MODEL_FAST, env.AI_MODEL].filter(Boolean))];
-  return dariSetelan.length ? dariSetelan : MODEL_BANGUN.slice();
+  if (dariSetelan.length) return dariSetelan;
+  const bawaanPenyedia = modelBawaan(env, "deep");
+  return bawaanPenyedia.length ? bawaanPenyedia : MODEL_BANGUN.slice();
 }
 
 const pesanRouterMati = (p) => {
