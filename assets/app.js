@@ -55,7 +55,7 @@
   /* Penanda versi tampilan. Naikkan angka ini setiap kali app.js berubah,
      dan samakan dengan ?v= di index.html — supaya browser tidak menyajikan
      berkas lama (itu penyebab "sudah di-deploy tapi layar belum berubah"). */
-  var VERSI_APP = '33';
+  var VERSI_APP = '34';
 
   /* ── 1. Mode AI ────────────────────────────────────────────────────── */
   var MODE = {
@@ -1496,7 +1496,31 @@
     $('setUsage').textContent = String(SET.pakai.jumlah || 0);   /* hitungan perangkat ini saja — batas resmi ada di dasbor 9Router */
     $('setCount').textContent = sesi.length;
     $('setArts').textContent = sesi.reduce(function (n, s) { return n + (s.artifacts || []).length; }, 0);
+    /* kartu "Penyedia AI" di paling atas modal — supaya tidak perlu dicari */
+    var pk = $('setPenAktif'), pf = $('setPenFast'), pv = $('setPenVersi'), pb = $('setPenBatas');
+    if (pk) pk.textContent = labelPenyediaAktif();
+    if (pf) pf.textContent = modelAktifUntukMode('fast') || 'bawaan penyedia';
+    if (pb) pb.textContent = 'mengikuti paket akunmu di ' + labelPenyedia();
+    if (pv) pv.textContent = 'Versi tampilan F' + VERSI_APP + ' · app.js?v=' + VERSI_APP
+      + ' — kalau angkanya berbeda dengan yang kamu harapkan, muat ulang keras (Ctrl+Shift+R).';
   }
+  /* tombol "Atur penyedia & model per fitur" → buka halaman Pengaturan lengkap,
+     lalu sorot bagian Penyedia AI-nya */
+  (function pasangTombolPenyedia() {
+    var b = $('setPenBuka');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      $('setModal').hidden = true;
+      location.hash = '#/settings';
+      setTimeout(function () {
+        var s2 = $('penSec');
+        if (!s2) return;
+        s2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        s2.classList.add('sec-sorot');
+        setTimeout(function () { s2.classList.remove('sec-sorot'); }, 3000);
+      }, 500);
+    });
+  })();
   $('setVoice').addEventListener('change', function () { SET.suara = this.value; simpanSet(); });
   $('setExport').addEventListener('click', function () {
     unduh('van-chat-spy-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify({ versi: 1, setelan: SET, sesi: sesi }, null, 2), 'application/json');
@@ -2943,13 +2967,21 @@
     ['FreeTiers', 'FreeTiers — gabungan model gratis'],
   ];
   /* ── tampilan bagian "Penyedia AI" di Pengaturan ── */
+  function penyediaServerAktif() {
+    var t = (SET.penyedia && SET.penyedia.teks) || {};
+    return String(t.penyedia || '').toLowerCase();
+  }
   function penyediaTerpilih() {
     if (SET.penyediaSet && SET.penyediaSet.provider) return SET.penyediaSet.provider;
-    var dariServer = (SET.penyedia && SET.penyedia.penyedia) ? String(SET.penyedia.penyedia).toLowerCase() : '';
+    var dariServer = penyediaServerAktif();
     return PRESET_PENYEDIA[dariServer] ? dariServer : '9router';
   }
   function opsiProv() {
+    /* kalau belum diatur dari browser, yang ditandai = penyedia yang benar-benar
+       aktif di server (dari /api/providers) supaya tidak menyesatkan */
     var kini = penyediaTerpilih();
+    var dariServer = penyediaServerAktif();
+    if (!(SET.penyediaSet && SET.penyediaSet.provider) && PRESET_PENYEDIA[dariServer]) kini = dariServer;
     return Object.keys(PRESET_PENYEDIA).map(function (k) {
       return '<option value="' + esc(k) + '"' + (k === kini ? ' selected' : '') + '>' + esc(PRESET_PENYEDIA[k].label) + '</option>';
     }).join('');
@@ -2971,7 +3003,11 @@
   function daftarModelUI() {
     var ps = SET.penyediaSet || {};
     var p = PRESET_PENYEDIA[ps.provider] || {};
-    var daftar = (ps.daftar && ps.daftar.length) ? ps.daftar : ((SET.modelServer && SET.modelServer.semua) || []);
+    /* daftar dari server berbentuk pasangan [id, label] — yang dipakai id-nya */
+    var dariServer = ((SET.modelServer && SET.modelServer.semua) || []).map(function (x) {
+      return Array.isArray(x) ? x[0] : x;
+    }).filter(Boolean);
+    var daftar = (ps.daftar && ps.daftar.length) ? ps.daftar : dariServer;
     /* daftar bawaan Apinex: 6 model yang diminta */
     if (!daftar.length && ps.provider === 'apinex') {
       daftar = ['free/gpt-6-luna', 'free/glm-5.3-flash', 'free/deepseek-v4.1-flash', 'free/deepseek-v4-pro-0813', 'free/mimo-v2.6-pro', 'free/minimax-m3.1'];
@@ -2982,7 +3018,13 @@
     var ps = SET.penyediaSet || {};
     var terpilih = (ps.model && ps.model[fitur]) || '';
     var daftar = daftarModelUI();
-    return '<option value="">(bawaan penyedia)</option>' + daftar.map(function (m) {
+    var mentah = (SET.modelServer && SET.modelServer.mentah) || {};
+    var modesSrv = mentah.modes || {};
+    var bawaanModel = modesSrv[fitur]
+      || (fitur === 'visi' ? (mentah.modelVisi || (mentah.daftarVisi || [])[0]) : '')
+      || (fitur === 'pembangun' ? mentah.modelPembangun : '');
+    var bawaan = bawaanModel ? 'bawaan penyedia: ' + bawaanModel : 'bawaan penyedia';
+    return '<option value="">(' + esc(bawaan) + ')</option>' + daftar.map(function (m) {
       return '<option value="' + esc(m) + '"' + (String(m) === String(terpilih) ? ' selected' : '') + '>' + esc(m) + '</option>';
     }).join('');
   }
@@ -3142,6 +3184,10 @@
         if (halKini === 'settings') { ['fast', 'think', 'deep', 'expert'].forEach(function (m) {
           var el2 = document.getElementById('set18M_' + m); if (el2) el2.innerHTML = opsiModel(modelUntukMode(m));
         }); }
+        /* bagian "Penyedia AI" → model per fitur ikut terisi begitu daftar model tiba */
+        ['fast', 'think', 'deep', 'expert', 'visi', 'pembangun'].forEach(function (f) {
+          var el3 = document.getElementById('penM_' + f); if (el3) el3.innerHTML = opsiModelPenyedia(f);
+        });
       } catch (e) { /* tampilan saja — jangan sampai mengganggu */ }
       if (halKini === 'settings') {
         ['fast', 'think', 'deep', 'expert'].forEach(function (m) {
@@ -3192,6 +3238,24 @@
       var pk = perkiraanPenyimpanan();
       var r = ringkasMemori();
       return ''
+        + '<section class="hal-sec sec-utama" id="penSec"><h3>' + ic('plug', 16) + 'Penyedia AI</h3>'
+        + '<p class="note">Pilih penyedia, tempel <b>alamat</b> dan <b>API key</b>-nya, lalu tekan <b>Uji &amp; Aktifkan</b> — AI langsung hidup memakai penyedia itu, tanpa mengubah berkas atau hosting. Kunci disimpan <b>di browser ini saja</b> dan ikut pada setiap permintaan ke server <i>hanya saat dipakai</i>; server tidak menyimpannya. Penyedia aktif sekarang: <b>' + esc(labelPenyediaAktif()) + '</b></p>'
+        + barisSet('Penyedia', 'daftar siap pakai — pilih lalu isi kuncinya', '<select class="sel" id="penProv">' + opsiProv() + '</select>')
+        + barisSet('Alamat (base URL)', 'mis. https://api.apinex.bond/v1', '<input class="inp" id="penUrl" style="min-width:250px" value="' + esc((SET.penyediaSet && SET.penyediaSet.base) || '') + '" placeholder="https://…/v1">')
+        + barisSet('API key', 'hanya tersimpan di browser ini', '<input class="inp" id="penKunci" type="password" style="min-width:250px" value="' + esc((SET.penyediaSet && SET.penyediaSet.kunci) || '') + '" placeholder="' + esc((PRESET_PENYEDIA[(SET.penyediaSet && SET.penyediaSet.provider) || 'apinex'] || {}).contoh || '') + '">')
+        + barisSet('Protokol', 'sudah otomatis pas untuk tiap penyedia', '<select class="sel" id="penGaya">' + opsiGaya() + '</select>')
+        + barisSet('Aktifkan', 'kunci diuji sungguhan + daftar model dimuat', '<div class="img-aksi"><button class="btn" id="penAct">' + ic('zap', 15) + 'Uji &amp; Aktifkan</button><button class="btn" id="penOff">' + ic('rotate-ccw', 15) + 'Kembalikan ke server</button></div>')
+        + barisSet('Status', 'hasil uji terakhir', '<span class="pill-note" id="penStatus">' + esc(statusPenyedia()) + '</span>')
+        + barisSet('Versi tampilan', 'untuk memastikan browser memuat berkas terbaru', '<span class="pill-note">F' + VERSI_APP + ' · app.js?v=' + VERSI_APP + '</span>')
+        + barisSet('Model Normal (cepat)', 'dipakai mode Normal', '<select class="sel" id="penM_fast">' + opsiModelPenyedia('fast') + '</select>')
+        + barisSet('Model Berpikir', 'dipakai mode Berpikir', '<select class="sel" id="penM_think">' + opsiModelPenyedia('think') + '</select>')
+        + barisSet('Model Berpikir Mendalam', 'dipakai mode Mendalam', '<select class="sel" id="penM_deep">' + opsiModelPenyedia('deep') + '</select>')
+        + barisSet('Model Expert', 'dipakai mode Expert', '<select class="sel" id="penM_expert">' + opsiModelPenyedia('expert') + '</select>')
+        + barisSet('Model lihat foto', 'dipakai saat kamu kirim gambar', '<select class="sel" id="penM_visi">' + opsiModelPenyedia('visi') + '</select>')
+        + barisSet('Model Builder', 'dipakai halaman Builder', '<select class="sel" id="penM_pembangun">' + opsiModelPenyedia('pembangun') + '</select>')
+        + barisSet('Pembuat gambar', 'kosongkan = Pollinations gratis tanpa kunci', '<select class="sel" id="penImgProv">' + opsiImgProv() + '</select>')
+        + '</section>'
+
         + '<section class="hal-sec"><h3>' + ic('user', 16) + 'Profil & Akun</h3>'
         + barisSet('Nama panggilan', 'dipakai AI saat menyapa & menyebut kamu', '<input class="inp" id="set18Nama" maxlength="40" placeholder="Contoh: Rian" value="' + esc(SET.nama || '') + '">')
         + barisSet('Bahasaku', 'bahasa yang kupakai untuk berbicara dengan AI', seg18('set18Bahasaku', [['id', 'Indonesia'], ['en', 'English']], SET.bahasa === 'en' ? 'en' : 'id'))
@@ -3231,24 +3295,6 @@
         + (((window.speechSynthesis && speechSynthesis.getVoices()) || []).map(function (v) { return '<option value="' + esc(v.name) + '"' + (SET.suara === v.name ? ' selected' : '') + '>' + esc(v.name) + ' — ' + esc(v.lang) + '</option>'; }).join(''))
         + '</select>')
         + barisSet('Percakapan suara', 'mikrofon → AI → suara', '<button class="btn" id="set18Voice">' + ic('mic', 15) + 'Buka mode suara</button>')
-        + '</section>'
-
-        + '<section class="hal-sec"><h3>' + ic('plug', 16) + 'Penyedia AI</h3>'
-        + '<p class="note">Pilih penyedia, tempel <b>alamat</b> dan <b>API key</b>-nya, lalu tekan <b>Uji &amp; Aktifkan</b> — AI langsung hidup memakai penyedia itu, tanpa mengubah berkas atau hosting. Kunci disimpan <b>di browser ini saja</b> dan ikut pada setiap permintaan ke server <i>hanya saat dipakai</i>; server tidak menyimpannya. Penyedia aktif sekarang: <b>' + esc(labelPenyediaAktif()) + '</b></p>'
-        + barisSet('Penyedia', 'daftar siap pakai — pilih lalu isi kuncinya', '<select class="sel" id="penProv">' + opsiProv() + '</select>')
-        + barisSet('Alamat (base URL)', 'mis. https://api.apinex.bond/v1', '<input class="inp" id="penUrl" style="min-width:250px" value="' + esc((SET.penyediaSet && SET.penyediaSet.base) || '') + '" placeholder="https://…/v1">')
-        + barisSet('API key', 'hanya tersimpan di browser ini', '<input class="inp" id="penKunci" type="password" style="min-width:250px" value="' + esc((SET.penyediaSet && SET.penyediaSet.kunci) || '') + '" placeholder="' + esc((PRESET_PENYEDIA[(SET.penyediaSet && SET.penyediaSet.provider) || 'apinex'] || {}).contoh || '') + '">')
-        + barisSet('Protokol', 'sudah otomatis pas untuk tiap penyedia', '<select class="sel" id="penGaya">' + opsiGaya() + '</select>')
-        + barisSet('Aktifkan', 'kunci diuji sungguhan + daftar model dimuat', '<div class="img-aksi"><button class="btn" id="penAct">' + ic('zap', 15) + 'Uji &amp; Aktifkan</button><button class="btn" id="penOff">' + ic('rotate-ccw', 15) + 'Kembalikan ke server</button></div>')
-        + barisSet('Status', 'hasil uji terakhir', '<span class="pill-note" id="penStatus">' + esc(statusPenyedia()) + '</span>')
-        + barisSet('Versi tampilan', 'untuk memastikan browser memuat berkas terbaru', '<span class="pill-note">F' + VERSI_APP + ' · app.js?v=' + VERSI_APP + '</span>')
-        + barisSet('Model Normal (cepat)', 'dipakai mode Normal', '<select class="sel" id="penM_fast">' + opsiModelPenyedia('fast') + '</select>')
-        + barisSet('Model Berpikir', 'dipakai mode Berpikir', '<select class="sel" id="penM_think">' + opsiModelPenyedia('think') + '</select>')
-        + barisSet('Model Berpikir Mendalam', 'dipakai mode Mendalam', '<select class="sel" id="penM_deep">' + opsiModelPenyedia('deep') + '</select>')
-        + barisSet('Model Expert', 'dipakai mode Expert', '<select class="sel" id="penM_expert">' + opsiModelPenyedia('expert') + '</select>')
-        + barisSet('Model lihat foto', 'dipakai saat kamu kirim gambar', '<select class="sel" id="penM_visi">' + opsiModelPenyedia('visi') + '</select>')
-        + barisSet('Model Builder', 'dipakai halaman Builder', '<select class="sel" id="penM_pembangun">' + opsiModelPenyedia('pembangun') + '</select>')
-        + barisSet('Pembuat gambar', 'kosongkan = Pollinations gratis tanpa kunci', '<select class="sel" id="penImgProv">' + opsiImgProv() + '</select>')
         + '</section>'
 
         + '<section class="hal-sec"><h3>' + ic('cpu', 16) + 'Model AI</h3>'
@@ -4029,24 +4075,84 @@
     b.berkas = (b.berkas || []).filter(function (f) { return f.path !== path && f.path.indexOf(path.replace(/\/$/, '') + '/') !== 0; });
     simpanSet();
   }
+  /* tab berkas yang sedang dibuka (seperti editor sungguhan) + kotak cari berkas */
+  var bgnTabsDaftar = [], bgnCari = '';
+  function bgnTabBuka(path) {
+    if (!path) return;
+    bgnTabsDaftar = bgnTabsDaftar.filter(function (x) { return x !== path; });
+    bgnTabsDaftar.unshift(path);
+    if (bgnTabsDaftar.length > 6) bgnTabsDaftar = bgnTabsDaftar.slice(0, 6);
+  }
+  function bgnTabTutup(path) {
+    bgnTabsDaftar = bgnTabsDaftar.filter(function (x) { return x !== path; });
+    if (bgnPath === path) bgnPath = bgnTabsDaftar[0] || null;
+    bgnRenderSemua();
+  }
+  function bgnTabsRender(b) {
+    var el = $('bdTabs'); if (!el) return;
+    var daftar = bgnTabsDaftar.length ? bgnTabsDaftar : (bgnPath ? [bgnPath] : []);
+    if (bgnPath && daftar.indexOf(bgnPath) < 0) daftar = [bgnPath].concat(daftar);
+    el.innerHTML = daftar.length ? daftar.map(function (p2) {
+      var nama = String(p2).split('/').pop();
+      var ikon = /\.(html?|css)$/i.test(nama) ? 'file-code' : /\.(js|mjs|ts|tsx|jsx|py|sql)$/i.test(nama) ? 'braces' : /\.(json|md|txt|yml|yaml)$/i.test(nama) ? 'file-text' : 'file';
+      return '<span class="bd-tab' + (p2 === bgnPath ? ' on' : '') + '" data-bgn-tab="' + esc(p2) + '">' + ic(ikon, 13) + '<b>' + esc(nama) + '</b>'
+        + '<i class="bd-tab-x" data-bgn-tutup="' + esc(p2) + '" title="Tutup">' + ic('x', 12) + '</i></span>';
+    }).join('') : '<span class="bd-tab-kosong">' + ic('file-code', 13) + 'belum ada berkas dibuka — pilih di kiri</span>';
+    /* jelaskan nama folder di jalur */
+    var crumb = $('bdCrumbTeks');
+    if (crumb) crumb.textContent = bgnPath && bgnPath.indexOf('/') >= 0 ? bgnPath.split('/').slice(0, -1).join(' / ') : '';
+  }
+  /* ringkasan proyek: jumlah berkas, ukuran kode, kapan terakhir diubah */
+  function bgnRingkas(b) {
+    var berkas = (b && b.berkas) || [];
+    var bita = berkas.reduce(function (n, f) { return n + String(f.isi || '').length; }, 0);
+    return { berkas: berkas.length, bita: bita };
+  }
+  function bgnWaktu(ts) {
+    if (!ts) return '—';
+    var d = new Date(ts), kini = new Date(), beda = (kini - d) / 1000;
+    if (beda < 60) return 'baru saja';
+    if (beda < 3600) return Math.floor(beda / 60) + ' menit lalu';
+    if (beda < 86400) return Math.floor(beda / 3600) + ' jam lalu';
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
   function bgnPohon(b) {
-    var jalur = (b.berkas || []).map(function (f) { return f.path; }).sort();
+    var cari = String(bgnCari || '').toLowerCase();
+    var jalur = (b.berkas || []).map(function (f) { return f.path; })
+      .filter(function (p2) { return !cari || p2.toLowerCase().indexOf(cari) >= 0; })
+      .sort();
+    if (!jalur.length) {
+      return '<p class="bd-kosong">' + ic('search', 14) + (cari ? 'Tidak ada berkas yang cocok dengan “' + esc(cari) + '”.' : 'Belum ada berkas — tekan Bangun atau tambah berkas baru.') + '</p>';
+    }
     var map = {};
-    jalur.forEach(function (p) {
-      var bagian = p.split('/');
+    jalur.forEach(function (p2) {
+      var bagian = p2.split('/');
       var nama = bagian.pop();
       var dir = bagian.join('/');
       map[dir] = map[dir] || [];
       map[dir].push(nama);
     });
+    var ikonUntuk = function (n) {
+      if (/\.html?$/i.test(n)) return 'file-code';
+      if (/\.css$/i.test(n)) return 'palette';
+      if (/\.(js|mjs|cjs|ts|tsx|jsx)$/i.test(n)) return 'braces';
+      if (/\.(py|rb|go|java|php)$/i.test(n)) return 'terminal';
+      if (/\.(json|yml|yaml|toml|env)$/i.test(n)) return 'database';
+      if (/\.(md|txt)$/i.test(n)) return 'file-text';
+      if (/\.(png|jpe?g|svg|webp|gif)$/i.test(n)) return 'image';
+      return 'file';
+    };
     return Object.keys(map).sort().map(function (d) {
-      return '<div class="ph-dir">' + ic('folder', 13) + '<span>' + esc(d || 'akar proyek') + '</span></div>'
-        + map[d].map(function (n) {
-          var p = d ? d + '/' + n : n;
-          var ikon = /\.(html?|css)$/i.test(n) ? 'file-code' : /\.(js|ts|tsx|jsx|py|sql)$/i.test(n) ? 'braces' : /\.(json|md|txt|yml|yaml)$/i.test(n) ? 'file-text' : /\.(png|jpe?g|svg|webp)$/i.test(n) ? 'image' : 'file';
-          return '<button class="ph-it' + (p === bgnPath ? ' on' : '') + '" data-bgn-buka="' + esc(p) + '">' + ic(ikon, 13) + '<span>' + esc(n) + '</span>'
-            + '<i class="ph-uk">' + kb(String(bgnBerkas(b, p) ? bgnBerkas(b, p).isi : '').length) + '</i></button>';
-        }).join('');
+      var baris = map[d].map(function (n) {
+        var p2 = d ? d + '/' + n : n;
+        var f = bgnBerkas(b, p2) || { isi: '' };
+        return '<button class="ph-it' + (p2 === bgnPath ? ' on' : '') + '" data-bgn-buka="' + esc(p2) + '" title="' + esc(p2) + '">'
+          + '<i class="ph-ikon">' + ic(ikonUntuk(n), 13) + '</i><span>' + esc(n) + '</span>'
+          + '<i class="ph-uk">' + kb(String(f.isi || '').length) + '</i></button>';
+      }).join('');
+      return '<div class="ph-dir">' + ic('folder', 13) + '<span>' + esc(d || 'akar proyek') + '</span>'
+        + '<i class="ph-uk">' + map[d].length + '</i></div>' + baris;
     }).join('');
   }
 
@@ -4436,10 +4542,11 @@
         + 'button{margin:10px 8px 0 0;padding:9px 14px;border-radius:9px;border:1px solid #333;background:#17171d;color:#e7e9ee;font:inherit;cursor:pointer}'
         + 'button.pr{background:#fa0102;border-color:#fa0102;color:#fff}</style>'
         + '<b>Pratinjau ditahan demi keamanan.</b>'
-        + '<p>Kode proyek ini berisi <b>perulangan tanpa henti</b>: ' + esc(daftar) + '. Kalau dijalankan, halaman (dan aplikasi ini) bisa membeku dan harus ditutup paksa.</p>'
-        + '<p>Pilihan yang aman:</p>'
+        + '<div class="aman-aksi">'
         + '<button class="pr" id="bgnAman1">Tampilkan tanpa skrip</button>'
         + '<button id="bgnAman2">Buka di tab baru (skrip jalan di tab terpisah)</button>'
+        + '</div>'
+        + '<p>Kode proyek ini berisi <b>perulangan tanpa henti</b>: ' + esc(daftar) + '. Kalau dijalankan, halaman (dan aplikasi ini) bisa membeku dan harus ditutup paksa.</p>'
         + '<p style="color:#8b8b96">Minta AI memperbaikinya lewat tombol <b>Perbaiki error</b>, atau sunting berkasnya lalu simpan.</p>'
         + '<script>'
         + 'function kirim(p){try{parent.postMessage({jenis:"vcs-bgn-aman",pilih:p},"*")}catch(e){}}'
@@ -4480,13 +4587,39 @@
   function bgnRenderSemua() {
     var b = bgnAktif();
     if (!b) return;
-    $('bgnNama').textContent = b.nama;
-    $('bgnDesk').textContent = b.deskripsi || '';
-    $('bgnPohon').innerHTML = bgnPohon(b);
+    /* kalau belum ada berkas yang dibuka (atau berkasnya sudah tidak ada),
+       buka index.html / berkas pertama supaya editor tidak kosong */
+    if (!bgnPath || !bgnBerkas(b, bgnPath)) {
+      var pertama = (b.berkas || []).filter(function (f) { return /\.html?$/i.test(f.path); })[0] || (b.berkas || [])[0];
+      bgnPath = pertama ? pertama.path : null;
+    }
+    if (bgnPath) bgnTabBuka(bgnPath);
+    var r = bgnRingkas(b);
+    var namaEl = $('bgnNama'), deskEl = $('bgnDesk');
+    if (namaEl) namaEl.textContent = b.nama;
+    if (deskEl) deskEl.textContent = b.deskripsi || '';
+    var pohonEl = $('bgnPohon'); if (pohonEl) pohonEl.innerHTML = bgnPohon(b);
+    bgnTabsRender(b);
     var f = bgnPath ? bgnBerkas(b, bgnPath) : null;
-    $('bgnKode').textContent = f ? f.isi : '(pilih berkas di kiri)';
-    $('bgnPath').textContent = bgnPath || '—';
-    $('bgnKodeBaris').textContent = f ? String(f.isi).split('\n').length + ' baris' : '';
+    var isi = f ? String(f.isi || '') : '';
+    var kodeEl = $('bgnKode'); if (kodeEl) kodeEl.textContent = f ? isi : '(pilih berkas di kiri)';
+    var pathEl = $('bgnPath'); if (pathEl) pathEl.textContent = bgnPath || '—';
+    var baris = isi ? isi.split('\n').length : 0;
+    var bhs = (typeof editorBahasa === 'function' && bgnPath) ? editorBahasa(bgnPath) : 'text';
+    var isi2 = function (id, teks) { var el = $(id); if (el) el.textContent = teks; };
+    isi2('bgnKodeBaris', f ? baris + ' baris' : '');
+    isi2('bdBaris2', baris + ' baris');
+    isi2('bdBita2', kb(isi.length));
+    isi2('bdBhs', String(bhs || 'text').toUpperCase());
+    /* statistik proyek di bilah perintah */
+    isi2('bdStatBerkas', String(r.berkas));
+    isi2('bdStatBita', kb(r.bita));
+    isi2('bdStatUbah', 'diubah ' + bgnWaktu(b.diubah));
+    var jml = $('bdJumlahBerkas'); if (jml) jml.textContent = String(r.berkas);
+    var kaki = $('bdKakiKiri'); if (kaki) kaki.textContent = r.berkas + ' berkas · ' + kb(r.bita) + ' kode';
+    var kr = $('bdCrumbTeks');
+    if (kr) kr.textContent = bgnPath && bgnPath.indexOf('/') >= 0 ? bgnPath.split('/').slice(0, -1).join(' / ') : '';
+    var pen = $('bdPenyedia'); if (pen) pen.innerHTML = ic('cpu', 13) + '<span>penyedia: ' + esc(labelPenyedia()) + '</span>';
     bgnRenderJejak(); bgnRenderKonsol(); bgnTerapkanLebar();
   }
   function parseProyekAI(teks) {
@@ -4704,69 +4837,108 @@
     gambar: function () {
       var b = bgnAktif();
       var daftarProyek = bgnDaftar().length
-        ? '<div class="bgn-pilih">' + bgnDaftar().map(function (x) {
+        ? '<div class="bgn-pilih">' + '<span class="bd-pilih-judul">' + ic('folder-open', 13) + 'Proyek saya</span>' + bgnDaftar().map(function (x) {
           return '<button class="chip' + (b && x.id === b.id ? ' on' : '') + '" data-bgn-pilih="' + x.id + '">' + ic('code', 14) + esc(x.nama) + '</button>';
         }).join('') + '</div>' : '';
+      var contoh = ['Buat website streaming anime bernama MIRU.',
+        'Buat landing page kedai kopi di Surabaya.',
+        'Buat toko online sederhana dengan keranjang.',
+        'Buat dashboard admin dengan grafik.',
+        'Buat aplikasi catatan dengan pencarian.'];
       return ''
-        + '<section class="hal-sec bgn-mulai">'
-        + '<h3>' + ic('hammer', 16) + 'Buat website / aplikasi dari perintah bahasa</h3>'
-        + '<textarea id="bgnPrompt" rows="2" placeholder="Contoh: Buat website streaming anime bernama MIRU.">' + esc(b && b.prompt ? b.prompt : '') + '</textarea>'
-        + '<div class="img-aksi bgn-contoh">'
-        + ['Buat website streaming anime bernama MIRU.',
-          'Buat landing page kedai kopi di Surabaya.',
-          'Buat toko online sederhana dengan keranjang.',
-          'Buat dashboard admin dengan grafik.',
-          'Buat aplikasi catatan dengan pencarian.'].map(function (c) {
-            return '<button class="chip-aksi" data-bgn-contoh="' + esc(c) + '">' + ic('sparkles', 14) + esc(c.slice(0, 42)) + '</button>';
+        /* ── bilah perintah (command deck) ── */
+        + '<section class="bd-hero">'
+        + '<div class="bd-hero-atas">'
+        + '<span class="bd-hero-ikon">' + ic('hammer', 19) + '</span>'
+        + '<div class="bd-hero-teks"><b>AI Builder</b><small>Bangun website &amp; aplikasi multi-berkas dari perintah bahasa — bisa dijalankan, diuji, dan di-deploy dari sini.</small></div>'
+        + '<span class="bd-lencana">' + ic('cpu', 13) + '<span>penyedia: ' + esc(labelPenyedia()) + '</span></span>'
+        + '</div>'
+        + '<div class="bd-perintah">'
+        + '<span class="bd-perintah-ikon">' + ic('sparkles', 16) + '</span>'
+        + '<textarea id="bgnPrompt" rows="2" placeholder="Tulis perintahnya… contoh: Buat website streaming anime bernama MIRU.">' + esc(b && b.prompt ? b.prompt : '') + '</textarea>'
+        + '<button class="btn pr bd-bangun" id="bgnMulai">' + ic('zap', 15) + 'Bangun</button>'
+        + '</div>'
+        + '<div class="img-aksi bgn-contoh">' + contoh.map(function (c) {
+            return '<button class="chip-aksi" data-bgn-contoh="' + esc(c) + '">' + ic('sparkles', 13) + esc(c.slice(0, 40)) + '</button>';
           }).join('') + '</div>'
-        + '<div class="img-aksi"><button class="btn pr" id="bgnMulai">' + ic('sparkles', 15) + 'Bangun</button>'
-        + '<span class="pill-note" id="bgnStatus">' + (b ? 'proyek siap' : 'menunggu perintah') + '</span></div>'
+        + '<div class="bd-langkah"><span class="bd-langkah-judul">' + ic('activity', 13) + 'Langkah build</span><ol class="bgn-jejak" id="bgnJejak"></ol></div>'
+        + '<div class="bd-stats">'
+        + '<span class="bd-stat">' + ic('file-code', 13) + '<i id="bdStatBerkas">0</i> berkas</span>'
+        + '<span class="bd-stat">' + ic('database', 13) + '<i id="bdStatBita">0 B</i> kode</span>'
+        + '<span class="bd-stat">' + ic('clock', 13) + '<i id="bdStatUbah">belum ada proyek</i></span>'
+        + '<span class="grow"></span>'
+        + '<span class="pill-note" id="bgnStatus">' + (b ? 'proyek siap' : 'menunggu perintah') + '</span>'
+        + '</div>'
         + daftarProyek
-        + '<ol class="bgn-jejak" id="bgnJejak"></ol>'
         + '</section>'
         + (b ? ''
-          + '<section class="hal-sec"><h3>' + ic('code', 16) + '<span id="bgnNama">' + esc(b.nama) + '</span><span class="grow"></span>'
-          + '<span class="pill-note" id="bgnDesk">' + esc(b.deskripsi || '') + '</span></h3>'
-          + '<div class="bgn-alat">'
-          + '<button class="btn" data-bgn-aksi="file">' + ic('file-plus', 14) + 'Buat file</button>'
-          + '<button class="btn" data-bgn-aksi="folder">' + ic('folder', 14) + 'Buat folder</button>'
-          + '<button class="btn" data-bgn-aksi="edit">' + ic('pencil', 14) + 'Edit + diff</button>'
+          /* ── studio: bilah jendela + toolbar + explorer + editor + pratinjau ── */
+          + '<section class="hal-sec bd-studio">'
+          + '<div class="bd-bilah">'
+          + '<span class="bd-dot"></span><span class="bd-dot"></span><span class="bd-dot"></span>'
+          + '<span class="bd-bilah-nama" id="bgnNama">' + esc(b.nama) + '</span>'
+          + '<span class="bd-bilah-desk" id="bgnDesk">' + esc(b.deskripsi || '') + '</span>'
+          + '<span class="grow"></span>'
+          + '<button class="btn pr" data-bgn-aksi="build">' + ic('package', 14) + 'Build</button>'
+          + '<button class="btn" data-bgn-aksi="test">' + ic('play', 14) + 'Uji</button>'
+          + '<button class="btn" data-bgn-aksi="zip">' + ic('download', 14) + 'ZIP</button>'
+          + '<button class="btn" data-bgn-aksi="deploy">' + ic('upload', 14) + 'Deploy</button>'
+          + '</div>'
+          + '<div class="bd-alat">'
+          + '<div class="bd-grup"><span class="bd-grup-judul">' + ic('folder-open', 12) + 'Berkas</span>'
+          + '<button class="btn" data-bgn-aksi="file">' + ic('file-plus', 14) + 'Baru</button>'
+          + '<button class="btn" data-bgn-aksi="folder">' + ic('folder', 14) + 'Folder</button>'
           + '<button class="btn" data-bgn-aksi="rename">' + ic('square-pen', 14) + 'Ganti nama</button>'
-          + '<button class="btn" data-bgn-aksi="pindah">' + ic('move', 14) + 'Pindahkan</button>'
+          + '<button class="btn" data-bgn-aksi="pindah">' + ic('move', 14) + 'Pindah</button>'
           + '<button class="btn danger" data-bgn-aksi="hapus">' + ic('trash', 14) + 'Hapus</button>'
-          + '<button class="btn" data-bgn-aksi="komponen">' + ic('component', 14) + 'Buat komponen</button>'
-          + '<button class="btn" data-bgn-aksi="api">' + ic('database', 14) + 'Buat API</button>'
+          + '</div>'
+          + '<div class="bd-grup"><span class="bd-grup-judul">' + ic('wand', 12) + 'AI</span>'
+          + '<button class="btn" data-bgn-aksi="edit">' + ic('pencil', 14) + 'Edit + diff</button>'
+          + '<button class="btn" data-bgn-aksi="komponen">' + ic('component', 14) + 'Komponen</button>'
+          + '<button class="btn" data-bgn-aksi="api">' + ic('database', 14) + 'API</button>'
           + '<button class="btn" data-bgn-aksi="refactor">' + ic('wand', 14) + 'Refactor</button>'
           + '<button class="btn" data-bgn-aksi="debug">' + ic('bug', 14) + 'Debug</button>'
-          + '<button class="btn" data-bgn-aksi="perbaiki">' + ic('wrench', 14) + 'Perbaiki error</button>'
+          + '<button class="btn" data-bgn-aksi="perbaiki">' + ic('wrench', 14) + 'Perbaiki</button>'
           + '</div>'
-          + '<div class="bgn-grid">'
-          + '<div class="bgn-kiri"><div class="bgn-head">Berkas</div><div class="bgn-pohon" id="bgnPohon"></div></div>'
-          + '<div class="bgn-tengah">'
-          + '<div class="bgn-head">Kode <span id="bgnPath">—</span><span class="grow"></span><span id="bgnKodeBaris" class="pill-note"></span>'
-          + '<button class="ib sm" data-bgn-aksi="salin" title="Salin">' + ic('copy', 14) + '</button>'
+          + '</div>'
+          + '<div class="bd-grid">'
+          /* kiri — penjelajah berkas */
+          + '<div class="bd-panel bd-kiri">'
+          + '<div class="bd-head">' + ic('folder-open', 13) + 'Berkas <span class="bd-lencana-kecil" id="bdJumlahBerkas">0</span><span class="grow"></span>'
+          + '<button class="ib sm" data-bgn-aksi="file" title="Berkas baru">' + ic('file-plus', 14) + '</button>'
+          + '<button class="ib sm" data-bgn-aksi="folder" title="Folder baru">' + ic('folder', 14) + '</button></div>'
+          + '<div class="bd-cari-kotak"><span>' + ic('search', 13) + '</span><input id="bdCari" type="search" placeholder="Cari berkas…" autocomplete="off"></div>'
+          + '<div class="bgn-pohon" id="bgnPohon"></div>'
+          + '<div class="bd-kaki"><span id="bdKakiKiri">—</span></div>'
+          + '</div>'
+          /* tengah — editor kode */
+          + '<div class="bd-panel bd-tengah">'
+          + '<div class="bd-tabs" id="bdTabs"></div>'
+          + '<div class="bd-head bd-crumb">' + ic('file-code', 13) + '<span id="bdCrumbTeks" class="bd-crumb-dir"></span><span id="bgnPath">—</span><span class="grow"></span><span class="pill-note" id="bgnKodeBaris"></span>'
+          + '<button class="ib sm" data-bgn-aksi="salin" title="Salin kode">' + ic('copy', 14) + '</button>'
           + '<button class="ib sm" data-bgn-aksi="unduhsatu" title="Unduh berkas">' + ic('download', 14) + '</button></div>'
-          + '<pre class="bgn-kode" id="bgnKode"></pre></div>'
-          + '<div class="bgn-kanan">'
-          + '<div class="bgn-head">Pratinjau (Live Preview)<span class="grow"></span><div class="seg" id="bgnLebar">'
+          + '<pre class="bgn-kode" id="bgnKode"></pre>'
+          + '<div class="bd-statusbar"><span class="bd-sb" id="bdBhs">TEXT</span><span class="bd-sb" id="bdBaris2">0 baris</span><span class="bd-sb" id="bdBita2">0 B</span><span class="grow"></span><span class="bd-sb bd-sb-hijau">' + ic('check', 12) + ' tersimpan di browser</span></div>'
+          + '</div>'
+          /* kanan — pratinjau + konsol */
+          + '<div class="bd-panel bd-kanan">'
+          + '<div class="bd-head">' + ic('play', 13) + 'Pratinjau langsung<span class="grow"></span><div class="seg" id="bgnLebar">'
           + '<button data-v="fit" class="on">Fit</button><button data-v="desktop">Desktop</button><button data-v="tablet">Tablet</button><button data-v="mobile">Mobile</button></div>'
-          + '<button class="ib sm" data-bgn-aksi="refresh" title="Muat ulang">' + ic('refresh-cw', 14) + '</button>'
+          + '<button class="ib sm" data-bgn-aksi="refresh" title="Muat ulang pratinjau">' + ic('refresh-cw', 14) + '</button>'
           + '<button class="ib sm" data-bgn-aksi="buka" title="Buka di tab baru">' + ic('external-link', 14) + '</button></div>'
-          + '<div class="bgn-frame"><iframe id="bgnPratinjau" sandbox="allow-scripts allow-forms allow-modals" title="Pratinjau builder"></iframe></div>'
-          + '<p class="note bgn-catatan">Pratinjau berjalan di iframe terisolasi (kotak pasir): kode di dalamnya tidak bisa memanggil API situs ini — browser memblokirnya sebagai lintas-asal. Panggilan seperti itu tetap terlihat di panel Konsol &amp; Jaringan. Untuk menguji API sungguhan, deploy dulu lalu buka di tab baru.</p>'
-          + '<div class="bgn-head">Konsol & Jaringan <span class="grow"></span><span class="pill-note" id="bgnKonsolHitung"></span>'
-          + '<button class="ib sm" data-bgn-aksi="bersih" title="Bersihkan">' + ic('trash', 14) + '</button></div>'
+          + '<div class="bd-frame"><iframe id="bgnPratinjau" sandbox="allow-scripts allow-forms allow-modals" title="Pratinjau builder"></iframe></div>'
+          + '<div class="bd-head bd-head-konsol">' + ic('terminal', 13) + 'Konsol &amp; jaringan<span class="grow"></span><span class="pill-note" id="bgnKonsolHitung"></span>'
+          + '<button class="ib sm" data-bgn-aksi="bersih" title="Bersihkan konsol">' + ic('trash', 14) + '</button></div>'
           + '<div class="bgn-konsol" id="bgnKonsol"></div>'
+          + '<div class="bd-hasil">' + ic('check', 13) + '<b>Hasil uji</b><div id="bgnUji"></div></div>'
           + '</div>'
           + '</div>'
-          + '<div class="bgn-hasil"><div><b>Hasil uji</b><div id="bgnUji"></div></div>'
-          + '<div class="img-aksi"><button class="btn" data-bgn-aksi="test">' + ic('play', 14) + 'Uji aplikasi</button>'
-          + '<button class="btn" data-bgn-aksi="build">' + ic('package', 14) + 'Build</button>'
-          + '<button class="btn" data-bgn-aksi="zip">' + ic('download', 14) + 'Unduh ZIP</button>'
-          + '<button class="btn pr" data-bgn-aksi="deploy">' + ic('upload', 14) + 'Deploy</button></div></div>'
+          + '<p class="note bd-catatan">Pratinjau berjalan di <b>iframe terisolasi (sandbox)</b>: kode di dalamnya tidak bisa memanggil API situs ini. Panggilan seperti itu tetap terlihat di panel <b>Konsol &amp; jaringan</b>. Kode yang berisi perulangan tanpa henti tidak dijalankan otomatis (aplikasi menawarkan tampilan tanpa skrip atau tab terpisah). Untuk menguji API sungguhan, <b>Deploy</b> dulu lalu buka di tab baru.</p>'
           + '</section>' : '');
     },
     pasang: function () {
+      /* tampilkan 10 langkah sejak awal (belum berjalan) supaya jelas alurnya */
+      if (!bgnJejak.length) bgnJejakBaru();
       bgnRenderJejak(); bgnRenderUji();
       if (bgnAktif()) { bgnRenderSemua(); bgnRenderPratinjau(); }
       var mulai = $('bgnMulai');
@@ -4793,11 +4965,21 @@
         var contoh = e.target.closest('[data-bgn-contoh]');
         if (contoh) { $('bgnPrompt').value = contoh.dataset.bgnContoh; toast('Perintah contoh diisi — tekan Bangun'); return; }
         var buka = e.target.closest('[data-bgn-buka]');
-        if (buka) { bgnPath = buka.dataset.bgnBuka; tampilHalaman('builder'); return; }
+        if (buka) { bgnPath = buka.dataset.bgnBuka; bgnTabBuka(bgnPath); tampilHalaman('builder'); return; }
+        var tutupTab = e.target.closest('[data-bgn-tutup]');
+        if (tutupTab) { bgnTabTutup(tutupTab.dataset.bgnTutup); return; }
+        var tab = e.target.closest('[data-bgn-tab]');
+        if (tab) { bgnPath = tab.dataset.bgnTab; bgnRenderSemua(); return; }
         var lebar = e.target.closest('#bgnLebar button');
         if (lebar) { bgnLebar = lebar.dataset.v; bgnTerapkanLebar(); return; }
         var aksi = e.target.closest('[data-bgn-aksi]');
         if (aksi) { bgnAksi(aksi.dataset.bgnAksi); return; }
+      });
+      $('halBody').addEventListener('input', function (e) {
+        if (e.target && e.target.id === 'bdCari') {
+          bgnCari = e.target.value || '';
+          var b2 = bgnAktif(); if (b2) { var p2 = $('bgnPohon'); if (p2) p2.innerHTML = bgnPohon(b2); }
+        }
       });
       });
     }

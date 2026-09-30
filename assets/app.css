@@ -668,6 +668,9 @@ select{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;pad
 /* ═══ 20. halaman ber-alamat (builder · proyek · tugas · setelan · plugin · admin) ═══ */
 .hal-page{position:fixed;inset:0;z-index:55;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
 .hal-body{flex:1;overflow:auto;padding:18px 22px 70px;display:flex;flex-direction:column;gap:16px;max-width:1180px;width:100%;margin:0 auto}
+/* kartu-kartu halaman TIDAK boleh diperas oleh flex kolom — biarkan setinggi isinya,
+   halaman yang menggulir (ini yang bikin panel Builder terpotong sebelumnya) */
+.hal-body>*{flex:0 0 auto}
 .hal-aksi{display:flex;gap:8px;flex-wrap:wrap}
 .hal-sec{border:1px solid var(--garis);border-radius:14px;background:var(--panel);padding:16px 18px}
 .hal-sec>h3{display:flex;align-items:center;gap:9px;margin:0 0 12px;font-size:15px}
@@ -787,7 +790,7 @@ select{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;pad
 .bgn-kiri,.bgn-tengah,.bgn-kanan{display:flex;flex-direction:column;border:1px solid var(--garis);border-radius:12px;overflow:hidden;min-width:0}
 .bgn-head{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--garis);font-size:12px;color:var(--redup);background:rgba(255,255,255,.03)}
 .bgn-head .seg button{padding:3px 8px;font-size:11.5px}
-.bgn-pohon{overflow:auto;max-height:340px;padding:6px}
+.bgn-pohon{overflow:auto;max-height:290px;padding:6px}
 .ph-dir{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--redup);padding:6px 6px 3px}
 .ph-it{display:flex;align-items:center;gap:7px;width:100%;background:transparent;border:0;color:var(--teks);padding:5px 8px;border-radius:8px;font-size:12.5px;cursor:pointer;text-align:left}
 .ph-it:hover{background:rgba(255,255,255,.05)}
@@ -797,7 +800,7 @@ select{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;pad
 .bgn-kode{margin:0;padding:10px 12px;overflow:auto;max-height:340px;background:#0b0d13;color:#cfd6e4;font:12.5px/1.6 ui-monospace,monospace;white-space:pre-wrap}
 .bgn-frame{flex:1;min-height:250px;background:#fff}
 .bgn-frame iframe{width:100%;height:100%;min-height:250px;border:0;background:#fff;margin:0 auto;display:block;transition:width .2s}
-.bgn-konsol{max-height:150px;overflow:auto;padding:8px 10px;background:#0b0d13;font:12px/1.55 ui-monospace,monospace}
+.bgn-konsol{max-height:140px;overflow:auto;padding:8px 10px;background:#0b0d13;font:12px/1.55 ui-monospace,monospace}
 .konsol-baris{display:flex;gap:8px;padding:2px 0}
 .konsol-baris i{font-style:normal;color:var(--redup);min-width:52px}
 .konsol-baris.error span,.konsol-baris.runtime span{color:#ff9a9c}
@@ -864,3 +867,127 @@ html[data-theme="light"] .editor-isi{caret-color:#12141a}
 .cmp-konfirmasi svg{flex:0 0 auto;color:var(--aksen)}
 .cmp-konfirmasi b{color:var(--teks)}
 .cmp-konfirmasi .btn{padding:.28rem .65rem;font-size:.79rem;flex:0 0 auto}
+
+/* ══════════════════════════════════════════════════════════════════════
+   F33b — STUDIO AI BUILDER (tampilan profesional: bilah jendela, tab,
+   penjelajah berkas, editor, pratinjau, konsol, bilah status)
+   ══════════════════════════════════════════════════════════════════════ */
+.bd-hero{border:1px solid var(--garis);border-radius:16px;padding:16px 16px 12px;background:
+  radial-gradient(1200px 220px at 12% -40%,rgba(250,1,2,.14),transparent 60%),
+  linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));
+  margin-bottom:16px}
+.bd-hero-atas{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.bd-hero-ikon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(140deg,#fa0102,#b3000a);box-shadow:0 8px 24px rgba(250,1,2,.28)}
+.bd-hero-teks{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bd-hero-teks b{font-size:15.5px;letter-spacing:.2px}
+.bd-hero-teks small{color:var(--redup);font-size:12.5px;line-height:1.5;max-width:70ch}
+.bd-lencana{margin-left:auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--garis);
+  border-radius:99px;padding:5px 11px;font-size:11.5px;color:var(--redup);background:rgba(255,255,255,.03);max-width:44ch}
+.bd-lencana span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-lencana-kecil{border:1px solid var(--garis);border-radius:99px;padding:1px 7px;font-size:11px;color:var(--redup)}
+.bd-perintah{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--garis);border-radius:14px;
+  padding:10px 10px 10px 12px;background:rgba(10,10,14,.45)}
+.bd-perintah-ikon{color:var(--aksen);margin-top:6px}
+.bd-perintah textarea{flex:1;min-height:52px;background:transparent;border:0;outline:none;color:var(--teks);
+  font:inherit;font-size:14px;line-height:1.55;resize:vertical;padding:4px 2px}
+.bd-perintah:focus-within{border-color:var(--aksen);box-shadow:0 0 0 3px rgba(250,1,2,.12)}
+.bd-bangun{align-self:stretch;padding:0 18px}
+.bd-langkah{display:flex;align-items:flex-start;gap:10px;margin-top:12px;flex-wrap:wrap}
+.bd-langkah-judul{display:inline-flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;
+  letter-spacing:.09em;color:var(--redup);padding-top:6px}
+.bd-stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.bd-stat{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--garis);border-radius:9px;
+  padding:5px 10px;font-size:12px;color:var(--redup);background:rgba(255,255,255,.02)}
+.bd-stat i{font-style:normal;color:var(--teks);font-weight:600}
+.bd-pilih-judul{display:inline-flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;
+  letter-spacing:.09em;color:var(--redup);margin-right:2px}
+
+.bd-studio{padding:0;border:1px solid var(--garis);border-radius:16px;overflow:hidden;margin-bottom:16px}
+.bd-bilah{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--garis);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));flex-wrap:wrap}
+.bd-dot{width:10px;height:10px;border-radius:50%;background:#3d3d47;flex:none}
+.bd-dot:nth-child(1){background:#ff5f57}.bd-dot:nth-child(2){background:#febc2e}.bd-dot:nth-child(3){background:#28c840}
+.bd-bilah-nama{font-weight:650;font-size:13.5px;margin-left:4px}
+.bd-bilah-desk{color:var(--redup);font-size:12px;max-width:46ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-alat{display:flex;gap:14px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--garis);background:rgba(255,255,255,.015)}
+.bd-grup{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bd-grup-judul{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.09em;color:var(--redup);padding-right:4px;border-right:1px solid var(--garis);margin-right:3px}
+.bd-grid{display:grid;grid-template-columns:250px minmax(260px,1fr) minmax(320px,1fr);gap:0;align-items:stretch}
+@media (max-width:1240px){.bd-grid{grid-template-columns:1fr}}
+.bd-panel{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;
+  border-right:1px solid var(--garis);background:rgba(0,0,0,.16)}
+.bd-panel:last-child{border-right:0}
+@media (max-width:1240px){.bd-panel{border-right:0;border-bottom:1px solid var(--garis)}}
+.bd-head{display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px solid var(--garis);
+  font-size:12px;color:var(--redup);background:rgba(255,255,255,.03)}
+.bd-head .seg button{padding:3px 8px;font-size:11.5px}
+.bd-cari-kotak{display:flex;align-items:center;gap:7px;margin:8px;padding:6px 9px;border:1px solid var(--garis);
+  border-radius:9px;background:rgba(10,10,14,.5);color:var(--redup)}
+.bd-cari-kotak input{flex:1;background:transparent;border:0;outline:none;color:var(--teks);font-size:12.5px;min-width:0}
+.bd-kaki{padding:7px 10px;border-top:1px solid var(--garis);font-size:11px;color:var(--redup);background:rgba(255,255,255,.02)}
+.bd-kosong{display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;color:var(--redup);
+  font-size:12.5px;padding:22px 14px;margin:0}
+.ph-ikon{display:inline-flex;color:var(--redup)}
+.ph-it.on .ph-ikon{color:var(--aksen)}
+.ph-it.on{background:rgba(250,1,2,.14);box-shadow:inset 2px 0 0 var(--aksen)}
+.bd-tabs{display:flex;align-items:center;gap:2px;padding:6px 6px 0;border-bottom:1px solid var(--garis);
+  background:rgba(0,0,0,.22);overflow-x:auto}
+.bd-tab{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid transparent;
+  border-bottom:0;border-radius:9px 9px 0 0;font-size:12px;color:var(--redup);cursor:pointer;white-space:nowrap}
+.bd-tab b{font-weight:550}
+.bd-tab:hover{color:var(--teks);background:rgba(255,255,255,.04)}
+.bd-tab.on{color:var(--teks);background:#0b0d13;border-color:var(--garis)}
+.bd-tab-x{display:inline-flex;opacity:.5;cursor:pointer}
+.bd-tab-x:hover{opacity:1;color:var(--aksen)}
+.bd-tab-kosong{display:inline-flex;align-items:center;gap:7px;color:var(--redup);font-size:12px;padding:7px 8px}
+.bd-crumb{font-size:11.5px}
+.bd-crumb #bgnPath{font-family:ui-monospace,monospace;color:var(--teks)}
+.bd-statusbar{display:flex;align-items:center;gap:10px;padding:5px 10px;border-top:1px solid var(--garis);
+  font-size:11px;color:var(--redup);background:rgba(250,1,2,.07)}
+.bd-sb{display:inline-flex;align-items:center;gap:4px}
+.bd-sb-hijau{color:#8ee0a8}
+.bd-frame{position:relative;flex:0 0 auto;height:300px;background:#fff;overflow:hidden;display:block}
+.bd-frame iframe{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100%;height:300px;border:0;background:#fff;transition:width .2s}
+.bd-head-konsol{border-top:1px solid var(--garis)}
+.bd-hasil{display:flex;flex-direction:column;gap:6px;padding:9px 10px;border-top:1px solid var(--garis);
+  font-size:12px;color:var(--redup);background:rgba(255,255,255,.02)}
+.bd-hasil b{color:var(--teks)}
+.bd-catatan{margin:0;padding:10px 12px;border-top:1px solid var(--garis)}
+.bgn-kode{flex:1;min-height:190px;max-height:300px;overflow:auto}
+
+/* kartu "Penyedia AI" di modal Pengaturan + bagian penyedia di halaman Pengaturan */
+.set-utama{border:1px solid rgba(250,1,2,.35);background:rgba(250,1,2,.06);border-radius:12px}
+.hal-sec.sec-utama{border:1px solid rgba(250,1,2,.32);background:rgba(250,1,2,.045)}
+.sec-sorot{animation:sorot2 3s ease-out}
+@keyframes sorot2{0%{box-shadow:0 0 0 0 rgba(250,1,2,.55)}60%{box-shadow:0 0 0 8px rgba(250,1,2,0)}100%{box-shadow:0 0 0 0 rgba(250,1,2,0)}}
+
+/* panel pratinjau: jangan sampai isinya menembus panel lain, dan tombol
+   pengaman sandbox tampil rapi di atas */
+.bd-panel{overflow:hidden}
+.bd-frame{overflow:hidden}
+.aman-aksi{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px}
+.bd-hero{padding:14px 14px 10px}
+.bd-perintah textarea{min-height:46px}
+
+/* studio: pastikan tiap panel punya batas tinggi sendiri (tidak menembus panel lain) */
+.bd-tabs{flex:0 0 auto}
+.bd-kaki{flex:0 0 auto}
+.bd-hasil{flex:0 0 auto}
+.bd-catatan{flex:0 0 auto}
+.bd-statusbar{flex:0 0 auto}
+.bd-bilah,.bd-alat{flex:0 0 auto}
+
+/* perapian akhir studio */
+.bd-perintah{align-items:flex-start}
+.bd-bangun{align-self:flex-start;padding:9px 18px;margin-top:2px;flex:0 0 auto}
+.bd-head{flex-wrap:wrap;row-gap:4px}
+.bd-head>span:first-of-type{white-space:nowrap}
+.bgn-jejak li.menunggu{opacity:.62}
+
+/* studio: tinggi panel mengikuti isi, tidak dipotong */
+.bd-studio{overflow:visible}
+.bd-panel{overflow:hidden}
+.bd-grid{align-items:stretch}
+.bd-tengah,.bd-kanan{min-height:0}

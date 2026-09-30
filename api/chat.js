@@ -853,6 +853,9 @@ async function tangani(request, env) {
         modelDariRouter: penyedia.router && lokalSiap,
       },
       /* daftar lengkap supaya halaman Setelan bisa menawarkan pilihan model */
+      /* model yang akan dipakai untuk kirim foto & Builder — ditampilkan di Pengaturan */
+      modelVisi: (antreanVisi || [])[0] || "",
+      modelPembangun: (penyedia.petaModel && penyedia.petaModel.pembangun && penyedia.petaModel.pembangun[0]) || "",
       daftarModel: (penyedia.daftarTampil && penyedia.daftarTampil.length)
         /* penyedia dengan daftar pilihan sendiri (mis. Apinex 6 model free/) →
            yang tampil di pemilih tepat daftar itu; antrean cadangan tetap dipakai

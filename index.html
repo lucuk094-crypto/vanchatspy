@@ -171,6 +171,14 @@
       <button class="ib" data-close title="Tutup"><span data-ic="x" data-ic-size="17"></span></button>
     </header>
     <div class="modal-bd2" id="setBody">
+      <section class="set set-utama" id="setPenKartu">
+        <h4><span data-ic="plug" data-ic-size="15"></span>Penyedia AI</h4>
+        <div class="row"><label>Penyedia aktif</label><b id="setPenAktif">memuat…</b></div>
+        <div class="row"><label>Model mode Normal</label><b id="setPenFast">—</b></div>
+        <div class="row col"><button class="btn pr" id="setPenBuka" style="width:100%;justify-content:center"><span data-ic="sliders" data-ic-size="15"></span>Atur penyedia &amp; model per fitur</button></div>
+        <p class="note" id="setPenVersi">—</p>
+      </section>
+
       <section class="set">
         <h4><span data-ic="palette" data-ic-size="15"></span>Tampilan</h4>
         <div class="row"><label>Tema</label>
@@ -232,7 +240,7 @@
       <section class="set">
         <h4><span data-ic="database" data-ic-size="15"></span>Pemakaian &amp; data</h4>
         <div class="row"><label>Permintaan AI dari perangkat ini</label><b id="setUsage">0</b></div>
-        <div class="row"><label>Batas penyedia</label><b>sesuai paket 9Router</b></div>
+        <div class="row"><label>Batas penyedia</label><b id="setPenBatas">mengikuti paket akunmu di penyedia</b></div>
         <div class="row"><label>Percakapan tersimpan</label><b id="setCount">0</b></div>
         <div class="row"><label>Berkas hasil</label><b id="setArts">0</b></div>
         <div class="btns">
@@ -517,6 +525,6 @@
 
 <script src="assets/icons.js"></script>
 <script src="assets/berkas.js"></script>
-<script src="assets/app.js?v=33"></script>
+<script src="assets/app.js?v=34"></script>
 </body>
 </html>

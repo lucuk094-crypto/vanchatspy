@@ -337,9 +337,12 @@ async function ujiHalamanBaru(browser) {
   const bingkai = page.frames().filter((f) => /srcdoc/.test(f.url()) || f !== page.mainFrame()).pop();
   const tombolAman = await bingkai.$('#bgnAman1');
   if (!tombolAman) throw new Error('tombol "Tampilkan tanpa skrip" tidak ada di pratinjau yang ditahan');
-  const kotakTombol = await tombolAman.boundingBox();
-  await page.mouse.click(kotakTombol.x + kotakTombol.width / 2, kotakTombol.y + kotakTombol.height / 2);
-  await tunggu(700);
+  /* geser dulu supaya tombolnya benar-benar terlihat (seperti manusia),
+     baru klik sungguhan di titik tengah tombol */
+  await tombolAman.scrollIntoView();
+  await tunggu(250);
+  await tombolAman.click();
+  await tunggu(900);
   const setelahAman = await page.evaluate(() => ({
     srcdoc: (document.querySelector('#bgnPratinjau').srcdoc || ''),
     status: document.querySelector('#bgnStatus').textContent,
