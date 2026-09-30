@@ -52,6 +52,11 @@
     }
   }
 
+  /* Penanda versi tampilan. Naikkan angka ini setiap kali app.js berubah,
+     dan samakan dengan ?v= di index.html — supaya browser tidak menyajikan
+     berkas lama (itu penyebab "sudah di-deploy tapi layar belum berubah"). */
+  var VERSI_APP = '33';
+
   /* ── 1. Mode AI ────────────────────────────────────────────────────── */
   var MODE = {
     fast: { label: 'Fast', ikon: 'zap', model: 'Ling 3.0 Flash', ket: 'Jawaban kilat untuk tanya-jawab harian (~1–3 detik).' },
@@ -3073,9 +3078,23 @@
   }
 
   function modelUntukMode(m) { return (SET.mPilih && SET.mPilih[m]) || ''; }
-  function labelMode(m) {
+  /* Model yang benar-benar akan dipakai untuk mode ini — urutannya:
+     1) pilihanmu di Setelan → Model AI,
+     2) pilihanmu di Pengaturan → Penyedia AI → model per fitur,
+     3) model yang akan dipakai server (dari /api/chat → modes),
+     4) nama dekoratif bawaan (hanya kalau server belum menjawab). */
+  function modelAktifUntukMode(m) {
     var pilih = modelUntukMode(m);
-    return pilih ? labelModel(pilih) || pilih : MODE[m].model;
+    if (pilih) return pilih;
+    var ps = SET.penyediaSet && SET.penyediaSet.model;
+    if (ps && ps[m]) return ps[m];
+    var mm = SET.modelServer && SET.modelServer.mentah && SET.modelServer.mentah.modes;
+    if (mm && mm[m]) return mm[m];
+    return '';
+  }
+  function labelMode(m) {
+    var id = modelAktifUntukMode(m);
+    return id ? (labelModel(id) || id) : MODE[m].model;
   }
   function labelModel(id) {
     var d = MODEL_PILIHAN_BAWAAN.filter(function (x) { return x[0] === id; })[0];
@@ -3114,6 +3133,16 @@
       (j.daftarVisi || []).forEach(function (m) { tambah(m, 'bisa melihat gambar'); });
       (j.modelTambahan || []).forEach(function (m) { tambah(m, 'model tambahanmu'); });
       SET.modelServer = { semua: semua.slice(1), mentah: j };
+      /* nama model di lembar "Pilih mode AI" & label bawah kotak tulis ikut berubah */
+      try {
+        var mList = document.getElementById('modeList');
+        if (mList) isiMode();
+        var sub = document.getElementById('chatSub');
+        if (sub) sub.textContent = labelMode(SET.mode);
+        if (halKini === 'settings') { ['fast', 'think', 'deep', 'expert'].forEach(function (m) {
+          var el2 = document.getElementById('set18M_' + m); if (el2) el2.innerHTML = opsiModel(modelUntukMode(m));
+        }); }
+      } catch (e) { /* tampilan saja — jangan sampai mengganggu */ }
       if (halKini === 'settings') {
         ['fast', 'think', 'deep', 'expert'].forEach(function (m) {
           var el = document.getElementById('set18M_' + m);
@@ -3212,6 +3241,7 @@
         + barisSet('Protokol', 'sudah otomatis pas untuk tiap penyedia', '<select class="sel" id="penGaya">' + opsiGaya() + '</select>')
         + barisSet('Aktifkan', 'kunci diuji sungguhan + daftar model dimuat', '<div class="img-aksi"><button class="btn" id="penAct">' + ic('zap', 15) + 'Uji &amp; Aktifkan</button><button class="btn" id="penOff">' + ic('rotate-ccw', 15) + 'Kembalikan ke server</button></div>')
         + barisSet('Status', 'hasil uji terakhir', '<span class="pill-note" id="penStatus">' + esc(statusPenyedia()) + '</span>')
+        + barisSet('Versi tampilan', 'untuk memastikan browser memuat berkas terbaru', '<span class="pill-note">F' + VERSI_APP + ' · app.js?v=' + VERSI_APP + '</span>')
         + barisSet('Model Normal (cepat)', 'dipakai mode Normal', '<select class="sel" id="penM_fast">' + opsiModelPenyedia('fast') + '</select>')
         + barisSet('Model Berpikir', 'dipakai mode Berpikir', '<select class="sel" id="penM_think">' + opsiModelPenyedia('think') + '</select>')
         + barisSet('Model Berpikir Mendalam', 'dipakai mode Mendalam', '<select class="sel" id="penM_deep">' + opsiModelPenyedia('deep') + '</select>')

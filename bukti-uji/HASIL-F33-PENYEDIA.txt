@@ -223,3 +223,41 @@ H. BAWAAN SEKARANG: APINEX (1 Okt 2026) + JALUR GANTI PENYEDIA
   Tanpa menyentuh env: Pengaturan → Penyedia AI di dalam web (kunci cuma di browser).
 * Di komputer sendiri: cukup ubah AI_PROVIDER + kunci di .env.local lalu jalankan ulang
   `node tools/server-uji.mjs` (banner sekarang menyebut penyedia yang benar-benar aktif).
+
+───────────────────────────────────────────────────────────────────────────────
+I. NAMA MODEL DI LAYAR = MODEL SUNGGUHAN + PENANDA VERSI (1 Okt 2026)
+───────────────────────────────────────────────────────────────────────────────
+Masalah yang dilaporkan pemilik aplikasi: "pilihan model di kolom chat belum ada
+perubahan, di Pengaturan juga belum ada perubahan" padahal server sudah Apinex.
+
+Pemeriksaan langsung ke https://vanchatspy.vercel.app (saat itu juga):
+   /api/chat   → penyedia Apinex · modes {fast free/gpt-6-luna, think free/glm-5.3-flash,
+                 deep free/deepseek-v4-pro-0813, expert free/mimo-v2.6-pro}
+                 daftarModel.fast = 6 model free/ yang diminta
+   /api/health → "Apinex (https://api.apinex.bond/v1)" · keyConfigured true ·
+                 kunciDari "env (APINEX_API_KEY)"
+   app.js      → sudah memuat penanda F33 (penProv, daftarPilihanModel, x-setelan-penyedia)
+Jadi sisi server + berkas di Vercel SUDAH benar.
+
+Dua penyebab tampilan terlihat "tidak berubah":
+  1. Lembar "Pilih mode AI" memakai nama HIASAN lama (Ling 3.0 Flash, Dots 3 Note,
+     Nex 2.5 Pro, Nemotron 3 Super 120B) dari MODE[].model — bukan model penyedia.
+     → DIPERBAIKI: labelMode() sekarang menampilkan model yang BENAR-BENAR dipakai,
+       urutannya: pilihanmu di Setelan → pilihanmu di Pengaturan (model per fitur)
+       → model yang akan dipakai server (/api/chat → modes) → baru nama bawaan.
+  2. Berkas app.js lama masih dipegang browser/edge (index.html memuat tanpa penanda
+     versi) → DIPERBAIKI: index.html memuat assets/app.js?v=33 dan Pengaturan →
+     Penyedia AI menampilkan "Versi tampilan: F33 · app.js?v=33" sebagai penanda.
+
+Bukti setelah perbaikan (Chromium headless ke server :8131, .env.local Apinex):
+   Lembar "Pilih mode AI":
+     • Normal — free/gpt-6-luna
+     • Berpikir — free/glm-5.3-flash
+     • Berpikir Mendalam — free/deepseek-v4-pro-0813
+     • Expert (tambahan) — free/mimo-v2.6-pro
+   Label bawah kotak tulis: "free/gpt-6-luna"
+   Pengaturan → Penyedia AI: ada · tombol "Uji & Aktifkan" ada ·
+     opsi model Normal = 6 model Apinex (free/gpt-6-luna … free/minimax-m3.1) ·
+     penanda versi "F33 · app.js?v=33"
+   Rangkaian uji setelah perbaikan: npm run uji 5×LULUS · uji:tampilan 4×LULUS ·
+     uji:setelan LULUS · uji:gratis LULUS

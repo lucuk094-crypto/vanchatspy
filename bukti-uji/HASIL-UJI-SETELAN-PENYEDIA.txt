@@ -1,5 +1,5 @@
 UJI SETELAN PENYEDIA — ganti penyedia dari halaman Pengaturan (browser sungguhan)
-30/9/2026, 19.16.49
+30/9/2026, 19.41.12
 
   ✓ aplikasi mulai dengan penyedia server — 9Router (127.0.0.1:8172) · server
   ✓ bagian "Penyedia AI" ada di halaman Pengaturan
