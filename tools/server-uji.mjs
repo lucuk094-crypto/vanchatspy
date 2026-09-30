@@ -72,7 +72,9 @@ function muatPenyedia() {
     if (fs.existsSync(berkas)) dariBerkas = JSON.parse(fs.readFileSync(berkas, 'utf8'));
   } catch (e) { dariBerkas = null; }
   if (dariBerkas && dariBerkas.url) {
-    env.AI_PROVIDER = env.AI_PROVIDER || '9router';
+    /* berkas lama tools/penyedia.json (hasil cek-penyedia) — hanya dipakai
+       kalau AI_PROVIDER belum diisi; bawaan aplikasi sekarang Apinex */
+    env.AI_PROVIDER = env.AI_PROVIDER || 'apinex';
     env.AI_BASE_URL = env.AI_BASE_URL || String(dariBerkas.url).replace(/\/+$/, '');
     if (!env.AI_API_KEY && dariBerkas.kunci) env.AI_API_KEY = dariBerkas.kunci;
     const m = dariBerkas.model || {};

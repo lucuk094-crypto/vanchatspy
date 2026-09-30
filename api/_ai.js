@@ -188,7 +188,10 @@ const PRESET = {
     catatan: 'GRATIS tanpa kartu (batas harian). Bagus untuk suara: Whisper + Orpheus TTS.',
   },
 };
-const PRESET_BAWAAN = '9router';
+/* Penyedia bawaan aplikasi sekarang: **Apinex** (gratis, 6 model free/).
+   Ubah kapan saja lewat env AI_PROVIDER (AI_PROVIDER=9router / gemini / groq / …)
+   atau langsung dari halaman Pengaturan → Penyedia AI tanpa redeploy. */
+const PRESET_BAWAAN = 'apinex';
 const ALAMAT_BAWAAN = PRESET[PRESET_BAWAAN].dasar;
 
 /* kunci bisa datang dari beberapa nama env supaya gampang dipakai apa adanya */

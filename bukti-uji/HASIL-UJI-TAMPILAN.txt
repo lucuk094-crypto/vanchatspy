@@ -1,5 +1,5 @@
 perintah : node tools/uji-tampilan.mjs
-waktu    : 2026-09-30T19:04:46.018Z
+waktu    : 2026-09-30T19:18:16.491Z
 
 ══ A. tampilan (jawaban AI tiruan) ══
 kolom → riwayat 272px · percakapan 537px · ruang kerja 619px · tema dark
@@ -10,7 +10,7 @@ referensi → chip aktif true · saklar di pengaturan ikut aktif true
 lembar mode → kepala: "Mode AIbatas permintaan mengikuti paket akunmu di Apinex"
 lembar mode → pilihan: Normal — Ling 3.0 Flash · Berpikir — Dots 3 Note · Berpikir Mendalam — Nex 2.5 Pro · Expert (tambahan) — Nemotron 3 Super 120B
 mode dipilih → bilah atas "Berpikir" · kotak tulis "Berpikir"
-tombol mode aktif → warna garis oklab(0.620649 0.220445 0.122953 / 0.454496)
+tombol mode aktif → warna garis oklab(0.623728 0.218656 0.121956 / 0.445414)
 referensi → lencana di pesan pengguna true · konteks terkirim ke API true
 jawaban → pesan 2 · h1 true · li 3 · tabel true · blok kode 2 · token berwarna 18 · kartu berkas 2
 riwayat → 1 percakapan
@@ -32,7 +32,7 @@ galat JS → tidak ada
 
 ══ B. backend asli ══
 backend asli → status panel: "server AI siap"
-backend asli → jawaban 5 karakter: "Biru."
+backend asli → jawaban 6 karakter: "Merah."
 galat JS (backend asli) → tidak ada
 
 ══ C. layar ponsel ══
@@ -77,7 +77,7 @@ pratinjau berisiko → kartu ditahan: true · iframe disembunyikan: true · sisa
    pesan: Pratinjau ditahan. Berkas ini berisi perulangan tanpa henti — macet.html baris 1 (while(true)). Kalau dijalankan, aplikasi bisa me
    pilih "Tampilkan tanpa skrip" → pratinjau tampil true · masih ada <script>: false · kartu tersembunyi: true
 riset dalam → bilah konfirmasi: Jalankan riset mendalam untuk “kopi dan kedai kopi”? Alur 7 langkah: rencana → cari sumber
-riset dalam → berkas "riset-muoh5575okt6w.html" · pratinjau 8008 karakter · kartu hasil 5
+riset dalam → berkas "riset-muohmiglbol6j.html" · pratinjau 8215 karakter · kartu hasil 5
 percakapan → sematan muncul di grup "Disematkan": true
 galat JS (fitur baru) → tidak ada
 
@@ -109,13 +109,13 @@ lampiran berkas → ["contoh.docx1003 B · dibaca AI","contoh.pdf453 B · dibaca
 isi berkas ke AI → DOCX terbaca: true · PDF terbaca: true
 kamera → modal terbuka · catatan: "Kamera tidak bisa dibuka: Requested device not found — kamu masih bisa"
 kamera → ambil ulang bekerja: true
-kamera → foto terkirim ke kotak tulis: ["kamera-19:04:40.jpg2.4 KB · dilihat AI"]
-tempel kode panjang → lampiran ["kamera-19:04:40.jpg","tempelan-panjang.txt"]
+kamera → foto terkirim ke kotak tulis: ["kamera-19:18:11.jpg2.4 KB · dilihat AI"]
+tempel kode panjang → lampiran ["kamera-19:18:11.jpg","tempelan-panjang.txt"]
 pustaka → halaman tampil true · tab ["Semua File","Gambar","Dokumen","Kode","Arsip"] · kartu 10
 pustaka → tab kode 10 kartu · urutan "Nama A–Z" · cari "catatan": 0 berkas (cari: catatan)
 pustaka → tag ditambahkan: ["penting"]
 pustaka → ganti nama: catatan-baru.html · ada: true
-pustaka → pratinjau: 6 info (HTML1.1 KBAI30 Sep 2026, 19.04Proyek: —#pentingGanti namaKe…)
+pustaka → pratinjau: 6 info (HTML1.1 KBAI30 Sep 2026, 19.18Proyek: —#pentingGanti namaKe…)
 pustaka → aksi pratinjau: ["Ganti nama","Ke percakapan","Unduh","Hapus"]
 pustaka → kembali ke percakapan: true
 galat JS (pesan & berkas) → tidak ada

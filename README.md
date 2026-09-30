@@ -68,7 +68,8 @@ hosting, jadi yang terlihat lokal = yang akan jalan setelah dipasang.
 
 ### 1b. Menyiapkan kunci penyedia AI
 
-Cara tercepat sekarang: buka aplikasi → **Pengaturan → Penyedia AI** → pilih
+Bawaan sekarang: **Apinex** — cukup isi `APINEX_API_KEY=sk-apx…` (lokal maupun Vercel).
+Cara tercepat untuk mencoba penyedia lain: buka aplikasi → **Pengaturan → Penyedia AI** → pilih
 penyedia, isi alamat + kunci, klik **Uji & Aktifkan**, lalu tentukan **model untuk
 tiap fitur** (Normal, Berpikir, Mendalam, Expert, kirim foto, Builder). Setelan itu
 disimpan di browser ini dan ikut terkirim per permintaan — jadi **ganti penyedia
@@ -82,7 +83,12 @@ Kalau mau jadi bawaan untuk semua pengunjung (atau dipasang di Vercel), isi env
 seperti di bawah. Penjelasan lengkap Apinex & Gemini:
 [`PANDUAN-VERCEL.md`](PANDUAN-VERCEL.md) bagian 2b–2c.
 
-Bawaannya aplikasi ini memakai **9Router** — alamat aksesnya lewat tunnel
+Penyedia **bawaan sekarang: Apinex** (gratis, 6 model `free/`) — kuncinya
+`APINEX_API_KEY=sk-apx…`. Mau pindah penyedia nanti? Ubah `AI_PROVIDER` + kuncinya
+di Vercel lalu **Redeploy** (langkah ringkasnya ada di bagian 2b–2c
+`PANDUAN-VERCEL.md`), atau langsung dari halaman Pengaturan tanpa redeploy.
+
+Sebelumnya aplikasi ini memakai **9Router** — alamat aksesnya lewat tunnel
 `https://rqacwx8.abc-tunnel.us/v1` (bawaannya, jadi `AI_BASE_URL` boleh
 dikosongkan). Tanpa kunci, aplikasi tetap bisa dibuka, tetapi setiap percakapan
 dijawab jujur «kunci 9Router belum dipasang» — tidak ada jawaban palsu.
@@ -109,14 +115,16 @@ begitu normal, percakapan langsung jalan tanpa perlu restart.
 
 ## 2. Memasang (Vercel)
 
-**Tidak ada kunci di dalam kode.** Setelah repo ini di-import:
+**Tidak ada kunci di dalam kode.** Penyedia bawaan: **Apinex** (bisa diganti kapan
+saja lewat env + Redeploy, atau dari halaman Pengaturan tanpa redeploy).
+Setelah repo ini di-import:
 
 1. Buka vercel.com → **Add New → Project** → pilih repo ini (tidak perlu build
    step; `/api/*.js` otomatis menjadi Edge Function, sisanya berkas statis).
 2. Project → **Settings → Environment Variables**, isi:
-   `AI_PROVIDER=9router` · `AI_API_KEY=sk-…` (kunci 9Router-mu).
+   `AI_PROVIDER=apinex` · `APINEX_API_KEY=sk-apx…` (kunci Apinex-mu — bawaan sekarang).
    Opsional: `AI_MODEL_FAST`, `AI_MODEL_THINK`, `AI_MODEL_VISI`, `AI_MODEL_BUILDER`, `ALLOWED_ORIGINS`, `APP_URL`.
-   Mau Apinex? `AI_PROVIDER=apinex` + `APINEX_API_KEY=sk-apx…`.
+   Mau 9Router lagi? `AI_PROVIDER=9router` + `AI_API_KEY=sk-…`.
    Mau Google AI Studio? `AI_PROVIDER=gemini` + `GEMINI_API_KEY=AIza…`/`AQ.…`
    (jangan isi `AI_BASE_URL` — alamat Google dipakai otomatis).
 3. **Deploy** — lalu buka webnya. Kalau env diubah belakangan, **redeploy**
@@ -258,7 +266,8 @@ node tools/uji-penyedia-gratis.mjs  # penyedia gratis (Pollinations/Gemini asli/
 
 ### Penyedia GRATIS (opsional) — mana yang menutup semua fitur
 
-Bawaan aplikasi tidak perlu diubah: percakapan lewat 9Router, gambar lewat Pollinations (gratis, tanpa kunci).
+Bawaan aplikasi: percakapan lewat **Apinex** (gratis, 6 model `free/`), gambar lewat Pollinations (gratis, tanpa kunci).
+Kalau ingin lewat tunnel lagi: `AI_PROVIDER=9router` + `AI_API_KEY=sk-…`.
 Kalau mau **semua fitur gratis dari satu akun** (teks + lihat foto + buat gambar FLUX + dengar + bicara):
 **Cloudflare Workers AI**, 10.000 neuron/hari tanpa kartu → ikuti langkahnya di
 [`PANDUAN-PENYEDIA-GRATIS.md`](PANDUAN-PENYEDIA-GRATIS.md).
@@ -268,7 +277,7 @@ Pilihan lain: **Apinex** (6 model `free/*` — batas 5 permintaan/menit; satu di
 kunci `AIza…` maupun `AQ.…`), Groq untuk percakapan cepat + Whisper.
 Cek kemampuan yang sedang aktif: `GET /api/health` → blok `kemampuan`.
 
-### Memakai 9Router (penyedia bawaan aplikasi ini)
+### Memakai 9Router (alternatif — lewat tunnel)
 
 Petunjuk lengkap + hasil pemeriksaan endpoint-nya ada di
 **PANDUAN-PENYEDIA-9ROUTER.md**. Ringkasnya:

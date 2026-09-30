@@ -199,3 +199,27 @@ G. CATATAN JUJUR — batas yang benar-benar terjadi saat uji (bukan disamarkan)
    (0 bita) dan percobaan pertama kehabisan waktu — tidak dilanjutkan supaya
    tidak ada kode yang diklaim jalan padahal belum diuji.
 
+───────────────────────────────────────────────────────────────────────────────
+H. BAWAAN SEKARANG: APINEX (1 Okt 2026) + JALUR GANTI PENYEDIA
+───────────────────────────────────────────────────────────────────────────────
+* Penyedia bawaan aplikasi = **Apinex** (kode: PRESET_BAWAAN='apinex' di api/_ai.js;
+  contoh env di .env.example & .env.local.contoh juga Apinex).
+* Bukti hidup (server :8131 dengan .env.local → AI_PROVIDER=apinex):
+    /api/providers → label "Apinex" · alamat https://api.apinex.bond/v1 ·
+                     protokol openai · kunci "sk-apx…a62a" (tersamar) · gratis true
+    /api/chat      → fast free/gpt-6-luna · think free/glm-5.3-flash ·
+                     deep free/deepseek-v4-pro-0813 · expert free/mimo-v2.6-pro
+    daftarModel.fast → ["free/gpt-6-luna","free/glm-5.3-flash","free/deepseek-v4.1-flash",
+                        "free/deepseek-v4-pro-0813","free/mimo-v2.6-pro","free/minimax-m3.1"]
+                     → tepat 6 model yang diminta pemilik aplikasi
+    percakapan     → "Jawab hanya dengan angka 42" → "42" (model free/gpt-6-luna)
+* Google AI Studio tetap bisa dipakai kapan saja (kunci AQ. terbukti):
+    /api/providers → protokol gemini · alamat https://generativelanguage.googleapis.com/v1beta
+    percakapan/mengalir/kirim foto/Builder → semua ok (model gemini-flash-lite-latest)
+* Ganti penyedia NANTI (pemilik aplikasi sendiri):
+    1) Vercel → Settings → Environment Variables → ubah AI_PROVIDER + kunci penyedia baru
+    2) Deployments → ⋯ → Redeploy   (env baru hanya berlaku setelah redeploy)
+    3) cek https://<web>/api/health → penyedia, kunciDari, dan daftar model ikut berubah
+  Tanpa menyentuh env: Pengaturan → Penyedia AI di dalam web (kunci cuma di browser).
+* Di komputer sendiri: cukup ubah AI_PROVIDER + kunci di .env.local lalu jalankan ulang
+  `node tools/server-uji.mjs` (banner sekarang menyebut penyedia yang benar-benar aktif).

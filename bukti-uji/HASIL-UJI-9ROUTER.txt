@@ -1,5 +1,5 @@
 UJI PENYEDIA 9ROUTER — alur aplikasi lewat router tiruan
-30/9/2026, 19.10.59
+30/9/2026, 19.16.49
 ──────────────────────────────────────────────────────────
 ══ uji: Van Chat.SPY memakai 9Router (rqacwx8.abc-tunnel.us) ══
    penyediaTeks({AI_PROVIDER:"9router"}) → {"dasar":"https://rqacwx8.abc-tunnel.us/v1","gaya":"openai","router":true}

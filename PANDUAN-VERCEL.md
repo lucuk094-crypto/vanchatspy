@@ -46,24 +46,41 @@ Di halaman import, buka bagian **Environment Variables**.
 Kolomnya ada tiga: **Key** (nama), **Value** (isi), **Environments** (centang
 **Production** *dan* **Preview** supaya berlaku di dua-duanya).
 
-### Wajib — hanya dua baris ini
+### Wajib — dua baris ini (penyedia bawaan sekarang: **Apinex**)
 
 | Key | Value | Keterangan |
 |---|---|---|
-| `AI_PROVIDER` | `9router` | nama penyedia. Jangan diganti huruf besar/beda. |
-| `AI_API_KEY` | `sk-………………` | kunci 9Router milikmu (dari langkah 0). **Jangan pakai tanda kutip**, jangan ada spasi di depan/belakang. |
+| `AI_PROVIDER` | `apinex` | penyedia bawaan aplikasi sejak 1 Okt 2026. Jangan diganti huruf besar/beda. |
+| `APINEX_API_KEY` | `sk-apx………………` | kunci Apinex-mu (dari apinex.bond). **Jangan pakai tanda kutip**, jangan ada spasi di depan/belakang. |
+
+> Catatan Apinex: paket gratis dibatasi **5 permintaan/menit per akun**, dan
+> `free/minimax-m3.1` ternyata **butuh langganan** — aplikasi mengatakan itu apa
+> adanya kalau model tersebut dipakai (tidak mengganti model diam-diam).
+> Model `claude-*` juga butuh saldo/top-up. Lihat bagian 2b untuk daftar lengkapnya.
+
+### Alternatif: kembali memakai 9Router (tunnel)
+
+| Key | Value | Keterangan |
+|---|---|---|
+| `AI_PROVIDER` | `9router` | kalau mau lewat tunnel 9Router lagi |
+| `AI_API_KEY` | `sk-………………` | kunci 9Router-mu (dari langkah 0) |
+| `AI_BASE_URL` | *(kosongkan)* | otomatis `https://rqacwx8.abc-tunnel.us/v1` |
 
 ### Opsional — pilih model (boleh dikosongkan)
 
-Kalau dibiarkan kosong, aplikasi memakai model bawaan & daftar model dari akunmu.
+Kalau dibiarkan kosong, aplikasi memakai model bawaan penyedia yang aktif.
 
-| Key | Value contoh | Keterangan |
+| Key | Value contoh (Apinex) | Keterangan |
 |---|---|---|
-| `AI_MODEL_FAST` | `kr/claude-haiku-4.5` | mode Normal |
-| `AI_MODEL_THINK` | `kr/claude-sonnet-4.5` | mode Berpikir |
-| `AI_MODEL_DEEP` | `kr/claude-sonnet-4.5` | mode Berpikir Mendalam |
-| `AI_MODEL_EXPERT` | `kr/claude-sonnet-4.5-agentic` | mode Expert |
-| `AI_MODEL_VISI` | `kr/claude-sonnet-4.5` | untuk kirim foto (sudah diuji membaca gambar) |
+| `AI_MODEL_FAST` | `free/gpt-6-luna` | mode Normal |
+| `AI_MODEL_THINK` | `free/glm-5.3-flash` | mode Berpikir |
+| `AI_MODEL_DEEP` | `free/deepseek-v4-pro-0813` | mode Berpikir Mendalam |
+| `AI_MODEL_EXPERT` | `free/mimo-v2.6-pro` | mode Expert |
+| `AI_MODEL_VISI` | `free/glm-5.3-flash` | untuk kirim foto (sudah diuji membaca gambar) |
+| `AI_MODEL_BUILDER` | `free/deepseek-v4-pro-0813` | AI Builder |
+
+*(Kalau memakai 9Router, contohnya: `kr/claude-haiku-4.5`, `kr/claude-sonnet-4.5`,
+`kr/claude-sonnet-4.5-agentic`.)*
 
 ### Opsional — keamanan & alamat
 
@@ -98,23 +115,26 @@ perangkat) dan itu sudah jalan:
 | `STT_PROVIDER` + `STT_API_KEY` | penyedia OpenAI-compatible | ubah suara → teks |
 | `TTS_PROVIDER` + `TTS_API_KEY` | penyedia OpenAI-compatible | teks → suara |
 
-> ❗ **Jangan isi** `AI_BASE_URL`. Kalau dikosongkan, aplikasi otomatis memakai
-> `https://rqacwx8.abc-tunnel.us/v1`. Isi hanya kalau kamu memang memakai alamat lain.
+> ❗ **Jangan isi** `AI_BASE_URL` kalau memakai Apinex/9Router/Gemini: alamat
+> bawaannya sudah benar (Apinex → `https://api.apinex.bond/v1`, 9Router →
+> `https://rqacwx8.abc-tunnel.us/v1`, Gemini → `…/v1beta`). Isi hanya kalau kamu
+> memang memakai gateway lain.
 
 ---
 
-## 2b. Memakai Apinex atau Google AI Studio (opsional)
+## 2b. Apinex (bawaan) & Google AI Studio
 
-Dua penyedia ini bisa dipilih **dari dalam web** (Pengaturan → Penyedia AI) —
+**Apinex sekarang adalah penyedia bawaan aplikasi** (lihat tabel "Wajib" di atas).
+Dua penyedia ini juga bisa dipilih **dari dalam web** (Pengaturan → Penyedia AI) —
 cara itu **tidak perlu Redeploy** karena setelannya ikut terkirim dari browser
 setiap permintaan (kunci tidak disimpan di server). Tapi kalau kamu mau jadi
 bawaan untuk semua orang yang membuka webnya, isi env-nya seperti ini:
 
-### Apinex (`https://api.apinex.bond/v1`)
+### Apinex (`https://api.apinex.bond/v1`) — bawaan sekarang
 
 | Key | Value | Keterangan |
 |---|---|---|
-| `AI_PROVIDER` | `apinex` | |
+| `AI_PROVIDER` | `apinex` | sudah jadi bawaan; baris ini boleh dikosongkan |
 | `APINEX_API_KEY` | `sk-apx…………` | kunci dari apinex.bond |
 | `AI_MODEL_FAST` | `free/gpt-6-luna` | mode Normal |
 | `AI_MODEL_THINK` | `free/glm-5.3-flash` | mode Berpikir |
@@ -170,6 +190,18 @@ Catatan jujur soal Apinex (hasil uji langsung, 1 Okt 2026):
 3. tentukan **model per fitur** (Normal / Berpikir / Mendalam / Expert / kirim foto /
    Builder) dan pembuat gambar, lalu tutup — setelan tersimpan di browser ini,
 4. tombol **Kembalikan ke server** menghapus setelan itu dan kembali memakai env.
+
+### Ganti penyedia di Vercel nanti (kamu sendiri)
+
+1. **Settings → Environment Variables** → ubah `AI_PROVIDER` + kunci penyedia baru
+   (mis. `AI_PROVIDER=gemini` + `GEMINI_API_KEY=AIza…`),
+2. **Deployments → deployment teratas → ⋯ → Redeploy** — env baru **hanya** berlaku
+   setelah redeploy,
+3. buka `/api/health` untuk memastikan: `penyedia`, `kunciDari`, dan daftar `model`
+   akan mengikuti penyedia yang baru.
+
+Kalau hanya mau coba-coba tanpa menyentuh env: pakai **Pengaturan → Penyedia AI**
+di dalam web (kunci hanya di browser, tanpa redeploy).
 
 Kunci yang kamu tulis di situ **hanya dipakai untuk permintaan itu** (header
 `x-setelan-penyedia`), tidak ditulis ke log, dan tidak pernah dikembalikan lagi ke
