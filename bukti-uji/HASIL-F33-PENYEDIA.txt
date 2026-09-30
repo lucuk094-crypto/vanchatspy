@@ -261,3 +261,56 @@ Bukti setelah perbaikan (Chromium headless ke server :8131, .env.local Apinex):
      penanda versi "F33 · app.js?v=33"
    Rangkaian uji setelah perbaikan: npm run uji 5×LULUS · uji:tampilan 4×LULUS ·
      uji:setelan LULUS · uji:gratis LULUS
+
+───────────────────────────────────────────────────────────────────────────────
+J. PENYEDIA AI DI DEPAN + STUDIO BUILDER BARU (1 Okt 2026)
+───────────────────────────────────────────────────────────────────────────────
+Keluhan pemilik aplikasi: (1) bagian "Penyedia AI" tidak terlihat di Pengaturan,
+(2) halaman Builder minta dibuat lebih profesional.
+
+Sebab nomor 1 bukan karena bagiannya hilang — letaknya paling BAWAH sehingga
+perlu digulir. Perbaikan:
+  • modal Pengaturan kini dibuka dengan kartu "PENYEDIA AI" di PALING ATAS
+    (penyedia aktif · model mode Normal · versi tampilan · tombol
+     "Atur penyedia & model per fitur"),
+  • tombol itu membuka halaman Pengaturan, menggulir + menyorot bagian Penyedia AI,
+  • di halaman Pengaturan bagian "Penyedia AI" dipindah ke paling atas
+    (sebelum "Profil & Akun") dengan bingkai merah supaya menonjol,
+  • pemilih "Penyedia" menandai penyedia yang BENAR-BENAR aktif di server, dan
+    tiap "Model …" menampilkan "(bawaan penyedia: free/gpt-6-luna)" sesuai
+    jawaban /api/chat — bukan lagi "(bawaan penyedia)" tanpa keterangan.
+
+Builder dirombak menjadi studio:
+  • bilah perintah (hero) + 10 langkah build yang terlihat sejak awal,
+  • bilah jendela (titik merah/kuning/hijau) + tombol Build · Uji · ZIP · Deploy,
+  • toolbar dua kelompok: BERKAS (Baru/Folder/Ganti nama/Pindah/Hapus) & AI
+    (Edit + diff/Komponen/API/Refactor/Debug/Perbaiki),
+  • penjelajah berkas: kotak cari, ikon per jenis berkas, ukuran tiap berkas,
+    jumlah berkas per folder, penanda berkas aktif,
+  • editor: TAB berkas (buka/tutup, maks 6), jalur folder, salin/unduh,
+    bilah status (HTML · 3 baris · 539 B · "tersimpan di browser"),
+  • pratinjau: tinggi tetap 300 px, Fit/Desktop/Tablet/Mobile, muat ulang,
+    buka di tab baru — kode proyek tidak lagi meluber ke panel lain,
+  • konsol & jaringan + hasil uji di bawah pratinjau, catatan keamanan sandbox,
+  • perbaikan penting: aturan flex .hal-body dulu MEMERAS panel Builder
+    (panel tengah kosong, pratinjau meluber) — kini .hal-body>*{flex:0 0 auto}
+    + tinggi panel ditetapkan, jadi tata letaknya kokoh.
+
+Bukti (Chromium 148 headless, server:8131 dengan .env.local Apinex):
+  modal Pengaturan  : kartu Penyedia AI = elemen PERTAMA · penyedia aktif tampil ·
+                      model Normal "free/gpt-6-luna" · "Versi tampilan F34 · app.js?v=34"
+  halaman Pengaturan: #penSec di atas & terlihat · tombol "Uji & Aktifkan" ada ·
+                      pemilih Penyedia = "Apinex — gratis (5 permintaan/menit)" ·
+                      Model Normal = "(bawaan penyedia: free/gpt-6-luna)" + 6 model
+  studio builder    : hero · bilah jendela · 2 grup toolbar · 3 panel ·
+                      tab index.html → app.js · cari "styl" → styles.css ·
+                      statistik "4 berkas · 1,3 KB kode · diubah 2 menit lalu" ·
+                      bilah status "HTML 3 baris 539 B · tersimpan di browser" ·
+                      konsol "0 console error · 0 runtime error" · hasil uji tampil ·
+                      galat JS halaman: tidak ada
+  gambar bukti      : bukti-uji/47-modal-pengaturan-penyedia.png ·
+                      48-pengaturan-penyedia-atas.png · 49-studio-builder.png ·
+                      50-studio-builder-tab.png · 51-studio-builder-konsol.png ·
+                      52-modal-pengaturan.png
+  rangkaian uji     : npm run uji 5×LULUS · uji:tampilan 4×LULUS ·
+                      uji:setelan LULUS · uji:gratis LULUS
