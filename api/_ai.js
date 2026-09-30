@@ -117,13 +117,25 @@ const PRESET = {
     catatan: '9Router — banyak model; sebagian paketnya gratis.',
   },
   'gemini': {
-    dasar: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    dasar: 'https://generativelanguage.googleapis.com/v1beta',
     label: 'Google AI Studio (Gemini)',
-    visi: true, stream: true, kunci: 'wajib', gratis: true,
-    model: ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'],
+    visi: true, stream: true, kunci: 'wajib', gratis: true, gaya: 'gemini',
+    model: ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'],
     gambar: { mode: 'gemini', model: 'gemini-2.5-flash-image' },
-    catatan: 'Kunci GRATIS dari aistudio.google.com (tanpa kartu): teks, streaming, dan '
-      + 'melihat gambar. Pembuatan gambar di Google berbayar — biarkan ditangani Pollinations.',
+    catatan: 'Kunci GRATIS dari aistudio.google.com (tanpa kartu) — protokol asli Google: teks, '
+      + 'melihat gambar, dan suara (TTS) gratis. Pembuatan gambar di tier gratis kena kuota '
+      + '(berbayar) — biarkan ditangani Pollinations atau Cloudflare.',
+    /* Diuji langsung 1 Okt 2026: 'gemini-flash-lite-latest' & 'gemini-3.1-flash-lite'
+       menjawab teks DAN melihat gambar; 'gemini-flash-latest' sering 503 (sibuk) dan
+       'gemini-pro-latest' kena kuota gratis — jadi dipakai sebagai cadangan terakhir. */
+    mode: {
+      fast: ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+      think: ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+      deep: ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+      expert: ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-flash-latest'],
+      visi: ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite'],
+      pembangun: ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest'],
+    },
   },
   'pollinations': {
     dasar: 'https://text.pollinations.ai/openai',
@@ -143,6 +155,30 @@ const PRESET = {
     gambar: { mode: 'cloudflare', model: '@cf/black-forest-labs/flux-1-schnell' },
     catatan: 'GRATIS 10.000 neuron/hari (tanpa kartu) dan menutup SEMUA fitur: teks, melihat gambar, '
       + 'membuat gambar (FLUX), dengar (Whisper), dan suara (MeloTTS). Butuh CF_ACCOUNT_ID + CF_API_TOKEN.',
+  },
+  'apinex': {
+    dasar: 'https://api.apinex.bond/v1',
+    label: 'Apinex',
+    visi: true, stream: true, kunci: 'wajib', gratis: true,
+    model: ['free/gpt-6-luna', 'free/glm-5.3-flash', 'free/deepseek-v4.1-flash',
+      'free/deepseek-v4-pro-0813', 'free/mimo-v2.6-pro', 'free/minimax-m3.1'],
+    catatan: 'Apinex — model gratis dibatasi 5 permintaan/menit per akun. Sebagian model berawalan '
+      + '"free/" ternyata butuh langganan (mis. free/minimax-m3.1) — pesan penolakan penyedia '
+      + 'diteruskan apa adanya, bukan diakali.',
+    /* model per fitur — diuji langsung ke Apinex (1 Okt 2026) */
+    /* daftar yang ditampilkan di pemilih model (Pengaturan → model per fitur &
+       bilah obrolan). Sengaja tepat enam model yang diminta pemilik aplikasi —
+       termasuk free/minimax-m3.1 yang ternyata butuh langganan: kalau dipakai,
+       aplikasi menjawab dengan catatan jujur (bukan menyembunyikannya). */
+    tampil: ['free/gpt-6-luna', 'free/glm-5.3-flash', 'free/deepseek-v4.1-flash', 'free/deepseek-v4-pro-0813', 'free/mimo-v2.6-pro', 'free/minimax-m3.1'],
+    mode: {
+      fast: ['free/gpt-6-luna', 'free/glm-5.3-flash'],
+      think: ['free/glm-5.3-flash', 'free/deepseek-v4.1-flash'],
+      deep: ['free/deepseek-v4-pro-0813', 'free/mimo-v2.6-pro'],
+      expert: ['free/mimo-v2.6-pro', 'free/deepseek-v4-pro-0813'],
+      visi: ['free/glm-5.3-flash', 'free/deepseek-v4.1-flash'],
+      pembangun: ['free/deepseek-v4-pro-0813', 'free/mimo-v2.6-pro'],
+    },
   },
   'groq': {
     dasar: 'https://api.groq.com/openai/v1',
@@ -164,6 +200,12 @@ function kunciDariEnv(env) {
 /* Model bawaan per mode untuk penyedia yang daftar modelnya belum terbaca. */
 export function modelBawaan(env = {}, mode = 'fast') {
   const p = penyediaTeks(env);
+  /* peta model per fitur milik penyedia (bila ada) → urutan paling tepat */
+  const peta = p.petaModel || null;
+  if (peta && peta[mode] && peta[mode].length) {
+    const lain = (p.modelBawaan || []).filter((m) => !peta[mode].includes(m));
+    return peta[mode].concat(lain).filter(Boolean);
+  }
   const daftar = (p.modelBawaan || []).filter(Boolean);
   if (!daftar.length) return [];
   if (daftar.length === 1) return daftar.slice();
@@ -172,16 +214,81 @@ export function modelBawaan(env = {}, mode = 'fast') {
   return urut.map((i) => daftar[i]).filter(Boolean);
 }
 
+/* Nama env yang berkaitan dengan penyedia AI. Handler API hanya meneruskan
+   nama-nama ini ke lapisan penyedia (daftar-putih) — jadi setelan penyedia baru
+   tidak perlu didaftarkan ulang di banyak berkas. */
+export const ENV_PENYEDIA = [
+  /* penyedia teks */
+  'AI_PROVIDER', 'AI_BASE_URL', 'AI_API_KEY', 'AI_GAYA', 'NINE_API_KEY', 'ROUTER_API_KEY',
+  'APINEX_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_AI_API_KEY', 'AISTUDIO_API_KEY', 'GROQ_API_KEY',
+  'CF_API_TOKEN', 'CF_ACCOUNT_ID', 'CF_BASE_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID',
+  'AI_MODEL', 'AI_MODELS', 'MODELS_JSON', 'AI_MODEL_IZIN', 'AI_CADANGAN', 'AI_MODEL_VISI',
+  'AI_MODEL_FAST', 'AI_MODEL_THINK', 'AI_MODEL_DEEP', 'AI_MODEL_EXPERT', 'AI_MODEL_BUILDER',
+  /* setelan penyedia dari browser (halaman Pengaturan) */
+  'AI_PROVIDER_UI', 'AI_BASE_URL_UI', 'AI_API_KEY_UI', 'AI_GAYA_UI', 'AI_MODEL_UI',
+  'AI_MODEL_VISI_UI', 'AI_MODEL_FAST_UI', 'AI_MODEL_THINK_UI', 'AI_MODEL_DEEP_UI', 'AI_MODEL_EXPERT_UI', 'AI_MODEL_BUILDER_UI',
+  /* pembuat gambar */
+  'IMAGE_PROVIDER', 'IMAGE_PROVIDER_UI', 'IMAGE_BASE_URL', 'IMAGE_BASE_URL_UI',
+  'IMAGE_API_KEY', 'IMAGE_API_KEY_UI', 'IMAGE_MODEL', 'IMAGE_MODEL_UI',
+  /* suara */
+  'STT_PROVIDER', 'STT_PROVIDER_UI', 'STT_API_KEY', 'STT_BASE_URL', 'STT_MODEL',
+  'TTS_PROVIDER', 'TTS_PROVIDER_UI', 'TTS_API_KEY', 'TTS_BASE_URL', 'TTS_MODEL', 'TTS_VOICE',
+  /* hosting & pengaman */
+  'ALLOWED_ORIGINS', 'APP_URL', 'VERCEL', 'VERCEL_ENV', 'VERCEL_URL', 'HOSTING',
+];
+
+/* Kunci untuk satu penyedia:
+   1) pilihan dari browser (Pengaturan → Penyedia) selalu menang,
+   2) lalu kunci env yang memang milik penyedia itu,
+   3) terakhir kunci umum AI_API_KEY. */
+function kunciPenyedia(nama, env) {
+  const ui = String(env.AI_API_KEY_UI || '').trim();
+  if (ui) return ui;
+  const kandidat = {
+    '9router': ['AI_API_KEY', 'NINE_API_KEY', 'ROUTER_API_KEY'],
+    apinex: ['APINEX_API_KEY'],
+    gemini: ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_AI_API_KEY', 'AISTUDIO_API_KEY'],
+    groq: ['GROQ_API_KEY'],
+    cloudflare: ['CF_API_TOKEN', 'CLOUDFLARE_API_TOKEN'],
+    pollinations: [],
+  }[String(nama || '').toLowerCase()] || [];
+  for (const k of kandidat) {
+    const v = String(env[k] || '').trim();
+    if (v) return v;
+  }
+  return String(env.AI_API_KEY || '').trim();
+}
+
+/* Nama env tempat kunci penyedia diambil — dipakai /api/health supaya
+   diagnosanya menyebut variabel yang BENAR (mis. APINEX_API_KEY, bukan AI_API_KEY). */
+export function namaEnvKunci(nama, env = {}) {
+  if (String(env.AI_API_KEY_UI || '').trim()) return 'halaman Pengaturan (dari browser)';
+  const kandidat = {
+    '9router': ['AI_API_KEY', 'NINE_API_KEY', 'ROUTER_API_KEY'],
+    apinex: ['APINEX_API_KEY'],
+    gemini: ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_AI_API_KEY', 'AISTUDIO_API_KEY'],
+    groq: ['GROQ_API_KEY'],
+    cloudflare: ['CF_API_TOKEN', 'CLOUDFLARE_API_TOKEN'],
+    pollinations: [],
+  }[String(nama || '').toLowerCase()] || [];
+  for (const k of kandidat) if (String(env[k] || '').trim()) return k;
+  if (String(env.AI_API_KEY || '').trim()) return 'AI_API_KEY';
+  return '';
+}
+
 export function penyediaTeks(env = {}) {
-  const namaAsli = String(env.AI_PROVIDER || PRESET_BAWAAN).toLowerCase();
+  const namaAsli = String(env.AI_PROVIDER_UI || env.AI_PROVIDER || PRESET_BAWAAN).toLowerCase();
   const dikenal = !!PRESET[namaAsli];
   const p = dikenal ? PRESET[namaAsli] : { dasar: ALAMAT_BAWAAN, label: namaAsli || 'Penyedia AI' };
-  /* Cloudflare: alamatnya memuat ID akun, jadi disusun saat dipakai */
+  /* protokol: 'gemini' = API asli Google v1beta, 'openai' = /chat/completions */
+  const gaya = String(env.AI_GAYA_UI || env.AI_GAYA || p.gaya || 'openai').toLowerCase() === 'gemini' ? 'gemini' : 'openai';
+  /* alamat bawaan penyedia (Cloudflare disusun dari ID akun; Gemini gaya OpenAI
+     memakai jalur kompatibilitas /v1beta/openai) */
   const bawaanPenyedia = (namaAsli === 'cloudflare')
     ? (dasarCloudflare(env).dasar ? dasarCloudflare(env).dasar + '/v1' : p.dasar)
-    : p.dasar;
-  const dasar = String(env.AI_BASE_URL || bawaanPenyedia || ALAMAT_BAWAAN).replace(/\/+$/, '');
-  const kunci = kunciDariEnv(env);
+    : (namaAsli === 'gemini' && gaya === 'openai' ? String(p.dasar).replace(/\/+$/, '') + '/openai' : p.dasar);
+  const dasar = String(env.AI_BASE_URL_UI || env.AI_BASE_URL || bawaanPenyedia || ALAMAT_BAWAAN).replace(/\/+$/, '');
+  const kunci = kunciPenyedia(namaAsli, env);
   const label = namakanTampilan(dasar, bawaanPenyedia || p.dasar, p.label);
   const kustom = (() => { try { return new URL(dasar).host !== new URL(bawaanPenyedia || p.dasar).host; } catch (e) { return false; } })();
   return {
@@ -196,15 +303,184 @@ export function penyediaTeks(env = {}) {
     stream: p.stream !== false,   /* bisa menjawab mengalir (SSE)? */
     gratis: !!p.gratis,
     modelBawaan: (p.model || []).slice(),
+    petaModel: (p.mode ? JSON.parse(JSON.stringify(p.mode)) : null),
+    /* daftar model yang ditampilkan di pemilih (Pengaturan & bilah obrolan).
+       Kalau kosong, aplikasi menampilkan hasil baca dari penyedia (GET /models). */
+    daftarTampil: (p.tampil || []).slice(),
     gambarBawaan: p.gambar || null,
     catatanPenyedia: p.catatan || '',
-    /* 9Router melayani protokol OpenAI: Authorization: Bearer + /chat/completions */
-    gaya: 'openai',
+    /* 'openai' → /chat/completions ; 'gemini' → API asli Google v1beta */
+    gaya,
+    /* 'browser' = penyedia diatur dari halaman Pengaturan (kunci di browser) */
+    sumber: (env.AI_PROVIDER_UI || env.AI_BASE_URL_UI || env.AI_API_KEY_UI) ? 'browser' : 'server',
     /* daftar model diambil dari penyedia itu sendiri (GET /models) */
     router: true,
     lokal: false,
     dasarLokal: false,
   };
+}
+
+/* ── Setelan penyedia yang datang dari browser (Pengaturan → Penyedia) ──
+   Dikirim lewat satu header: x-setelan-penyedia = encodeURIComponent(JSON).
+   Kunci HANYA dipakai untuk permintaan ini: tidak disimpan di server, tidak
+   ditulis ke log, dan tidak pernah dikirim balik ke browser. */
+export function setelanDariPermintaan(request) {
+  const h = request && request.headers;
+  if (!h || typeof h.get !== 'function') return null;
+  let mentah = '';
+  try { mentah = String(h.get('x-setelan-penyedia') || '').trim(); } catch { mentah = ''; }
+  if (!mentah || mentah.length > 6000) return null;
+  let d = null;
+  try { d = JSON.parse(decodeURIComponent(mentah)); } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const t = (v, n) => String(v == null ? '' : v).slice(0, n || 200).trim();
+  const keluar = {
+    provider: t(d.provider, 40),
+    base: t(d.base, 300),
+    kunci: t(d.kunci, 300),
+    gaya: t(d.gaya, 20),
+    model: {},
+    gambar: {
+      provider: t(d.gambar && d.gambar.provider, 40),
+      base: t(d.gambar && d.gambar.base, 300),
+      kunci: t(d.gambar && d.gambar.kunci, 300),
+      model: t(d.gambar && d.gambar.model, 120),
+    },
+  };
+  const m = (d.model && typeof d.model === 'object') ? d.model : {};
+  for (const k of ['fast', 'think', 'deep', 'expert', 'visi', 'pembangun', 'judul']) keluar.model[k] = t(m[k], 120);
+  return keluar;
+}
+
+/* Setelan browser → kunci env bayangan (…_UI) supaya SELURUH aplikasi
+   memakainya tanpa berkas lain perlu diubah. Tanpa setelan: env apa adanya. */
+export function envDenganSetelan(env = {}, setelan) {
+  if (!setelan) return env;
+  const e = { ...env };
+  if (setelan.provider) e.AI_PROVIDER_UI = setelan.provider;
+  if (setelan.base) e.AI_BASE_URL_UI = setelan.base;
+  if (setelan.kunci) e.AI_API_KEY_UI = setelan.kunci;
+  if (setelan.gaya) e.AI_GAYA_UI = setelan.gaya;
+  for (const [k, v] of Object.entries(setelan.model || {})) {
+    if (!v) continue;
+    const nama = k === 'visi' ? 'AI_MODEL_VISI_UI'
+      : (k === 'pembangun' ? 'AI_MODEL_BUILDER_UI' : 'AI_MODEL_' + String(k).toUpperCase() + '_UI');
+    e[nama] = v;
+  }
+  const g = setelan.gambar || {};
+  if (g.provider) e.IMAGE_PROVIDER_UI = g.provider;
+  if (g.base) e.IMAGE_BASE_URL_UI = g.base;
+  if (g.kunci) e.IMAGE_API_KEY_UI = g.kunci;
+  if (g.model) e.IMAGE_MODEL_UI = g.model;
+  return e;
+}
+
+/* Pintasan untuk handler API: env = env hosting + setelan dari browser. */
+export function envPermintaan(request, env = {}) {
+  return envDenganSetelan(env, setelanDariPermintaan(request));
+}
+
+/* ── Protokol asli Google (Gemini v1beta) ─────────────────────────────
+   Jawabannya dibungkus ke bentuk OpenAI supaya penyaring pikiran, pemeriksa
+   bentuk perintah, dan penampil streaming tetap bekerja tanpa cabang baru. */
+function pesanKeGemini(pesan = []) {
+  const isi = [];
+  let sistem = '';
+  for (const m of (pesan || [])) {
+    const peran = String((m && m.role) || 'user');
+    if (peran === 'system') {
+      sistem += (sistem ? '\n' : '') + (typeof m.content === 'string' ? m.content : '');
+      continue;
+    }
+    const bagian = [];
+    if (typeof m.content === 'string') bagian.push({ text: m.content });
+    else if (Array.isArray(m.content)) {
+      for (const b of m.content) {
+        if (!b) continue;
+        if (b.type === 'text' && b.text) bagian.push({ text: String(b.text) });
+        else if (b.type === 'image_url' && b.image_url && b.image_url.url) {
+          const cocok = /^data:([^;,]+);base64,(.*)$/.exec(String(b.image_url.url));
+          if (cocok) bagian.push({ inline_data: { mime_type: cocok[1], data: cocok[2] } });
+        }
+      }
+    }
+    if (bagian.length) isi.push({ role: peran === 'assistant' ? 'model' : 'user', parts: bagian });
+  }
+  return { isi, sistem };
+}
+
+export function teksGemini(json) {
+  const b = json && json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts;
+  return (b || []).map((p) => (p && p.text) || '').join('');
+}
+export function pesanGalatGemini(json) {
+  const g = json && json.error;
+  return g ? String(g.message || g.status || '').slice(0, 220) : '';
+}
+
+export async function panggilGemini({ dasar, model, kunci, pesan, stream, signal }) {
+  const { isi, sistem } = pesanKeGemini(pesan);
+  const badan = { contents: isi };
+  if (sistem) badan.system_instruction = { parts: [{ text: sistem }] };
+  const aksi = stream ? ':streamGenerateContent?alt=sse&key=' : ':generateContent?key=';
+  const url = String(dasar).replace(/\/+$/, '') + '/models/' + encodeURIComponent(model) + aksi + encodeURIComponent(kunci);
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(badan), signal });
+  if (!r.ok) return r;
+  if (!stream) {
+    const d = await r.json();
+    const teks = teksGemini(d);
+    const galat = pesanGalatGemini(d);
+    if (!teks && galat) return new Response(JSON.stringify({ error: { message: galat } }), { status: 502, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({
+      object: 'chat.completion', model,
+      choices: [{ index: 0, message: { role: 'assistant', content: teks }, finish_reason: 'stop' }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  }
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const aliran = new ReadableStream({
+    async start(c) {
+      const rd = r.body.getReader();
+      let sisa = '';
+      const kirim = (teks) => {
+        if (!teks) return;
+        c.enqueue(enc.encode('data: ' + JSON.stringify({ model, choices: [{ index: 0, delta: { content: teks } }] }) + '\n\n'));
+      };
+      try {
+        for (;;) {
+          const { done, value } = await rd.read();
+          if (done) break;
+          sisa += dec.decode(value, { stream: true });
+          const baris = sisa.split('\n');
+          sisa = baris.pop() || '';
+          for (const b of baris) {
+            const t = b.trim();
+            if (!t.startsWith('data:')) continue;
+            const isiB = t.slice(5).trim();
+            if (!isiB || isiB === '[DONE]') continue;
+            try { kirim(teksGemini(JSON.parse(isiB))); } catch { /* potongan rusak dilewati */ }
+          }
+        }
+        c.enqueue(enc.encode('data: [DONE]\n\n'));
+      } catch (e) {
+        c.enqueue(enc.encode('data: ' + JSON.stringify({ error: String((e && e.message) || e) }) + '\n\n'));
+      }
+      try { c.close(); } catch { }
+    },
+  });
+  return new Response(aliran, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform' } });
+}
+
+/* Daftar model protokol asli Google. */
+export async function daftarModelGemini({ dasar, kunci, signal }) {
+  const r = await fetch(String(dasar).replace(/\/+$/, '') + '/models?pageSize=200&key=' + encodeURIComponent(kunci), { signal });
+  if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
+  const d = await r.json();
+  return (d.models || [])
+    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map((m) => String(m.name || '').replace(/^models\//, ''))
+    .filter(Boolean)
+    .slice(0, 200);
 }
 
 /* Pembuat gambar.
@@ -214,8 +490,8 @@ export function penyediaTeks(env = {}) {
    atau penyedia apa pun yang protokolnya OpenAI (/images/generations). */
 export function penyediaGambar(env = {}) {
   const teks = penyediaTeks(env);
-  const minta = String(env.IMAGE_PROVIDER || '').trim().toLowerCase();
-  const kunci = String(env.IMAGE_API_KEY || '').trim();
+  const minta = String(env.IMAGE_PROVIDER_UI || env.IMAGE_PROVIDER || '').trim().toLowerCase();
+  const kunci = String(env.IMAGE_API_KEY_UI || env.IMAGE_API_KEY || '').trim();
 
   if (minta === 'off' || minta === 'mati') {
     return { nama: 'off', label: 'dimatikan', mode: 'off', dasar: '', kunci: '', model: '', siap: false, catatan: 'Pembuat gambar dimatikan lewat IMAGE_PROVIDER=off.' };
@@ -241,14 +517,15 @@ export function penyediaGambar(env = {}) {
     };
   }
   if (minta === 'gemini' || (!minta && teks.gambarBawaan && teks.gambarBawaan.mode === 'gemini' && kunci)) {
-    const dasar = String(env.IMAGE_BASE_URL || PRESET.gemini.dasar).replace(/\/+$/, '');
+    /* pembuatan gambar Google ada di jalur kompatibilitas /v1beta/openai */
+    const dasar = String(env.IMAGE_BASE_URL || (PRESET.gemini.dasar + '/openai')).replace(/\/+$/, '');
     const model = String(env.IMAGE_MODEL || PRESET.gemini.gambar.model);
     return { nama: 'gemini', label: 'Google AI Studio (Gemini)', mode: 'openai', dasar, kunci: kunci || teks.kunci, model, siap: !!(kunci || teks.kunci), catatan: 'Pembuatan gambar di Google berbayar; kunci gratis biasanya ditolak dengan pesan yang jujur.' };
   }
   if (minta === 'pollinations' || !minta) {
     /* 'sana' = model yang sekarang benar-benar dilayani kuota anonim Pollinations
        (uji 2026-10-01: sana 6/6 berhasil, flux 4/6, dan tanpa model 0/6). */
-    const model = String(env.IMAGE_MODEL || 'sana');
+    const model = String(env.IMAGE_MODEL_UI || env.IMAGE_MODEL || 'sana');
     return {
       nama: 'pollinations', label: 'Pollinations', mode: 'pollinations', dasar: 'https://image.pollinations.ai', kunci: '', model,
       siap: true,
@@ -256,8 +533,8 @@ export function penyediaGambar(env = {}) {
     };
   }
   /* sisanya: penyedia gambar protokol OpenAI (/images/generations) */
-  const dasar = String(env.IMAGE_BASE_URL || '').replace(/\/+$/, '');
-  const model = String(env.IMAGE_MODEL || 'gpt-image-1');
+  const dasar = String(env.IMAGE_BASE_URL_UI || env.IMAGE_BASE_URL || '').replace(/\/+$/, '');
+  const model = String(env.IMAGE_MODEL_UI || env.IMAGE_MODEL || 'gpt-image-1');
   return { nama: minta, label: minta, mode: 'openai', dasar, kunci, model, siap: !!kunci && !!dasar, catatan: 'Penyedia gambar protokol OpenAI: butuh IMAGE_BASE_URL + IMAGE_API_KEY.' };
 }
 
@@ -272,8 +549,21 @@ export function dasarCloudflare(env = {}) {
 
 export function penyediaSuara(env = {}, jenis = 'tts') {
   const awalan = jenis === 'tts' ? 'TTS' : 'STT';
-  const nama = String(env[awalan + '_PROVIDER'] || '').toLowerCase();
+  const nama = String(env[awalan + '_PROVIDER_UI'] || env[awalan + '_PROVIDER'] || '').toLowerCase();
   const cf = dasarCloudflare(env);
+  /* Google AI Studio: suara (TTS) gratis lewat protokol asli Gemini. */
+  if (nama === 'gemini' && jenis === 'tts') {
+    const kunciGem = String(env[awalan + '_API_KEY'] || kunciPenyedia('gemini', env)).trim();
+    const dasarGem = String(env[awalan + '_BASE_URL'] || PRESET.gemini.dasar).replace(/\/+$/, '');
+    return {
+      nama: 'gemini', label: 'Google AI Studio (Gemini)', mode: 'gemini',
+      dasar: dasarGem, kunci: kunciGem,
+      model: String(env.TTS_MODEL || 'gemini-2.5-flash-preview-tts'),
+      suara: String(env.TTS_VOICE || 'Kore'),
+      siap: !!kunciGem,
+      catatan: 'Suara gratis dari Google AI Studio (TTS bawaan Gemini). Bila kuota habis, aplikasi memakai suara bawaan browser.',
+    };
+  }
   if (nama === 'cloudflare') {
     const dasar = String(env[awalan + '_BASE_URL'] || cf.dasar).replace(/\/+$/, '');
     const model = jenis === 'tts' ? String(env.TTS_MODEL || '@cf/myshell-ai/melotts') : String(env.STT_MODEL || '@cf/openai/whisper');
@@ -546,6 +836,28 @@ export async function textToSpeech({ env = {}, teks, suara }) {
         'Aplikasi tetap membacakan jawaban lewat suara bawaan browser (Web Speech API).',
     };
   }
+  if (p.mode === 'gemini') {
+    /* Gemini TTS: jawabannya PCM L16 (base64) → dibungkus jadi WAV supaya
+       bisa langsung diputar <audio> di browser. */
+    const r = await fetch(p.dasar + '/models/' + encodeURIComponent(p.model) + ':generateContent?key=' + encodeURIComponent(p.kunci), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: String(teks || '').slice(0, 3000) }] }],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: String(suara || p.suara || 'Kore') } } },
+        },
+      }),
+    });
+    if (!r.ok) return gagalAmbil(r);
+    const d = await r.json();
+    const galat = pesanGalatGemini(d);
+    const bagian = d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0];
+    const b64 = (bagian && bagian.inlineData && bagian.inlineData.data) || (bagian && bagian.inline_data && bagian.inline_data.data) || '';
+    if (!b64) return { ok: false, pesan: 'Google tidak mengembalikan suara' + (galat ? ': ' + galat : '.') };
+    return { ok: true, dataUrl: wavDariPcm16(b64, 24000), model: p.model, suara: suara || p.suara, penyedia: p.label };
+  }
   if (p.mode === 'cloudflare') {
     /* Cloudflare MeloTTS: jawabannya JSON berisi audio base64 */
     const r = await fetch(p.dasar + '/run/' + p.model, {
@@ -572,6 +884,23 @@ export async function textToSpeech({ env = {}, teks, suara }) {
   return { ok: true, dataUrl: 'data:audio/mpeg;base64,' + btoa(biner), model: p.model, suara: suara || p.suara, penyedia: p.nama };
 }
 
+/* PCM 16-bit mono → WAV (supaya jawaban suara Gemini bisa diputar browser). */
+function wavDariPcm16(b64, rate = 24000) {
+  const pcm = Uint8Array.from(atob(String(b64)), (c) => c.charCodeAt(0));
+  const kepala = new Uint8Array(44);
+  const tulis = (pos, teks) => { for (let i = 0; i < teks.length; i++) kepala[pos + i] = teks.charCodeAt(i); };
+  const angka32 = (pos, n) => { kepala[pos] = n & 255; kepala[pos + 1] = (n >> 8) & 255; kepala[pos + 2] = (n >> 16) & 255; kepala[pos + 3] = (n >> 24) & 255; };
+  const angka16 = (pos, n) => { kepala[pos] = n & 255; kepala[pos + 1] = (n >> 8) & 255; };
+  tulis(0, 'RIFF'); angka32(4, 36 + pcm.length); tulis(8, 'WAVE'); tulis(12, 'fmt ');
+  angka32(16, 16); angka16(20, 1); angka16(22, 1); angka32(24, rate); angka32(28, rate * 2);
+  angka16(32, 2); angka16(34, 16); tulis(36, 'data'); angka32(40, pcm.length);
+  const semua = new Uint8Array(44 + pcm.length);
+  semua.set(kepala, 0); semua.set(pcm, 44);
+  let biner = '';
+  for (let i = 0; i < semua.length; i += 8192) biner += String.fromCharCode.apply(null, semua.subarray(i, i + 8192));
+  return 'data:audio/wav;base64,' + btoa(biner);
+}
+
 /* ── 7. daftarProvider — untuk halaman Pengaturan & Admin ──────────── */
 export function daftarProvider(env = {}) {
   const t = penyediaTeks(env);
@@ -582,7 +911,8 @@ export function daftarProvider(env = {}) {
   return {
     teks: {
       penyedia: t.nama, label: t.label, alamat: t.dasar, adaKunci: t.adaKunci, kunci: samarkan(t.kunci),
-      modelTetap: env.AI_MODEL || null, lokal: t.lokal, kustom: t.kustom,
+      modelTetap: env.AI_MODEL_UI || env.AI_MODEL || null, lokal: t.lokal, kustom: t.kustom,
+      sumber: t.sumber || 'server', protokol: t.gaya || 'openai',
       gratis: !!t.gratis, lihatGambar: t.visi !== false, streaming: t.stream !== false,
       catatan: t.catatanPenyedia || ('Penyedia OpenAI-compatible di ' + t.dasar),
     },

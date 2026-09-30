@@ -11,7 +11,7 @@
  * 501 dan penjelasan — bukan gambar palsu dan bukan tombol yang diam-diam mati.
  */
 import { siapkan, json, audit, teksMasuk, periksaGambar, BATAS_MAKS } from '../_aman.js';
-import { generateImage, daftarProvider } from '../_ai.js';
+import { generateImage, daftarProvider, envPermintaan } from '../_ai.js';
 
 export const config = { runtime: 'edge' };
 
@@ -22,6 +22,8 @@ export default async function handler(request, env = {}) {
   const s = siapkan(request, env, { nama: 'image', maks: 20, post: true });
   if (s.jawab) return s.jawab;
 
+  /* pembuat gambar juga mengikuti setelan dari halaman Pengaturan */
+  env = envPermintaan(request, env);
   const status = daftarProvider(env).gambar;
 
   if (request.method === 'GET') {

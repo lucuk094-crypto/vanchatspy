@@ -2,6 +2,18 @@
 
 Diperiksa: 1 Oktober 2026 · bukti uji: `bukti-uji/HASIL-UJI-PENYEDIA-GRATIS.txt` (`node tools/uji-penyedia-gratis.mjs`)
 
+> **Baru (1 Okt 2026): Apinex + Google AI Studio.** Dua penyedia ini bisa dipilih
+> **dari dalam web** — Pengaturan → **Penyedia AI** → isi alamat + kunci → **Uji &
+> Aktifkan** → tentukan model per fitur. Tanpa redeploy, kunci tidak disimpan di
+> server, dan hasil ujinya dilaporkan apa adanya (kunci ditampilkan tersamar).
+> Ringkasan jujurnya: **Apinex** `https://api.apinex.bond/v1` menyediakan 6 model
+> `free/*` (batas **5 permintaan/menit**; `free/minimax-m3.1` ternyata butuh
+> langganan — aplikasi bilang terus terang, bukan diam-diam ganti model);
+> **Google AI Studio (Gemini)** memakai protokol asli Google
+> (`.../v1beta/models/<model>:generateContent`) dengan kunci `AIza…` atau `AQ.…`,
+> teks + lihat foto gratis, **buat gambar tidak gratis**. Langkah lengkapnya di
+> `PANDUAN-VERCEL.md` bagian 2b–2c.
+
 Aplikasi ini butuh 6 kemampuan: **percakapan · jawaban mengalir (streaming) · melihat foto (vision) ·
 membuat gambar · dengar suara (STT) · membaca jawaban (TTS)** — plus Builder & Riset yang ikut jalur percakapan.
 

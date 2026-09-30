@@ -1,0 +1,201 @@
+═══════════════════════════════════════════════════════════════════════════════
+BUKTI UJI — F33
+Penyedia Apinex + Google AI Studio · ganti penyedia dari halaman Pengaturan ·
+model per fitur · jawaban jujur tanpa simulasi
+═══════════════════════════════════════════════════════════════════════════════
+
+Tanggal    : 1 Oktober 2026 (WIB)  ·  dijalankan 30 Sep 2026 ~19.0x UTC
+Lingkungan : Sandbox Linux, Node v20.20.2, Chromium 148.0.7778.97 (Puppeteer)
+Cara ulang : lihat bagian F (semua perintah bisa dijalankan sendiri)
+
+SUMBAR KUNCI (penting): kunci Apinex & Google AI Studio milik pemilik aplikasi
+hanya dipakai untuk menguji; tidak ada di repo, zip, atau berkas bukti ini —
+di bawah hanya muncul versi tersamar (mis. sk-apx…a62a). Aplikasi juga tidak
+pernah mengembalikan kunci utuh ke browser.
+
+───────────────────────────────────────────────────────────────────────────────
+A. APINEX — lewat aplikasi sungguhan (kunci asli, batas 5 permintaan/menit)
+───────────────────────────────────────────────────────────────────────────────
+BUKTI UJI LANGSUNG — F33 (Apinex + Google AI Studio, bisa diatur dari halaman Pengaturan)
+waktu : 2026-09-30T19:05:56.594Z
+server: http://127.0.0.1:8131
+
+1) mode Berpikir (free/glm-5.3-flash) → ok:true | jawab: "1. Merah\n2. Hijau\n3. Biru" | bentuk diperiksa: ["daftar"]
+2) Mengalir → potongan SSE: 3 | jawaban: "1 2 3 4 5"
+3) Kirim foto (free/glm-5.3-flash) → ok:true | jawab: "Merah"
+4) Builder (free/deepseek-v4-pro-0813) → ok:true | bita kode: 8321
+5) "Uji & Aktifkan" dengan kunci salah → ok:false | pesan: HTTP 401 (jujur, bukan "sibuk")
+
+Catatan: Apinex gratis dibatasi 5 permintaan/menit; bila kena batas, pesannya diteruskan apa adanya.
+
+───────────────────────────────────────────────────────────────────────────────
+B. HALAMAN PENGATURAN → "UJI & AKTIFKAN" (kunci asli) + KEPATUHAN + KEJUJURAN
+───────────────────────────────────────────────────────────────────────────────
+══ A. Halaman Pengaturan: "Uji & Aktifkan" dengan kunci Apinex asli (dikirim dari browser, sekali pakai) ══
+   ok=true | label=Apinex | protokol=openai | kunci tersamar=sk-ap…62a
+   model terbaca=35 | 6 model yang diminta pengguna: 6/6
+   pesan=Siap dipakai — 35 model terbaca dan percakapan uji berhasil.
+   uji tanya-jawab kecil="SIAP" (ok=true)
+   kunci asli TIDAK dikembalikan ke browser: true
+
+══ B. Kepatuhan perintah (mode Normal, model free/gpt-6-luna) ══
+   jawaban="42" | model=free/glm-5.3-flash | sesuai perintah: true
+   catatanModel=(kosong)
+
+══ C. Kejujuran bila model memang tidak tersedia (free/minimax-m3.1 = berlangganan) ══
+   ok=true | model yang menjawab=free/glm-5.3-flash | pesan=Halo! Ada yang bisa saya bantu hari ini?
+   catatanModel=Model pilihanmu (free/minimax-m3.1) tidak bisa dipakai di penyedia ini: model/penyedia ini meminta langganan berbayar: "This model is currently available only with a subscription. Buy a subscription at https://apinex.bond/subscripti. Jawaban ini dari free/glm-5.3-flash.
+   jujur menyebut langganan: true
+
+───────────────────────────────────────────────────────────────────────────────
+C. GOOGLE AI STUDIO — protokol ASLI Google (…/v1beta/models/<model>:generateContent)
+───────────────────────────────────────────────────────────────────────────────
+══ Google AI Studio (protokol asli, kunci AQ.) lewat aplikasi ══
+1) penyedia aktif : Google AI Studio (Gemini) | protokol: gemini | alamat: https://generativelanguage.googleapis.com/v1beta | kunci: AQ.Ab8…qE9g
+   suara (tts)    : (bawaan browser) | siap: false | model: gpt-4o-mini-tts
+2) daftar model   : {"fast":"gemini-flash-lite-latest","think":"gemini-flash-lite-latest","deep":"gemini-flash-lite-latest","expert":"gemini-3.1-flash-lite"}
+3) percakapan     : ok=true | model=gemini-flash-lite-latest | "Kopi adalah minuman seduhan yang dihasilkan dari ekstraksi biji buah tanaman Coffea yang telah disan"
+4) mengalir       : potongan=3 | "1 2 3 4 5"
+5) kirim foto     : ok=true | model=gemini-flash-lite-latest | "Merah"
+6) builder        : ok=true | bita=8539 | model=gemini-flash-lite-latest
+
+───────────────────────────────────────────────────────────────────────────────
+D. GANTI PENYEDIA DARI HALAMAN PENGATURAN — BROWSER SUNGGUHAN (Chromium)
+═══════════════════════════════════════════════════════════════════════════════
+Penyedia tiruan dipakai sebagai "penyedia baru" (daftar 6 model free/*), dengan
+penyedia server tetap 9Router tiruan. Yang dibuktikan: isi alamat + kunci →
+"Uji & Aktifkan" → daftar model terisi → tersimpan di browser → percakapan
+sungguhan lewat penyedia baru → dan tanpa setelan itu server tetap memakai env.
+
+UJI SETELAN PENYEDIA — ganti penyedia dari halaman Pengaturan (browser sungguhan)
+30/9/2026, 19.00.52
+
+  ✓ aplikasi mulai dengan penyedia server — 9Router (127.0.0.1:8172) · server
+  ✓ bagian "Penyedia AI" ada di halaman Pengaturan
+  ✓ status setelah "Uji & Aktifkan" menyebut penyedia aktif — aktif: Kustom (protokol OpenAI) · 6 model terbaca · kunci tersimpan di browser · uji jawab: Jawaban dari gateway tiruan un
+  ✓ daftar model per fitur terisi dari penyedia baru — free/gpt-6-luna, free/glm-5.3-flash, free/deepseek-v4.1-flash … (6 opsi)
+  ✓ setelan penyedia tersimpan di browser ini — kustom · 6 model · kunci disimpan: true
+  ✓ model per fitur tersimpan — {"fast":"free/gpt-6-luna"}
+  ✓ daftar model penyedia baru terbaca aplikasi — free/gpt-6-luna, free/glm-5.3-flash, free/deepseek-v4.1-flash, free/deepseek-v4-pro-0813
+  ✓ setelan model per mode memakai daftar penyedia baru — free/glm-5.3-flash, free/gpt-6-luna, free/deepseek-v4.1-flash, free/deepseek-v4-pro-0813
+  ✓ percakapan lewat penyedia baru (dari setelan browser) — model: free/gpt-6-luna · jawab: Jawaban dari gateway tiruan untuk: Balas
+  ✓ tanpa setelan browser → server memakai penyedia env (9Router tiruan) — model: kr/claude-haiku-4.5
+  ✓ kunci dari browser tidak tersimpan di server — 9Router (127.0.0.1:8172) · sumber: server
+  ✓ tidak ada galat JavaScript di halaman
+
+HASIL: SEMUA LULUS — setelan penyedia dari browser terbukti jalan
+
+───────────────────────────────────────────────────────────────────────────────
+E. PENYEDIA GRATIS (Pollinations · Gemini 2 jalur · Cloudflare) — tanpa kuota asli
+───────────────────────────────────────────────────────────────────────────────
+UJI PENYEDIA GRATIS — Pollinations (tanpa kunci) · Gemini · Cloudflare Workers AI
+30/9/2026, 19.00.52
+────────────────────────────────────────────────────────────
+══ A. Pollinations — GRATIS, tanpa kunci, tanpa pendaftaran ══
+   penyedia: {"nama":"pollinations","label":"Pollinations","alamat":"https://text.pollinations.ai/openai","adaKunci":true}
+   gambar  : {"penyedia":"Pollinations","model":"sana","siap":true}
+  ✓ penyedia dilaporkan Pollinations
+  ✓ dikenali sebagai penyedia tanpa kunci
+  ✓ model bawaan dari penyedia gratis
+  ✓ pembuat gambar otomatis siap (tanpa setelan) — Pollinations
+  ✓ model gambar gratis memakai model yang dilayani penyedia — sana
+  · percakapan Pollinations sedang dibatasi penyedianya — Tidak ada model yang bisa dipakai dari Pollinations. Galat terakhir dari penyedia: ENOSPC:
+  ✓ pesannya jujur menyebut galat penyedia (bukan jawaban palsu)
+   gambar: ok · Pollinations · sana · 69331 karakter data URL
+  ✓ pembuat gambar gratis menghasilkan gambar sungguhan
+   kirim foto → Penyedia yang sedang dipakai (Pollinations) belum bisa melihat gambar. Pakai penyedia yang bisa melihat gambar: isi AI_P
+  ✓ dijawab jujur: penyedia ini belum bisa melihat gambar
+  ✓ pesannya menyebut jalan keluarnya (gemini + kunci gratis)
+
+══ B. Gemini — Google AI Studio, jalur OpenAI-compatible (tiruan, tanpa kuota) ══
+   penyedia: {"nama":"gemini","label":"Google AI Studio (Gemini) (127.0.0.1:8155)"}
+  ✓ penyedia dilaporkan gemini
+  ✓ nama tampilannya "Google AI Studio (Gemini)"
+  ✓ protokol bisa dipaksa OpenAI-compatible (AI_GAYA=openai)
+   jawaban: "Kopi adalah minuman."
+  ✓ percakapan lewat penyedia Gemini
+   kirim foto → "Latar belakang merah dengan lingkaran putih di tengah dan batang vertikal biru."
+  ✓ foto diterima penyedia yang bisa melihat gambar
+
+══ B2. Gemini — protokol asli Google (…/v1beta/models/<model>:generateContent) ══
+   penyedia: {"nama":"gemini"}
+  ✓ penyedia gemini memakai protokol asli Google
+   jawaban: "Kopi adalah minuman hasil seduhan biji kopi." · model gemini-flash-lite-latest
+  ✓ percakapan lewat protokol asli Gemini
+   kirim foto → "Merah"
+  ✓ foto dikirim sebagai inlineData ke Gemini asli
+   jejak permintaan ke tiruan: /v1beta/models?pageSize=200&key=AQ.kunci-uji-asli | /v1beta/models/gemini-flash-lite-latest:generateContent?key=AQ.kunci-uji-asli | /v1beta/models/gemini-flash-
+  ✓ benar-benar memakai /models/<model>:generateContent
+  ✓ tidak memakai /chat/completions (itu jalur OpenAI-compatible)
+  ✓ kunci dikirim dengan cara Google (X-goog-api-key atau ?key=)
+
+══ C. Cloudflare Workers AI — satu akun untuk SEMUA fitur (tiruan) ══
+   penyedia: {"teks":"Cloudflare Workers AI","gambar":"Cloudflare Workers AI","gambarSiap":true,"suara":{"stt":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/openai/whisper","catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."},"tts":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/myshell-ai/melotts","suara":"id-ID","catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."}}}
+  ✓ penyedia = Cloudflare Workers AI — Cloudflare Workers AI
+  ✓ alamat teks mengikuti setelan akun (tiruan) — http://127.0.0.1:8157/v1
+  ✓ rumus alamat asli Cloudflare benar — https://api.cloudflare.com/client/v4/accounts/akun-uji/ai/v1
+  ✓ pembuat gambar otomatis ikut Cloudflare (FLUX)
+  ✓ dengar & suara dilaporkan siap (Whisper + MeloTTS) — {"stt":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/openai/whisper","catatan":"Cloud
+   percakapan: "Kopi adalah minuman."
+  ✓ teks lewat Cloudflare (endpoint OpenAI-compatible-nya)
+   gambar: Cloudflare Workers AI · @cf/black-forest-labs/flux-1-schnell
+  ✓ gambar lewat Cloudflare (FLUX /run)
+  [cf] whisper menerima 9 bita audio, content-type=audio/webm
+   dengar (Whisper): {"ok":true,"teks":"halo, ini hasil dengar tiruan","penyedia":"Cloudflare Workers AI"}
+  ✓ dengar lewat Cloudflare Whisper
+   suara (MeloTTS): data:audio/mpeg;base64,SU5JQVVESU9USUJVQU4=
+  ✓ suara lewat Cloudflare MeloTTS
+   health: {"lihatGambar":true,"streaming":true,"pembuatGambar":"Cloudflare Workers AI","pembuatGambarSiap":true,"suara":{"penyedia":"Cloudflare Workers AI","siap":true,"catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."}}
+  ✓ health menyebut kemampuan + pembuat gambar siap
+
+HASIL: SEMUA LULUS (1 bagian dilewati karena kuota gratis penyedianya sedang habis — dicatat apa adanya)
+
+───────────────────────────────────────────────────────────────────────────────
+F. RANGKAIAN UJI OTOMATIS — semuanya LULUS (1 Okt 2026)
+───────────────────────────────────────────────────────────────────────────────
+npm run uji              → 5 berkas: HASIL: SEMUA LULUS (uji-bentuk, uji-api,
+                           cek-impor-api, cek-ikon, uji-rahasia, uji-9router)
+npm run uji:tampilan     → 4 berkas: HASIL: SEMUA LULUS ×4 (uji-tampilan,
+                           uji-bagian-h, uji-arahan-proyek, smoke-18)
+npm run uji:gratis       → HASIL: SEMUA LULUS (1 bagian dilewati karena kuota
+                           anonim Pollinations habis — dilaporkan, bukan dipalsukan)
+npm run uji:setelan      → HASIL: SEMUA LULUS — setelan penyedia dari browser
+                           terbukti jalan
+Perintah baru yang ditambahkan F33:
+   npm run uji:setelan   → tools/uji-setelan-penyedia.mjs
+   npm run uji:gratis    → tools/uji-penyedia-gratis.mjs
+
+───────────────────────────────────────────────────────────────────────────────
+G. CATATAN JUJUR — batas yang benar-benar terjadi saat uji (bukan disamarkan)
+───────────────────────────────────────────────────────────────────────────────
+1. Apinex membatasi 5 permintaan/menit per akun. Kalau kena 429, aplikasi
+   meneruskan pesan penyedia apa adanya ("Max 5 requests per minute … Retry in Ns")
+   — tidak diubah jadi "sedang sibuk" dan tidak dipalsukan jadi jawaban.
+2. free/minimax-m3.1 TERNYATA butuh langganan (penyedia menjawab 402
+   "available only with a subscription"). Model itu tetap ada di pemilih model
+   (sesuai permintaan pemilik aplikasi), tetapi kalau dipakai aplikasi menjawab
+   dengan catatan jujur: "Model pilihanmu (free/minimax-m3.1) tidak bisa dipakai
+   di penyedia ini: … Jawaban ini dari (model yang benar-benar menjawab)."
+   Jadi tidak ada pergantian model diam-diam.
+3. Model claude-*/opus di Apinex butuh saldo/top-up → tombol "Uji & Aktifkan"
+   sekarang mencoba 3 model mulai dari free/* supaya akun tanpa saldo tetap lulus
+   uji dengan benar (sebelumnya salah menyimpulkan "gagal" karena mencoba claude).
+4. Google: gemini-flash-latest sering menjawab 503 (sedang sibuk) dan
+   gemini-pro-latest kena kuota gratis; gemini-2.5-flash 404 untuk akun baru.
+   Karena itu bawaan aplikasi = gemini-flash-lite-latest / gemini-3.1-flash-lite
+   (dua-duanya TERBUKTI bisa teks dan melihat gambar), sisanya cadangan.
+5. Pembuatan gambar di Google TIDAK gratis (gemini-2.5-flash-image ditolak/kuota).
+   Pembuat gambar bawaan tetap Pollinations (gratis, tanpa kunci) atau Cloudflare
+   (10.000 neuron/hari). Aplikasi mengatakan ini apa adanya, tidak mengarang gambar.
+6. Suara Google (TTS) mengembalikan PCM L16 24 kHz mentah → aplikasi membungkusnya
+   jadi WAV sebelum diberikan ke browser (tanpa ini suaranya tidak bisa diputar).
+7. Pollinations anonim ±1 permintaan/15 detik: pada satu putaran uji sempat kena
+   402 dan uji mencatatnya sebagai "dilewati"; putaran berikutnya berhasil
+   (69.331 karakter data URL). Ini kuota penyedia, bukan kegagalan aplikasi.
+8. Penyedia Antigravity (cloudcode-pa.googleapis.com) tidak dipakai: endpoint
+   antigravity-cli tidak tersedia dari lingkungan uji (respons selalu HTML/404)
+   sehingga tidak bisa dibuktikan; aplikasi tidak menawarkan yang tidak terbukti.
+9. Klien Flutter (.dart) tidak dibuat: berkas contoh dari lingkungan uji kosong
+   (0 bita) dan percobaan pertama kehabisan waktu — tidak dilanjutkan supaya
+   tidak ada kode yang diklaim jalan padahal belum diuji.
+

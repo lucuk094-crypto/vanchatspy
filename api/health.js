@@ -13,7 +13,7 @@
  *  untuk menjawab "kenapa tidak bisa menghubungi penyedia AI?" tanpa menebak.
  * ════════════════════════════════════════════════════════════════════
  */
-import { penyediaTeks, teksDariSSE, modelBawaan, penyediaGambar, penyediaSuara } from "./_ai.js";
+import { penyediaTeks, teksDariSSE, modelBawaan, penyediaGambar, penyediaSuara, envPermintaan, namaEnvKunci } from "./_ai.js";
 
 /* Model cadangan (daftar sungguhan diambil dari 9Router oleh /api/chat). */
 const MODEL = {
@@ -32,8 +32,8 @@ const json = (o, s) =>
   });
 
 /* diagnosa: apa yang sebenarnya terjadi saat server menyentuh penyedia AI? */
-async function ujiPenyedia(mintaChat) {
-  const env = process.env || {};
+async function ujiPenyedia(mintaChat, envUji) {
+  const env = envUji || process.env || {};
   const p = penyediaTeks(env);
   const h = { "Content-Type": "application/json" };
   if (p.kunci) h.Authorization = "Bearer " + p.kunci;
@@ -108,28 +108,30 @@ async function ujiPenyedia(mintaChat) {
   const c = hasil.percakapan;
   hasil.kesimpulan = c
     ? (c.ok ? "penyedia + kunci sehat — percakapan berhasil"
-      : (c.status === 401 || c.status === 403 ? "kunci ditolak penyedia (periksa AI_API_KEY)"
+      : (c.status === 401 || c.status === 403 ? "kunci ditolak penyedia (periksa " + (namaEnvKunci(penyediaInfo.nama, env) || "AI_API_KEY") + ")"
         : "percakapan gagal: " + (c.galat || "HTTP " + c.status)))
     : (m.ok ? (m.jumlah ? "alamat + kunci sehat (" + m.jumlah + " model terlihat)"
       : "alamat menjawab, tetapi daftar model kosong untuk paketmu")
-      : (m.status === 401 || m.status === 403 ? "kunci ditolak penyedia (periksa AI_API_KEY)"
+      : (m.status === 401 || m.status === 403 ? "kunci ditolak penyedia (periksa " + (namaEnvKunci(penyediaInfo.nama, env) || "AI_API_KEY") + ")"
         : "tidak bisa menghubungi penyedia: " + (m.galat || "HTTP " + m.status) + " (" + m.ms + " ms)"));
   return hasil;
 }
 
-export default async function (request) {
+export default async function (request, envHosting = {}) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (request.method !== "GET") return json({ ok: false, pesan: "Gunakan GET" }, 405);
 
-  const penyediaInfo = penyediaTeks(process.env);
-  const gambarInfo = penyediaGambar(process.env);
-  const suaraInfo = penyediaSuara(process.env, "tts");
-  const kunci = penyediaInfo.kunci || String(process.env.AI_API_KEY || process.env.NINE_API_KEY || "").trim();
+  /* diagnosa memakai penyedia yang sedang aktif — termasuk setelan dari halaman Pengaturan */
+  const env = envPermintaan(request, Object.assign({}, process.env, envHosting || {}));
+  const penyediaInfo = penyediaTeks(env);
+  const gambarInfo = penyediaGambar(env);
+  const suaraInfo = penyediaSuara(env, "tts");
+  const kunci = penyediaInfo.kunci;
 
   /* ?uji=1 / ?uji=chat → diagnosa sungguhan ke penyedia */
   const param = new URL(request.url).searchParams.get("uji");
   if (param && param !== "0" && param !== "false") {
-    const hasil = await ujiPenyedia(param === "chat");
+    const hasil = await ujiPenyedia(param === "chat", env);
     return json({
       ok: hasil.model.ok || !!(hasil.percakapan && hasil.percakapan.ok),
       service: "van-chat-spy",
@@ -154,8 +156,19 @@ export default async function (request) {
     penyedia: penyediaInfo.label + " (" + penyediaInfo.dasar + ")",
     penyediaNama: penyediaInfo.nama,
     keyConfigured: !!kunci,
-    kunciDari: kunci ? "env (AI_API_KEY)" : "belum dipasang",
-    model: MODEL,
+    kunciDari: kunci ? ("env (" + (namaEnvKunci(penyediaInfo.nama, env) || "AI_API_KEY") + ")") : "belum dipasang",
+    /* model ditampilkan mengikuti penyedia yang sedang aktif — bukan angka bawaan
+       9Router, supaya diagnosa tidak menyesatkan (mis. saat Apinex/Gemini aktif) */
+    model: (function () {
+      const peta = penyediaInfo.petaModel;
+      if (!peta) return MODEL;
+      return {
+        fast: (peta.fast || [])[0] || MODEL.fast,
+        think: (peta.think || [])[0] || MODEL.think,
+        deep: (peta.deep || [])[0] || MODEL.deep,
+        expert: (peta.expert || [])[0] || MODEL.expert,
+      };
+    })(),
     kemampuan: {
       lihatGambar: penyediaInfo.visi !== false,
       streaming: penyediaInfo.stream !== false,

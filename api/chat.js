@@ -41,7 +41,7 @@
  */
 
 /* lapisan bersama: penyedia AI yang bisa dikonfigurasi + pengaman permintaan */
-import { teksDariSSE, bersihkanPikir, buatPenyaringPikir, penyediaTeks, modelBawaan } from "./_ai.js";
+import { teksDariSSE, bersihkanPikir, buatPenyaringPikir, penyediaTeks, modelBawaan, panggilGemini, daftarModelGemini, envPermintaan, ENV_PENYEDIA } from "./_ai.js";
 import { periksaGambar as saringGambar, teksMasuk, audit, asalDiizinkan } from "./_aman.js";
 
 /* Model cadangan kalau daftar model dari 9Router belum terbaca.
@@ -106,7 +106,7 @@ function cors(origin, env, request) {
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, x-setelan-penyedia",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
@@ -133,12 +133,17 @@ function kuotaHabis(status, detail) {
 }
 function pesanKuota(detail) {
   let reset = "";
+  let tunggu = "";
   try {
     const j = JSON.parse(String(detail || "{}"));
     const h = (j && j.error && j.error.metadata && j.error.metadata.headers) || {};
     reset = h["X-RateLimit-Reset"] || h["x-ratelimit-reset"] || "";
+    /* penyedia seperti Apinex menulis "Retry in 41s" di pesannya — pakai apa adanya */
+    const pesan = String((j && j.error && j.error.message) || "").slice(0, 160);
+    const m = /retry in\s+([0-9]+)\s*s/i.exec(pesan);
+    if (m) tunggu = " Tunggu ±" + m[1] + " detik lagi (batas penyedia).";
   } catch {}
-  return "batas permintaan penyedia AI tercapai (paket akunmu di penyedianya). " +
+  return "batas permintaan penyedia AI tercapai (paket akunmu di penyedianya)." + tunggu + " " +
     "Coba lagi " + jamResetWIB(reset) + " — atau naikkan paket akunmu di dasbor penyedia. " +
     "Sementara itu percakapan lama masih bisa dibaca dan ruang kerja tetap jalan.";
 }
@@ -172,6 +177,27 @@ async function daftarModelLokal(env) {
   const p = penyediaTeks(env);
   if (!p.router) return null;   /* penyedia yang daftar modelnya tidak dibaca dari penyedia itu */
   const kini = Date.now();
+  /* Google AI Studio (protokol asli): daftar model dibaca lewat /v1beta/models */
+  if (p.gaya === "gemini") {
+    if (cacheLokal.dasar === p.dasar && kini - cacheLokal.ts < 60000) return cacheLokal.ok ? cacheLokal.daftar : null;
+    const t0g = Date.now();
+    try {
+      if (!p.kunci) throw Object.assign(new Error("kunci belum dipasang"), { status: 401 });
+      const daftar = await daftarModelGemini({
+        dasar: p.dasar, kunci: p.kunci,
+        signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined,
+      });
+      cacheLokal = { dasar: p.dasar, ts: kini, daftar, visi: daftar, ok: daftar.length > 0, kode: 0, sebab: "", ms: Date.now() - t0g };
+      if (!daftar.length) { cacheLokal.sebab = "penyedia menjawab, tetapi daftar model untuk kuncimu kosong"; return null; }
+      return daftar;
+    } catch (e) {
+      cacheLokal = {
+        dasar: p.dasar, ts: kini - 55000, daftar: [], visi: [], ok: false,
+        kode: Number((e && e.status) || 0), sebab: sebabDari(e, Date.now() - t0g), ms: Date.now() - t0g,
+      };
+      return null;
+    }
+  }
   /* hasil yang tersimpan hanya dipercaya kalau memang pernah BERHASIL;
      percobaan yang gagal tidak boleh dianggap "daftar kosong" (nanti model
      penyedia lain yang dipakai) — harus null = tidak bisa dihubungi */
@@ -232,7 +258,8 @@ async function daftarModelCepat(env, ms = DAFTAR_CEPAT_MS) {
 
 /* apakah model ditentukan sendiri oleh pengguna (env)? kalau ya, jangan menyerah
    hanya karena daftar model router belum terbaca */
-const adaModelPaksa = (env) => ["AI_MODELS", "AI_MODEL", "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT", "AI_MODEL_VISI"]
+const adaModelPaksa = (env) => ["AI_MODELS", "AI_MODEL", "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT", "AI_MODEL_VISI",
+  "AI_MODEL_FAST_UI", "AI_MODEL_THINK_UI", "AI_MODEL_DEEP_UI", "AI_MODEL_EXPERT_UI", "AI_MODEL_VISI_UI", "AI_MODEL_BUILDER_UI"]
   .some((k) => String((env && env[k]) || "").trim());
 
 /* kunci ditolak penyedia (alamatnya menjawab, kuncinya salah) */
@@ -278,8 +305,21 @@ const COCOK_MODE = {
   expert: /opus|pro|max|ultra|o3|o4|gpt-5|gemini|claude|sonnet/i,
 };
 function pilihModelMode(mode, daftar, env) {
-  const khusus = env["AI_MODEL_" + String(mode).toUpperCase()] || env.AI_MODEL;
+  const M = String(mode).toUpperCase();
+  /* 1) pilihan dari halaman Pengaturan (browser) menang atas env hosting */
+  const khusus = env["AI_MODEL_" + M + "_UI"] || env["AI_MODEL_" + M] || env.AI_MODEL_UI || env.AI_MODEL;
   if (khusus) return String(khusus);
+  /* 2) model per fitur milik penyedia (mis. Apinex: fast=free/gpt-6-luna) */
+  const peta = penyediaTeks(env).petaModel;
+  if (peta && peta[mode] && peta[mode].length) {
+    const ada = peta[mode].filter((m) => !daftar.length || daftar.includes(m));
+    if (ada.length) return ada[0];
+  }
+  /* model khusus untuk Builder ikut penyedia yang dipilih di Pengaturan */
+  if (mode === "pembangun" || mode === "builder") {
+    const b = env.AI_MODEL_BUILDER_UI || env.AI_MODEL_BUILDER;
+    if (b) return String(b);
+  }
   const rx = COCOK_MODE[mode];
   const kena = rx ? daftar.filter((d) => rx.test(d)) : [];
   return kena[0] || daftar[0] || "";
@@ -311,7 +351,15 @@ export function kandidatModel(env, daftar, mode = "fast", maks = 8) {
   const ekstra = tambahan(env);
   const urut = [];
   const dorong = (m) => { if (m && semua.includes(m) && !urut.includes(m)) urut.push(m); };
+  /* pilihan pengguna untuk fitur ini (Setelan/Pengaturan) dicoba lebih dulu —
+     termasuk waktu pilihannya ternyata butuh langganan: biar ketahuan apa adanya */
+  const M2 = String(mode).toUpperCase();
+  const eksplisit = env["AI_MODEL_" + M2 + "_UI"] || env["AI_MODEL_" + M2] || env.AI_MODEL_UI || env.AI_MODEL;
+  if (eksplisit) dorong(String(eksplisit));
   if (ingat) dorong(ingat);
+  /* lalu model yang ditentukan penyedia untuk fitur ini */
+  const petaPenyedia = penyediaTeks(env).petaModel;
+  if (petaPenyedia && petaPenyedia[mode]) petaPenyedia[mode].forEach(dorong);
   ekstra.forEach(dorong);
   if (utama) dorong(utama);
   semua.forEach(dorong);
@@ -339,7 +387,12 @@ async function antreanLokal(env, cepat = false) {
 async function visiLokal(env, cepat = false) {
   const daftar = cepat ? await daftarModelCepat(env) : await daftarModelLokal(env);
   if (!daftar || !daftar.length) return null;
-  if (env.AI_MODEL_VISI) return [String(env.AI_MODEL_VISI)];
+  if (env.AI_MODEL_VISI_UI || env.AI_MODEL_VISI) return [String(env.AI_MODEL_VISI_UI || env.AI_MODEL_VISI)];
+  const petaVisi = penyediaTeks(env).petaModel;
+  if (petaVisi && petaVisi.visi && petaVisi.visi.length) {
+    const ada = petaVisi.visi.filter((m) => daftar.includes(m));
+    if (ada.length) return ada.slice(0, 6);
+  }
   /* gateway yang menyebut kemampuan modelnya sendiri (capabilities.vision) → pakai itu */
   const dariPenyedia = (cacheLokal.visi || []).filter((m) => daftar.includes(m));
   if (dariPenyedia.length) return dariPenyedia.slice(0, 6);
@@ -628,6 +681,11 @@ function susunPesan(riwayat, prompt, opsi) {
 /* Kirim ke 9Router (protokol OpenAI): /chat/completions + Authorization: Bearer. */
 function mintaKePenyedia({ model, pesan, mode, kunci, env, stream, signal }) {
   const p = penyediaTeks(env);
+  /* Google AI Studio (protokol asli v1beta): jawabannya dibungkus jadi bentuk
+     OpenAI oleh panggilGemini, jadi sisa aplikasi tidak perlu tahu bedanya. */
+  if (p.gaya === "gemini") {
+    return panggilGemini({ dasar: p.dasar, model, kunci: kunci || p.kunci, pesan, stream, signal });
+  }
   const kepala = { "Content-Type": "application/json" };
   if (kunci) kepala.Authorization = `Bearer ${kunci}`;
   const isi = {
@@ -657,6 +715,15 @@ async function galatPenyedia(r, env) {
     } else if (j && j.message) pesan = String(j.message).slice(0, 200);
   } catch {}
   if (kuotaHabis(r.status, t)) throw new Error("KUOTA|" + pesanKuota(t));
+  /* 402 dari penyedia (mis. Apinex: "available only with a subscription") → jujur,
+     bukan disamarkan jadi "sibuk" */
+  if (r.status === 402) {
+    throw new Error("LANGGANAN|model/penyedia ini meminta langganan berbayar: \"" + pesan + "\". Pilih model lain (semua model gratis Apinex berawalan free/ tetapi sebagian tetap butuh langganan) atau ganti penyedia di halaman Pengaturan.");
+  }
+  /* 400 dari penyedia: biasanya permintaan tidak cocok (mis. model tidak menerima gambar) */
+  if (r.status === 400) {
+    throw new Error("PERMINTAAN|penyedia menolak permintaan ini (" + pesan + "). Coba tanpa lampiran foto, atau pilih model lain.");
+  }
   /* saldo/kredit penyedia habis → katakan apa adanya, jangan disamarkan */
   if (/insufficient balance|insufficient credit|no credit|out of credits|saldo|kredit habis|quota exceeded/i.test(t)) {
     throw new Error("SALDO|saldo/kredit penyedia AI habis menurut jawaban penyedianya: \"" + pesan + "\". Isi ulang kredit di dasbor 9Router (menu billing/top-up), lalu coba lagi.");
@@ -756,6 +823,9 @@ async function cobaStream(model, pesan, mode, kunci, env) {
 }
 
 async function tangani(request, env) {
+  /* Setelan penyedia dari halaman Pengaturan (bila ada) digabung ke env —
+     kuncinya hanya hidup selama permintaan ini, tidak disimpan di server. */
+  env = envPermintaan(request, env);
   const origin = request.headers.get("Origin") || "";
   const c = cors(origin, env, request);
   const kunci = kunciDipakai(env);
@@ -783,7 +853,13 @@ async function tangani(request, env) {
         modelDariRouter: penyedia.router && lokalSiap,
       },
       /* daftar lengkap supaya halaman Setelan bisa menawarkan pilihan model */
-      daftarModel: antrean, daftarVisi: antreanVisi, modelTambahan: tambahan(env),
+      daftarModel: (penyedia.daftarTampil && penyedia.daftarTampil.length)
+        /* penyedia dengan daftar pilihan sendiri (mis. Apinex 6 model free/) →
+           yang tampil di pemilih tepat daftar itu; antrean cadangan tetap dipakai
+           di belakang layar supaya jawaban tidak gagal */
+        ? { fast: penyedia.daftarTampil.slice(), think: penyedia.daftarTampil.slice(), deep: penyedia.daftarTampil.slice(), expert: penyedia.daftarTampil.slice() }
+        : antrean,
+      daftarVisi: antreanVisi, modelTambahan: tambahan(env),
       pesan: penyedia.router
         ? (lokalSiap
           ? "siap — " + penyedia.label + " di " + penyedia.dasar
@@ -866,10 +942,24 @@ async function tangani(request, env) {
     (cacheLokal && cacheLokal.daftar) || [], antrean.fast, antrean.think, antrean.deep, antrean.expert, antreanVisi, tambahan(env),
   ));
   let kandidat = adaGambar ? antreanVisi : (antrean[mode] || antrean.fast);
+  let modelDiminta = "";
   if (pilihModel && sahModel.has(pilihModel)) {
     kandidat = [pilihModel].concat(kandidat.filter((m) => m !== pilihModel));
+    modelDiminta = pilihModel;
     audit("model-dipilih", { mode, model: pilihModel, ip });
+  } else {
+    /* model yang dipilih pengguna untuk fitur ini di halaman Pengaturan/Setelan */
+    const MM = String(mode).toUpperCase();
+    const dariSetelan = env["AI_MODEL_" + MM + "_UI"] || env["AI_MODEL_" + MM] || env.AI_MODEL_UI || env.AI_MODEL;
+    if (dariSetelan && sahModel.has(String(dariSetelan))) modelDiminta = String(dariSetelan);
   }
+  /* kalau model pilihan ternyata tidak bisa dipakai, aplikasi tetap menjawab —
+     tapi pengguna diberi tahu (jangan diam-diam berganti model) */
+  let sebabGantiModel = "";
+  const catatanGantiModel = (modelDipilih, modelPakai) => (modelDipilih && modelDipilih !== modelPakai
+    ? "Model pilihanmu (" + modelDipilih + ") tidak bisa dipakai di penyedia ini"
+      + (sebabGantiModel ? ": " + sebabGantiModel : "") + ". Jawaban ini dari " + modelPakai + "."
+    : undefined);
   let terakhir = "tidak diketahui";
   let galatRouter = 0, galatLain = 0;
 
@@ -884,13 +974,19 @@ async function tangani(request, env) {
           const sse = teksDariSSE(await r.text());
           if (sse.teks) {
             catatTerbukti(mode, model);
-            return json({ ok: true, text: bersihkanPikir(sse.teks), model, mode }, 200, c);
+            return json({ ok: true, text: bersihkanPikir(sse.teks), model, mode, catatanModel: catatanGantiModel(modelDiminta, model) }, 200, c);
           }
           throw new Error("jawaban kosong dari " + model);
         }
         if (r.ok) catatTerbukti(mode, model);
         const kepala = new Headers(r.headers);
         Object.entries(c).forEach(([k, v]) => kepala.set(k, v));
+        /* kepala ini dibaca halaman web supaya bisa memberi tahu kalau model
+           yang dipilih pengguna ternyata tergantikan */
+        if (modelDiminta) kepala.set("x-model-diminta", modelDiminta);
+        kepala.set("x-model-dipakai", String(model));
+        const catatan = catatanGantiModel(modelDiminta, model);
+        if (catatan) kepala.set("x-catatan-model", encodeURIComponent(catatan));
         return new Response(r.body, { status: 200, headers: kepala });
       }
       let teks = await sekaliJalan(model, pesan, mode, kunci, env);
@@ -926,12 +1022,16 @@ async function tangani(request, env) {
       }
       return json({
         ok: true, text: teks, model, mode,
+        catatanModel: catatanGantiModel(modelDiminta, model),
         bentukDiperiksa: aturanKetatAwal.map((a) => a.jenis), diperbaiki,
         bentukTidakPas,
         catatanBentuk: bentukTidakPas ? ("Jawaban belum persis seperti yang kamu minta (" + alasanTidakPas + ") — sudah dicoba tiga kali diperbaiki.") : undefined,
       }, 200, c);
     } catch (e) {
       const m = String((e && e.message) || e);
+      if (modelDiminta && model === modelDiminta && !sebabGantiModel) {
+        sebabGantiModel = String(m.split("|").slice(1).join("|") || m).replace(/\s+/g, " ").slice(0, 160);
+      }
       /* kuota habis → ganti model tidak akan menolong, beri tahu apa adanya */
       if (m.indexOf("KUOTA|") === 0) return json({ ok: false, kuota: true, pesan: m.slice(6) }, 429, c);
       if (m.indexOf("SALDO|") === 0) return json({ ok: false, saldo: true, pesan: m.slice(6) }, 402, c);
@@ -987,12 +1087,9 @@ function envProses(tambahanEnv) {
   const dasar = (typeof process !== "undefined" && process.env) || {};
   const p = { ...dasar, ...(tambahanEnv || {}) };
   const kunci = {};
-  for (const k of [
-    "AI_PROVIDER", "AI_BASE_URL", "AI_API_KEY", "NINE_API_KEY", "AI_MODEL", "AI_MODELS", "AI_MODEL_VISI",
-    "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT", "MODELS_JSON",
-    "ALLOWED_ORIGINS", "APP_URL", "AI_MODEL_IZIN", "AI_CADANGAN",
-    "VERCEL", "VERCEL_ENV", "VERCEL_URL", "HOSTING",
-  ]) if (p[k] !== undefined) kunci[k] = p[k];
+  /* daftar nama env penyedia ada di _ai.js (ENV_PENYEDIA) supaya penyedia baru
+     tidak perlu didaftarkan berulang kali di tiap berkas */
+  for (const k of ENV_PENYEDIA) if (p[k] !== undefined) kunci[k] = p[k];
   return kunci;
 }
 

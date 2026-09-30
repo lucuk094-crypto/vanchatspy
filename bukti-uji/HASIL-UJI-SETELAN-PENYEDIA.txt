@@ -1,0 +1,17 @@
+UJI SETELAN PENYEDIA — ganti penyedia dari halaman Pengaturan (browser sungguhan)
+30/9/2026, 19.10.59
+
+  ✓ aplikasi mulai dengan penyedia server — 9Router (127.0.0.1:8172) · server
+  ✓ bagian "Penyedia AI" ada di halaman Pengaturan
+  ✓ status setelah "Uji & Aktifkan" menyebut penyedia aktif — aktif: Kustom (protokol OpenAI) · 6 model terbaca · kunci tersimpan di browser · uji jawab: Jawaban dari gateway tiruan un
+  ✓ daftar model per fitur terisi dari penyedia baru — free/gpt-6-luna, free/glm-5.3-flash, free/deepseek-v4.1-flash … (6 opsi)
+  ✓ setelan penyedia tersimpan di browser ini — kustom · 6 model · kunci disimpan: true
+  ✓ model per fitur tersimpan — {"fast":"free/gpt-6-luna"}
+  ✓ daftar model penyedia baru terbaca aplikasi — free/gpt-6-luna, free/glm-5.3-flash, free/deepseek-v4.1-flash, free/deepseek-v4-pro-0813
+  ✓ setelan model per mode memakai daftar penyedia baru — free/glm-5.3-flash, free/gpt-6-luna, free/deepseek-v4.1-flash, free/deepseek-v4-pro-0813
+  ✓ percakapan lewat penyedia baru (dari setelan browser) — model: free/gpt-6-luna · jawab: Jawaban dari gateway tiruan untuk: Balas
+  ✓ tanpa setelan browser → server memakai penyedia env (9Router tiruan) — model: kr/claude-haiku-4.5
+  ✓ kunci dari browser tidak tersimpan di server — 9Router (127.0.0.1:8172) · sumber: server
+  ✓ tidak ada galat JavaScript di halaman
+
+HASIL: SEMUA LULUS — setelan penyedia dari browser terbukti jalan

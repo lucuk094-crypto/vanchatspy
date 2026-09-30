@@ -41,6 +41,10 @@ function muatEnvLokal() {
   return jumlah;
 }
 const DARI_ENV_LOKAL = muatEnvLokal();
+if (process.env.VCS_TENANG !== '1') {
+  const nama = Object.keys(process.env).filter((k) => /^(AI_|APINEX|GEMINI|GOOGLE|GROQ|CF_|CLOUDFLARE|NINE|STT_|TTS_|IMAGE_)/.test(k));
+  console.log('  setelan env  : ' + (nama.length ? nama.join(', ') : '(tidak ada)') + (DARI_ENV_LOKAL ? ' — ' + DARI_ENV_LOKAL + ' di antaranya dari .env.local' : ''));
+}
 
 /* ── penyedia AI yang dipakai ────────────────────────────────────────────
    Aplikasi ini memakai **9Router** (satu penyedia saja). Alamat bawaannya
@@ -164,7 +168,13 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`  alamat   : http://127.0.0.1:${PORT}/`);
   console.log(`  endpoint : /api/chat (streaming) · /api/builder · /api/search · /api/health`);
   console.log(`             /api/providers · /api/cron · /api/image/generate · /api/deploy`);
-  console.log(`  penyedia AI: ${PENYEDIA.catatan}`);
+  /* penyedia yang benar-benar aktif (bukan label bawaan) — supaya banner tidak
+     menyesatkan waktu penyedia diganti lewat .env.local atau halaman Pengaturan */
+  {
+    const pAktif = penyediaTeks(PENYEDIA.env);
+    console.log(`  penyedia AI: ${pAktif.label} (${pAktif.dasar}${pAktif.kunci ? ' · kunci dipasang' : ' · tanpa kunci'})`);
+    console.log(`               protokol ${pAktif.gaya} · sumber ${pAktif.sumber === 'browser' ? 'halaman Pengaturan' : 'env'}`);
+  }
 
   /* kalau memakai penyedia lokal, beri tahu apa adanya apakah sudah terjangkau */
   const p = penyediaTeks(PENYEDIA.env);

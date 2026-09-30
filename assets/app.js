@@ -68,6 +68,8 @@
     memori: [], memoriAktif: true, proyek: [], proyekAktif: null,
     tugas: [], berkas: [],
     nama: '', bahasa: 'id', tanggal: 'id', zona: 'Asia/Jakarta', mPilih: {},
+    /* penyedia AI yang diatur dari halaman Pengaturan (kunci hidup di browser ini) */
+    penyediaSet: null,
     pakai: { tanggal: '', jumlah: 0 }
   }, baca(LS_SET, {}));
 
@@ -79,6 +81,60 @@
   var sedangJalan = false;
   var lampiran = [];        /* berkas/foto yang dilampirkan (bisa lebih dari satu) */
   var kendali = null;        /* AbortController */
+
+  /* ── Penyedia AI siap-pakai (bisa diganti kapan saja dari halaman Pengaturan) ── */
+  var PRESET_PENYEDIA = {
+    apinex: {
+      label: 'Apinex — gratis (5 permintaan/menit)',
+      url: 'https://api.apinex.bond/v1', gaya: 'openai', contoh: 'sk-apx…',
+      catatan: 'Model gratis: free/gpt-6-luna · free/glm-5.3-flash · free/deepseek-v4.1-flash · free/deepseek-v4-pro-0813 · free/mimo-v2.6-pro · free/minimax-m3.1 (yang terakhir butuh langganan).'
+    },
+    gemini: {
+      label: 'Google AI Studio (Gemini) — gratis', url: 'https://generativelanguage.googleapis.com/v1beta',
+      gaya: 'gemini', contoh: 'AQ.… atau AIza…',
+      catatan: 'Kunci gratis dari aistudio.google.com. Bisa teks, melihat foto, dan suara. Kunci berawalan AQ. memakai protokol asli Google (sudah dipilih otomatis).'
+    },
+    '9router': {
+      label: '9Router (tunnel)', url: 'https://rqacwx8.abc-tunnel.us/v1', gaya: 'openai', contoh: 'sk-…',
+      catatan: 'Penyedia bawaan web ini. Nyalakan tunnel 9Router dulu, lalu masukkan alamat & kuncinya.'
+    },
+    groq: { label: 'Groq — gratis', url: 'https://api.groq.com/openai/v1', gaya: 'openai', contoh: 'gsk_…', catatan: 'Cepat, gratis tanpa kartu (batas harian).' },
+    pollinations: { label: 'Pollinations — tanpa kunci', url: 'https://text.pollinations.ai/openai', gaya: 'openai', contoh: '(tidak perlu kunci)', catatan: 'Tanpa pendaftaran, tetapi satu model kecil dan tanpa melihat gambar.' },
+    cloudflare: { label: 'Cloudflare Workers AI — gratis', url: '', gaya: 'openai', contoh: 'token Workers AI', catatan: 'Isi alamat dengan https://api.cloudflare.com/client/v4/accounts/<ID_AKUN>/ai/v1 lalu tempel tokennya.' },
+    kustom: { label: 'Kustom (protokol OpenAI)', url: '', gaya: 'openai', contoh: 'kunci penyedia', catatan: 'Penyedia apa pun yang mengikuti /chat/completions.' }
+  };
+  function labelPenyediaAktif() {
+    var ps = SET.penyediaSet;
+    if (!ps || (!ps.provider && !ps.base)) return 'server (env)';
+    var nama = (PRESET_PENYEDIA[ps.provider] && PRESET_PENYEDIA[ps.provider].label) || ps.provider || 'kustom';
+    return nama + ' · diatur di browser ini';
+  }
+  /* Setelan penyedia dikirim pada SETIAP permintaan /api/… lewat satu header.
+     Kunci hanya hidup di browser ini (localStorage) — server tidak menyimpannya. */
+  function hdrPenyedia() {
+    var ps = SET.penyediaSet;
+    if (!ps || (!ps.provider && !ps.base)) return {};
+    try { return { 'x-setelan-penyedia': encodeURIComponent(JSON.stringify(ps)) }; } catch (e) { return {}; }
+  }
+  (function pasangPengirimSetelan() {
+    var asli = window.fetch ? window.fetch.bind(window) : null;
+    if (!asli) return;
+    window.fetch = function (url, opsi) {
+      try {
+        var u = typeof url === 'string' ? url : ((url && url.url) || '');
+        if (u.indexOf('/api/') === 0) {
+          opsi = opsi || {};
+          var h = {};
+          var lama = opsi.headers || {};
+          for (var k in lama) { if (Object.prototype.hasOwnProperty.call(lama, k)) h[k] = lama[k]; }
+          var tambah = hdrPenyedia();
+          for (var j in tambah) { if (Object.prototype.hasOwnProperty.call(tambah, j)) h[j] = tambah[j]; }
+          opsi.headers = h;
+        }
+      } catch (e) {}
+      return asli(url, opsi);
+    };
+  })();
 
   function baca(k, bawaan) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : bawaan; } catch (e) { return bawaan; } }
   function tulis(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { toast('Penyimpanan browser penuh', 'err'); } }
@@ -755,6 +811,11 @@
       signal: kendali.signal
     }).then(function (r) {
       var ct = r.headers.get('content-type') || '';
+      try {
+        var minta = r.headers.get('x-model-diminta'), pakai = r.headers.get('x-model-dipakai');
+        var catat = r.headers.get('x-catatan-model');
+        if (minta && pakai && minta !== pakai) toast(catat ? decodeURIComponent(catat) : ('Model ' + minta + ' tidak bisa dipakai — jawaban ini dari ' + pakai + '.'), 'warn');
+      } catch (e) {}
       if (!r.ok && ct.indexOf('json') >= 0) {
         return r.json().then(function (j) {
           /* penyedia bilang batas permintaan tercapai → aplikasi mencatatnya,
@@ -2876,6 +2937,141 @@
     ['kr/auto', 'Kiro Auto — dipilih otomatis'],
     ['FreeTiers', 'FreeTiers — gabungan model gratis'],
   ];
+  /* ── tampilan bagian "Penyedia AI" di Pengaturan ── */
+  function penyediaTerpilih() {
+    if (SET.penyediaSet && SET.penyediaSet.provider) return SET.penyediaSet.provider;
+    var dariServer = (SET.penyedia && SET.penyedia.penyedia) ? String(SET.penyedia.penyedia).toLowerCase() : '';
+    return PRESET_PENYEDIA[dariServer] ? dariServer : '9router';
+  }
+  function opsiProv() {
+    var kini = penyediaTerpilih();
+    return Object.keys(PRESET_PENYEDIA).map(function (k) {
+      return '<option value="' + esc(k) + '"' + (k === kini ? ' selected' : '') + '>' + esc(PRESET_PENYEDIA[k].label) + '</option>';
+    }).join('');
+  }
+  function opsiGaya() {
+    var kini = (SET.penyediaSet && SET.penyediaSet.gaya) || (PRESET_PENYEDIA[penyediaTerpilih()] || {}).gaya || 'openai';
+    var pilihan = [['openai', 'OpenAI (/chat/completions)'], ['gemini', 'Google asli (/v1beta generateContent)']];
+    return pilihan.map(function (x) {
+      return '<option value="' + x[0] + '"' + (x[0] === kini ? ' selected' : '') + '>' + esc(x[1]) + '</option>';
+    }).join('');
+  }
+  function opsiImgProv() {
+    var kini = (SET.penyediaSet && SET.penyediaSet.gambar && SET.penyediaSet.gambar.provider) || '';
+    var pilihan = [['', 'Gratis bawaan (Pollinations, tanpa kunci)'], ['cloudflare', 'Cloudflare Workers AI (FLUX)'], ['gemini', 'Google Gemini (jika kuotanya ada)'], ['off', 'Matikan pembuat gambar']];
+    return pilihan.map(function (x) {
+      return '<option value="' + x[0] + '"' + (x[0] === kini ? ' selected' : '') + '>' + esc(x[1]) + '</option>';
+    }).join('');
+  }
+  function daftarModelUI() {
+    var ps = SET.penyediaSet || {};
+    var p = PRESET_PENYEDIA[ps.provider] || {};
+    var daftar = (ps.daftar && ps.daftar.length) ? ps.daftar : ((SET.modelServer && SET.modelServer.semua) || []);
+    /* daftar bawaan Apinex: 6 model yang diminta */
+    if (!daftar.length && ps.provider === 'apinex') {
+      daftar = ['free/gpt-6-luna', 'free/glm-5.3-flash', 'free/deepseek-v4.1-flash', 'free/deepseek-v4-pro-0813', 'free/mimo-v2.6-pro', 'free/minimax-m3.1'];
+    }
+    return daftar.slice(0, 200);
+  }
+  function opsiModelPenyedia(fitur) {
+    var ps = SET.penyediaSet || {};
+    var terpilih = (ps.model && ps.model[fitur]) || '';
+    var daftar = daftarModelUI();
+    return '<option value="">(bawaan penyedia)</option>' + daftar.map(function (m) {
+      return '<option value="' + esc(m) + '"' + (String(m) === String(terpilih) ? ' selected' : '') + '>' + esc(m) + '</option>';
+    }).join('');
+  }
+  function statusPenyedia() {
+    if (!SET.penyediaSet || (!SET.penyediaSet.provider && !SET.penyediaSet.base)) return 'memakai penyedia server (env)';
+    var jml = (SET.penyediaSet.daftar && SET.penyediaSet.daftar.length) || 0;
+    return 'aktif: ' + ((PRESET_PENYEDIA[SET.penyediaSet.provider] || {}).label || SET.penyediaSet.provider || 'kustom')
+      + (jml ? ' · ' + jml + ' model terbaca' : '') + (SET.penyediaSet.kunci ? ' · kunci tersimpan di browser' : ' · tanpa kunci');
+  }
+
+  function pasangBagianPenyedia() {
+    var prov = $('penProv');
+    var url = $('penUrl');
+    if (prov) prov.addEventListener('change', function () {
+      var p = PRESET_PENYEDIA[prov.value] || {};
+      if (url && p.url) url.value = p.url;
+      var g = $('penGaya'); if (g && p.gaya) g.value = p.gaya;
+      toast((p.label || prov.value) + ' dipilih — tekan "Uji & Aktifkan" untuk memakainya', 'info');
+    });
+    var act = $('penAct');
+    if (act) act.addEventListener('click', function () {
+      var provider = prov ? prov.value : 'kustom';
+      var base = url ? String(url.value || '').trim() : '';
+      var kunci = ($('penKunci') || {}).value || '';
+      var gaya = ($('penGaya') || {}).value || '';
+      var st = $('penStatus');
+      if (!base) { toast('Isi alamat (base URL) penyedia dulu', 'warn'); return; }
+      act.disabled = true;
+      if (st) st.textContent = 'menguji…';
+      toast('Menguji penyedia & kunci…');
+      fetch('/api/providers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: provider, base: base, kunci: kunci, gaya: gaya, uji: true })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        act.disabled = false;
+        if (!j || !j.ok) {
+          var pesan = (j && j.pesan) ? String(j.pesan).slice(0, 120) : 'penyedia menolak';
+          if (st) st.textContent = 'gagal: ' + pesan;
+          toast('Gagal mengaktifkan: ' + pesan, 'err');
+          return;
+        }
+        var lama = SET.penyediaSet || {};
+        SET.penyediaSet = {
+          provider: provider, base: j.alamat || base, kunci: kunci, gaya: j.protokol || gaya || 'openai',
+          daftar: (j.model || []).slice(0, 200),
+          model: lama.model || {}, gambar: lama.gambar || {},
+        };
+        simpanSet();
+        ['fast', 'think', 'deep', 'expert', 'visi', 'pembangun'].forEach(function (f) {
+          var el = $('penM_' + f);
+          if (el) el.innerHTML = opsiModelPenyedia(f);
+        });
+        if (st) st.textContent = statusPenyedia() + ' · ' + (j.uji && j.uji.jawaban ? 'uji jawab: ' + String(j.uji.jawaban).slice(0, 30) : 'siap');
+        toast('Penyedia aktif: ' + (j.label || provider) + ' (' + (j.model || []).length + ' model)', 'ok');
+        muatModelServer();
+      }).catch(function (e) {
+        act.disabled = false;
+        if (st) st.textContent = 'gagal menghubungi server';
+        toast('Tidak bisa menghubungi server: ' + (e && e.message ? e.message : e), 'err');
+      });
+    });
+    var off = $('penOff');
+    if (off) off.addEventListener('click', function () {
+      SET.penyediaSet = null;
+      SET.modelServer = null;
+      simpanSet();
+      var st = $('penStatus'); if (st) st.textContent = statusPenyedia();
+      ['fast', 'think', 'deep', 'expert', 'visi', 'pembangun'].forEach(function (f) {
+        var el = $('penM_' + f); if (el) el.innerHTML = opsiModelPenyedia(f);
+      });
+      toast('Kembali memakai penyedia server (env hosting)', 'info');
+      muatModelServer();
+    });
+    ['fast', 'think', 'deep', 'expert', 'visi', 'pembangun'].forEach(function (f) {
+      var el = $('penM_' + f);
+      if (!el) return;
+      el.addEventListener('change', function () {
+        SET.penyediaSet = SET.penyediaSet || { provider: penyediaTerpilih(), model: {} };
+        SET.penyediaSet.model = SET.penyediaSet.model || {};
+        if (el.value) SET.penyediaSet.model[f] = el.value; else delete SET.penyediaSet.model[f];
+        simpanSet();
+        toast('Model ' + f + ': ' + (el.value || 'bawaan penyedia'), 'ok');
+      });
+    });
+    var ip = $('penImgProv');
+    if (ip) ip.addEventListener('change', function () {
+      SET.penyediaSet = SET.penyediaSet || { provider: penyediaTerpilih(), model: {} };
+      SET.penyediaSet.gambar = SET.penyediaSet.gambar || {};
+      SET.penyediaSet.gambar.provider = ip.value || '';
+      simpanSet();
+      toast('Pembuat gambar: ' + (ip.value || 'gratis bawaan (Pollinations)'), 'ok');
+    });
+  }
+
   function modelUntukMode(m) { return (SET.mPilih && SET.mPilih[m]) || ''; }
   function labelMode(m) {
     var pilih = modelUntukMode(m);
@@ -2885,8 +3081,19 @@
     var d = MODEL_PILIHAN_BAWAAN.filter(function (x) { return x[0] === id; })[0];
     return d ? d[1] : '';
   }
+  /* Daftar model untuk bilah obrolan:
+     1) daftar dari penyedia yang aktif (GET /api/chat → daftarModel), lalu
+     2) daftar dari penyedia yang kamu aktifkan sendiri di Pengaturan, lalu
+     3) daftar bawaan. Jadi begitu Apinex aktif, yang tampil 6 model Apinex. */
+  function daftarPilihanModel() {
+    var ms = (SET.modelServer && SET.modelServer.semua) || null;
+    if (ms && ms.length) return ms;
+    var ps = SET.penyediaSet;
+    if (ps && ps.daftar && ps.daftar.length) return ps.daftar.map(function (m) { return [m, m]; });
+    return MODEL_PILIHAN_BAWAAN;
+  }
   function opsiModel(terpilih) {
-    var daftar = (SET.modelServer && SET.modelServer.semua) || MODEL_PILIHAN_BAWAAN;
+    var daftar = daftarPilihanModel();
     return '<option value="">(bawaan penyedia)</option>' + daftar.map(function (d) {
       return '<option value="' + esc(d[0]) + '"' + (String(d[0]) === String(terpilih) ? ' selected' : '') + '>' + esc(d[1]) + '</option>';
     }).join('');
@@ -2997,8 +3204,25 @@
         + barisSet('Percakapan suara', 'mikrofon → AI → suara', '<button class="btn" id="set18Voice">' + ic('mic', 15) + 'Buka mode suara</button>')
         + '</section>'
 
+        + '<section class="hal-sec"><h3>' + ic('plug', 16) + 'Penyedia AI</h3>'
+        + '<p class="note">Pilih penyedia, tempel <b>alamat</b> dan <b>API key</b>-nya, lalu tekan <b>Uji &amp; Aktifkan</b> — AI langsung hidup memakai penyedia itu, tanpa mengubah berkas atau hosting. Kunci disimpan <b>di browser ini saja</b> dan ikut pada setiap permintaan ke server <i>hanya saat dipakai</i>; server tidak menyimpannya. Penyedia aktif sekarang: <b>' + esc(labelPenyediaAktif()) + '</b></p>'
+        + barisSet('Penyedia', 'daftar siap pakai — pilih lalu isi kuncinya', '<select class="sel" id="penProv">' + opsiProv() + '</select>')
+        + barisSet('Alamat (base URL)', 'mis. https://api.apinex.bond/v1', '<input class="inp" id="penUrl" style="min-width:250px" value="' + esc((SET.penyediaSet && SET.penyediaSet.base) || '') + '" placeholder="https://…/v1">')
+        + barisSet('API key', 'hanya tersimpan di browser ini', '<input class="inp" id="penKunci" type="password" style="min-width:250px" value="' + esc((SET.penyediaSet && SET.penyediaSet.kunci) || '') + '" placeholder="' + esc((PRESET_PENYEDIA[(SET.penyediaSet && SET.penyediaSet.provider) || 'apinex'] || {}).contoh || '') + '">')
+        + barisSet('Protokol', 'sudah otomatis pas untuk tiap penyedia', '<select class="sel" id="penGaya">' + opsiGaya() + '</select>')
+        + barisSet('Aktifkan', 'kunci diuji sungguhan + daftar model dimuat', '<div class="img-aksi"><button class="btn" id="penAct">' + ic('zap', 15) + 'Uji &amp; Aktifkan</button><button class="btn" id="penOff">' + ic('rotate-ccw', 15) + 'Kembalikan ke server</button></div>')
+        + barisSet('Status', 'hasil uji terakhir', '<span class="pill-note" id="penStatus">' + esc(statusPenyedia()) + '</span>')
+        + barisSet('Model Normal (cepat)', 'dipakai mode Normal', '<select class="sel" id="penM_fast">' + opsiModelPenyedia('fast') + '</select>')
+        + barisSet('Model Berpikir', 'dipakai mode Berpikir', '<select class="sel" id="penM_think">' + opsiModelPenyedia('think') + '</select>')
+        + barisSet('Model Berpikir Mendalam', 'dipakai mode Mendalam', '<select class="sel" id="penM_deep">' + opsiModelPenyedia('deep') + '</select>')
+        + barisSet('Model Expert', 'dipakai mode Expert', '<select class="sel" id="penM_expert">' + opsiModelPenyedia('expert') + '</select>')
+        + barisSet('Model lihat foto', 'dipakai saat kamu kirim gambar', '<select class="sel" id="penM_visi">' + opsiModelPenyedia('visi') + '</select>')
+        + barisSet('Model Builder', 'dipakai halaman Builder', '<select class="sel" id="penM_pembangun">' + opsiModelPenyedia('pembangun') + '</select>')
+        + barisSet('Pembuat gambar', 'kosongkan = Pollinations gratis tanpa kunci', '<select class="sel" id="penImgProv">' + opsiImgProv() + '</select>')
+        + '</section>'
+
         + '<section class="hal-sec"><h3>' + ic('cpu', 16) + 'Model AI</h3>'
-        + '<p class="note">Model per mode berpikir bisa kamu ganti sendiri. Daftar ini diambil dari server (<code>GET /api/chat</code>), dan server mengambilnya dari penyedia yang aktif (<code>GET /v1/models</code>) — jadi yang tampil hanya model yang benar-benar tersedia untukmu. Penyedia yang dipakai sekarang: <b>' + esc(labelPenyedia()) + '</b> · kunci hidup di server lewat env <code>AI_API_KEY</code> (tidak pernah ditanam di halaman). Batas jumlah & tarif mengikuti paket akunmu di penyedia itu.</p>'
+        + '<p class="note">Model per mode berpikir bisa kamu ganti sendiri. Daftar ini diambil dari server (<code>GET /api/chat</code>), dan server mengambilnya dari penyedia yang aktif (<code>GET /v1/models</code>) — jadi yang tampil hanya model yang benar-benar tersedia untukmu. Penyedia yang dipakai sekarang: <b>' + esc(labelPenyediaAktif()) + '</b> · kalau diatur dari halaman Pengaturan, kuncinya hidup di browser ini (<code>localStorage</code>) dan tidak disimpan server; kalau tidak diatur, server memakai env <code>AI_API_KEY</code>/<code>APINEX_API_KEY</code>/<code>GEMINI_API_KEY</code>. Batas jumlah & tarif mengikuti paket akunmu di penyedia itu.</p>'
         + barisSet('Normal', MODE.fast.ket, '<select class="sel" id="set18M_fast">' + opsiModel(modelUntukMode('fast')) + '</select>')
         + barisSet('Berpikir', MODE.think.ket, '<select class="sel" id="set18M_think">' + opsiModel(modelUntukMode('think')) + '</select>')
         + barisSet('Berpikir Mendalam', MODE.deep.ket, '<select class="sel" id="set18M_deep">' + opsiModel(modelUntukMode('deep')) + '</select>')
@@ -3052,7 +3276,7 @@
         + '<p class="note">Van Chat.SPY — ruang kerja AI satu halaman. Semua uji tampilan memakai Chromium sungguhan; daftar per butir ada di <b>PESAN-BERKAS-8-14.md</b> dan <b>BUTIR-15-53.md</b>. Riwayat, berkas, memori, dan setelan hidup di browser ini.</p>'
         + '</section>';
     },
-    pasang: function () { pasangSetelan(); muatModelServer(); }
+    pasang: function () { pasangSetelan(); pasangBagianPenyedia(); muatModelServer(); }
   };
 
   function sw18(id, nilai, saatUbah) {
@@ -5085,6 +5309,8 @@
     suaraStatus(-1, false);
     if (!SET.bangunan) { SET.bangunan = []; simpanSet(); }
     if (bgnDaftar().length && !bgnAktifId) { bgnAktifId = bgnDaftar()[0].id; }
+    /* pilihan model di bilah obrolan mengikuti penyedia yang aktif */
+    muatModelServer();
   }
 
   /* ── 17k. penyalaan ──────────────────────────────────────────────── */

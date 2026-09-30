@@ -103,6 +103,81 @@ perangkat) dan itu sudah jalan:
 
 ---
 
+## 2b. Memakai Apinex atau Google AI Studio (opsional)
+
+Dua penyedia ini bisa dipilih **dari dalam web** (Pengaturan → Penyedia AI) —
+cara itu **tidak perlu Redeploy** karena setelannya ikut terkirim dari browser
+setiap permintaan (kunci tidak disimpan di server). Tapi kalau kamu mau jadi
+bawaan untuk semua orang yang membuka webnya, isi env-nya seperti ini:
+
+### Apinex (`https://api.apinex.bond/v1`)
+
+| Key | Value | Keterangan |
+|---|---|---|
+| `AI_PROVIDER` | `apinex` | |
+| `APINEX_API_KEY` | `sk-apx…………` | kunci dari apinex.bond |
+| `AI_MODEL_FAST` | `free/gpt-6-luna` | mode Normal |
+| `AI_MODEL_THINK` | `free/glm-5.3-flash` | mode Berpikir |
+| `AI_MODEL_DEEP` | `free/deepseek-v4-pro-0813` | mode Berpikir Mendalam |
+| `AI_MODEL_EXPERT` | `free/mimo-v2.6-pro` | mode Expert |
+| `AI_MODEL_VISI` | `free/glm-5.3-flash` | kirim foto |
+| `AI_MODEL_BUILDER` | `free/deepseek-v4-pro-0813` | AI Builder |
+
+Catatan jujur soal Apinex (hasil uji langsung, 1 Okt 2026):
+* batas **5 permintaan/menit** per akun — kalau kena, aplikasi menampilkan pesan
+  batas itu apa adanya plus "Retry in Ns" dari penyedia;
+* enam model `free/*` yang muncul di pemilih model: `free/gpt-6-luna`,
+  `free/glm-5.3-flash`, `free/deepseek-v4.1-flash`, `free/deepseek-v4-pro-0813`,
+  `free/mimo-v2.6-pro`, `free/minimax-m3.1`;
+* **`free/minimax-m3.1` ternyata BUTUH LANGGANAN** (penyedia menjawab 402
+  *"available only with a subscription"*). Modelnya tetap ada di daftar (kamu yang
+  minta), tapi kalau dipakai aplikasi menjawab dengan catatan jujur, bukan diam-diam
+  berganti model;
+* model `claude-*` juga butuh saldo/top-up — model uji di tombol "Uji & Aktifkan"
+  otomatis memilih model `free/*` supaya akun tanpa saldo tetap lulus uji.
+
+### Google AI Studio (Gemini)
+
+| Key | Value | Keterangan |
+|---|---|---|
+| `AI_PROVIDER` | `gemini` | |
+| `GEMINI_API_KEY` | `AIza…………` atau `AQ.…………` | kunci dari aistudio.google.com (kunci gaya `AQ.` juga jalan) |
+| `AI_MODEL_FAST` | `gemini-flash-lite-latest` | mode Normal |
+| `AI_MODEL_VISI` | `gemini-flash-lite-latest` | kirim foto |
+
+* `AI_BASE_URL` **jangan diisi** — aplikasi memakai alamat asli Google
+  `https://generativelanguage.googleapis.com/v1beta` dan protokol `:generateContent`.
+* Kalau mau lewat jalur OpenAI-compatible: `AI_GAYA=openai` +
+  `AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`.
+* Yang sudah diuji langsung: `gemini-flash-lite-latest` dan `gemini-3.1-flash-lite`
+  bisa teks **dan** melihat gambar; `gemini-flash-latest` sering menjawab 503
+  («sedang sibuk») dan `gemini-pro-latest` kena kuota gratis — makanya dipakai
+  sebagai cadangan belakang.
+* **Pembuat gambar di Gemini tidak gratis** (`gemini-2.5-flash-image` kena kuota/berbayar)
+  → biarkan pembuat gambar di **Pollinations/Cloudflare** (bawaan aplikasi).
+
+---
+
+## 2c. Mengubah setelan tanpa redeploy (dari dalam web)
+
+**Pengaturan → Penyedia AI** di aplikasi:
+
+1. pilih penyedia (Apinex, Google AI Studio, 9Router, Groq, Pollinations,
+   Cloudflare, atau **Kustom** untuk gateway lain),
+2. isi **alamat** + **kunci**, klik **Uji & Aktifkan** — aplikasi membaca daftar
+   model dan mencoba satu percakapan kecil lebih dulu, hasilnya ditampilkan jujur
+   (termasuk kunci tersamar `sk-apx…a62a`, bukan kunci utuh),
+3. tentukan **model per fitur** (Normal / Berpikir / Mendalam / Expert / kirim foto /
+   Builder) dan pembuat gambar, lalu tutup — setelan tersimpan di browser ini,
+4. tombol **Kembalikan ke server** menghapus setelan itu dan kembali memakai env.
+
+Kunci yang kamu tulis di situ **hanya dipakai untuk permintaan itu** (header
+`x-setelan-penyedia`), tidak ditulis ke log, dan tidak pernah dikembalikan lagi ke
+browser. Kalau web dibuka di perangkat lain, setelannya tidak ikut — itu memang
+disengaja supaya kunci tetap di perangkatmu.
+
+---
+
 ## 3. Deploy
 
 1. Klik **Deploy** → tunggu ± 1 menit.
@@ -156,6 +231,8 @@ yang sudah jalan. Setiap kali mengganti/menambah env →
 | "batas permintaan penyedia tercapai" | batas paket (mis. 15 permintaan/menit) | tunggu sebentar, atau naikkan paket |
 | Daftar model kosong padahal kunci benar | paket akunmu belum punya model untuk mode itu | pilih model lain di Setelan |
 | Perubahan env tidak berefek | deployment belum di-redeploy | Redeploy |
+| "Model pilihanmu (…) tidak bisa dipakai di penyedia ini: … langganan berbayar" | model itu memang butuh langganan (mis. `free/minimax-m3.1`) | pilih model lain di Pengaturan → Penyedia AI → model per fitur |
+| "batas permintaan penyedia AI tercapai" (Apinex) | Apinex gratis dibatasi 5 permintaan/menit | tunggu ± 1 menit, atau pilih 9Router/Gemini di Pengaturan |
 | "Tidak ada model yang bisa dipakai dari …" | gateway itu menyebut model yang kredensialnya tidak aktif | pilih model lain di Setelan → Model AI, atau kosongkan `AI_BASE_URL` |
 
 ---

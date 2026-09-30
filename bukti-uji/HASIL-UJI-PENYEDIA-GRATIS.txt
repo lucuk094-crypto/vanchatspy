@@ -1,5 +1,5 @@
 UJI PENYEDIA GRATIS — Pollinations (tanpa kunci) · Gemini · Cloudflare Workers AI
-30/9/2026, 17.50.06
+30/9/2026, 19.11.23
 ────────────────────────────────────────────────────────────
 ══ A. Pollinations — GRATIS, tanpa kunci, tanpa pendaftaran ══
    penyedia: {"nama":"pollinations","label":"Pollinations","alamat":"https://text.pollinations.ai/openai","adaKunci":true}
@@ -17,14 +17,27 @@ UJI PENYEDIA GRATIS — Pollinations (tanpa kunci) · Gemini · Cloudflare Worke
   ✓ dijawab jujur: penyedia ini belum bisa melihat gambar
   ✓ pesannya menyebut jalan keluarnya (gemini + kunci gratis)
 
-══ B. Gemini — Google AI Studio (lewat router tiruan, tanpa kuota) ══
+══ B. Gemini — Google AI Studio, jalur OpenAI-compatible (tiruan, tanpa kuota) ══
    penyedia: {"nama":"gemini","label":"Google AI Studio (Gemini) (127.0.0.1:8155)"}
   ✓ penyedia dilaporkan gemini
   ✓ nama tampilannya "Google AI Studio (Gemini)"
+  ✓ protokol bisa dipaksa OpenAI-compatible (AI_GAYA=openai)
    jawaban: "Kopi adalah minuman."
   ✓ percakapan lewat penyedia Gemini
    kirim foto → "Latar belakang merah dengan lingkaran putih di tengah dan batang vertikal biru."
   ✓ foto diterima penyedia yang bisa melihat gambar
+
+══ B2. Gemini — protokol asli Google (…/v1beta/models/<model>:generateContent) ══
+   penyedia: {"nama":"gemini"}
+  ✓ penyedia gemini memakai protokol asli Google
+   jawaban: "Kopi adalah minuman hasil seduhan biji kopi." · model gemini-flash-lite-latest
+  ✓ percakapan lewat protokol asli Gemini
+   kirim foto → "Merah"
+  ✓ foto dikirim sebagai inlineData ke Gemini asli
+   jejak permintaan ke tiruan: /v1beta/models?pageSize=200&key=AQ.kunci-uji-asli | /v1beta/models/gemini-flash-lite-latest:generateContent?key=AQ.kunci-uji-asli | /v1beta/models/gemini-flash-
+  ✓ benar-benar memakai /models/<model>:generateContent
+  ✓ tidak memakai /chat/completions (itu jalur OpenAI-compatible)
+  ✓ kunci dikirim dengan cara Google (X-goog-api-key atau ?key=)
 
 ══ C. Cloudflare Workers AI — satu akun untuk SEMUA fitur (tiruan) ══
    penyedia: {"teks":"Cloudflare Workers AI","gambar":"Cloudflare Workers AI","gambarSiap":true,"suara":{"stt":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/openai/whisper","catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."},"tts":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/myshell-ai/melotts","suara":"id-ID","catatan":"Cloudflare Workers AI (gratis 10.000 neuron/hari, tanpa kartu) — Whisper untuk dengar, MeloTTS untuk suara."}}}
@@ -33,7 +46,7 @@ UJI PENYEDIA GRATIS — Pollinations (tanpa kunci) · Gemini · Cloudflare Worke
   ✓ rumus alamat asli Cloudflare benar — https://api.cloudflare.com/client/v4/accounts/akun-uji/ai/v1
   ✓ pembuat gambar otomatis ikut Cloudflare (FLUX)
   ✓ dengar & suara dilaporkan siap (Whisper + MeloTTS) — {"stt":{"penyedia":"Cloudflare Workers AI","siap":true,"model":"@cf/openai/whisper","catatan":"Cloud
-   percakapan: "Kopi adalah minuman yang dibuat dari biji kopi yang disangra"
+   percakapan: "Kopi adalah minuman."
   ✓ teks lewat Cloudflare (endpoint OpenAI-compatible-nya)
    gambar: Cloudflare Workers AI · @cf/black-forest-labs/flux-1-schnell
   ✓ gambar lewat Cloudflare (FLUX /run)

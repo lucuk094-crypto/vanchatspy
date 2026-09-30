@@ -105,7 +105,7 @@ export function cors(origin, env = {}, request = null) {
   const h = {
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, x-setelan-penyedia',
     'Vary': 'Origin',
   };
   if (allow) h['Access-Control-Allow-Credentials'] = 'false';

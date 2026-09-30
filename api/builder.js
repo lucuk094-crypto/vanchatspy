@@ -37,7 +37,7 @@ const json = (o, s, extra) =>
   });
 
 import { asalDiizinkan, audit } from "./_aman.js";
-import { penyediaTeks, teksDariSSE, bersihkanPikir, modelBawaan } from "./_ai.js";
+import { penyediaTeks, teksDariSSE, bersihkanPikir, modelBawaan, envPermintaan, ENV_PENYEDIA } from "./_ai.js";
 import { daftarModelLokal, daftarModelCepat, kandidatModel, catatTidakAda, catatTerbukti, RX_MODEL_MATI, kunciDitolakTerakhir, pesanKunciDitolak, pesanKunciKosong, sebabLokalTerakhir } from "./chat.js";
 
 /* daftar model untuk membangun halaman: diambil dari 9Router (GET /models),
@@ -55,7 +55,8 @@ async function kandidatBangun(env) {
   /* daftar model dari penyedia belum terbaca (lambat/gagal sesaat) → JANGAN menyerah:
      pakai model dari setelan, lalu daftar bawaan. Kalau penyedianya memang tak bisa
      dihubungi, percobaannya sendiri yang gagal dan pesannya menyebut sebabnya. */
-  const dariSetelan = [...new Set([env.AI_MODEL_DEEP, env.AI_MODEL_THINK, env.AI_MODEL_FAST, env.AI_MODEL].filter(Boolean))];
+  const dariSetelan = [...new Set([env.AI_MODEL_BUILDER_UI, env.AI_MODEL_BUILDER, env.AI_MODEL_DEEP_UI, env.AI_MODEL_DEEP,
+    env.AI_MODEL_THINK_UI, env.AI_MODEL_THINK, env.AI_MODEL_FAST_UI, env.AI_MODEL_FAST, env.AI_MODEL_UI, env.AI_MODEL].filter(Boolean))];
   if (dariSetelan.length) return dariSetelan;
   const bawaanPenyedia = modelBawaan(env, "deep");
   return bawaanPenyedia.length ? bawaanPenyedia : MODEL_BANGUN.slice();
@@ -79,7 +80,7 @@ function cors(origin, env, request) {
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, x-setelan-penyedia",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
@@ -256,15 +257,12 @@ function envProses(tambahan) {
   const das = (typeof process !== "undefined" && process.env) || {};
   const g = { ...das, ...(tambahan || {}) };
   const kunci = {};
-  for (const k of ["AI_PROVIDER", "AI_BASE_URL", "AI_API_KEY", "AI_MODEL", "AI_MODELS", "AI_MODEL_VISI",
-    "AI_MODEL_FAST", "AI_MODEL_THINK", "AI_MODEL_DEEP", "AI_MODEL_EXPERT",
-    "NINE_API_KEY", "MODELS_JSON",
-    "ALLOWED_ORIGINS", "APP_URL", "AI_MODEL_IZIN", "AI_CADANGAN",
-    "VERCEL", "VERCEL_ENV", "VERCEL_URL", "HOSTING",
-  ]) if (g[k] !== undefined) kunci[k] = g[k];
+  for (const k of ENV_PENYEDIA) if (g[k] !== undefined) kunci[k] = g[k];
   return kunci;
 }
 
 export default async function (request, env) {
+  /* setelan penyedia dari halaman Pengaturan (bila ada) — kunci tidak disimpan di server */
+  env = envPermintaan(request, env);
   return tangani(request, envProses(env));
 }

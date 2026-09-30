@@ -66,9 +66,23 @@ npm run uji:tampilan        # uji tampilan & tombol nyata di Chromium
 Berkas backend yang dijalankan persis sama dengan yang nanti dipakai di
 hosting, jadi yang terlihat lokal = yang akan jalan setelah dipasang.
 
-### 1b. Menyiapkan kunci penyedia AI (9Router)
+### 1b. Menyiapkan kunci penyedia AI
 
-Aplikasi ini **hanya** bicara ke **9Router** — alamat aksesnya lewat tunnel
+Cara tercepat sekarang: buka aplikasi → **Pengaturan → Penyedia AI** → pilih
+penyedia, isi alamat + kunci, klik **Uji & Aktifkan**, lalu tentukan **model untuk
+tiap fitur** (Normal, Berpikir, Mendalam, Expert, kirim foto, Builder). Setelan itu
+disimpan di browser ini dan ikut terkirim per permintaan — jadi **ganti penyedia
+tidak perlu redeploy**, dan kunci tidak disimpan di server.
+
+Penyedia yang sudah disiapkan di dalam aplikasi: **9Router** (bawaan),
+**Apinex** (`https://api.apinex.bond/v1`, 6 model `free/*`), **Google AI Studio**
+(Gemini, protokol asli `v1beta`), Groq, Pollinations, Cloudflare, dan **Kustom**.
+
+Kalau mau jadi bawaan untuk semua pengunjung (atau dipasang di Vercel), isi env
+seperti di bawah. Penjelasan lengkap Apinex & Gemini:
+[`PANDUAN-VERCEL.md`](PANDUAN-VERCEL.md) bagian 2b–2c.
+
+Bawaannya aplikasi ini memakai **9Router** — alamat aksesnya lewat tunnel
 `https://rqacwx8.abc-tunnel.us/v1` (bawaannya, jadi `AI_BASE_URL` boleh
 dikosongkan). Tanpa kunci, aplikasi tetap bisa dibuka, tetapi setiap percakapan
 dijawab jujur «kunci 9Router belum dipasang» — tidak ada jawaban palsu.
@@ -101,7 +115,10 @@ begitu normal, percakapan langsung jalan tanpa perlu restart.
    step; `/api/*.js` otomatis menjadi Edge Function, sisanya berkas statis).
 2. Project → **Settings → Environment Variables**, isi:
    `AI_PROVIDER=9router` · `AI_API_KEY=sk-…` (kunci 9Router-mu).
-   Opsional: `AI_MODEL_FAST`, `AI_MODEL_THINK`, `AI_MODEL_VISI`, `ALLOWED_ORIGINS`, `APP_URL`.
+   Opsional: `AI_MODEL_FAST`, `AI_MODEL_THINK`, `AI_MODEL_VISI`, `AI_MODEL_BUILDER`, `ALLOWED_ORIGINS`, `APP_URL`.
+   Mau Apinex? `AI_PROVIDER=apinex` + `APINEX_API_KEY=sk-apx…`.
+   Mau Google AI Studio? `AI_PROVIDER=gemini` + `GEMINI_API_KEY=AIza…`/`AQ.…`
+   (jangan isi `AI_BASE_URL` — alamat Google dipakai otomatis).
 3. **Deploy** — lalu buka webnya. Kalau env diubah belakangan, **redeploy**
    supaya berlaku.
 
@@ -197,6 +214,10 @@ Batas yang perlu diketahui (jujur):
   "Plugin" menampilkan **6 alat bawaan yang benar-benar jalan + 1 yang ditandai
   "belum dipasang"** — lengkap dengan izin, endpoint, dan autentikasinya.
 * Kalau semua model cadangan sedang sibuk, jawaban gagal dengan pesan yang jelas — bukan diam-diam kosong.
+* **Model yang kamu pilih tidak tersedia?** Aplikasi tetap menjawab dengan model cadangan,
+  tetapi **mengatakannya**: «Model pilihanmu (…) tidak bisa dipakai di penyedia ini: … langganan
+  berbayar. Jawaban ini dari …» — muncul sebagai catatan di balon jawaban (mode mengalir lewat
+  kepala `x-model-diminta` / `x-model-dipakai` / `x-catatan-model`). Tidak ada pergantian diam-diam.
 * **Perintah bentuk** ("tepat tiga kata", "maksimal 5 kata", "hanya daftar bernomor", "hanya kodenya") diperiksa di server dan diperbaiki otomatis sampai 3 putaran — **tepat**, **maksimal**, dan **minimal** dibedakan ("maksimal 8 kata" tidak lagi dianggap "harus pas 8"). Permintaan internal aplikasi (Builder, Riset, Perbaiki berkas) sengaja **tidak** lewat pemeriksa ini: jawabannya dipakai sebagai data (JSON/isi berkas), bukan sebagai jawaban pengguna. Kalau model tetap meleset, aplikasi **mengatakannya** lewat catatan di balon jawaban — tidak ada klaim palsu bahwa perintah sudah dipatuhi.
 * **Batas permintaan penyedia tercapai** ditampilkan apa adanya ("batas penyedia tercapai (dari 9Router)"); percakapan lama tetap bisa dibaca dan ruang kerja tetap bisa dipakai.
 
@@ -231,6 +252,8 @@ node tools/uji-bagian-h.mjs        # butir 15–53 (penyedia AI ditiru)
 node tools/uji-arahan-proyek.mjs   # arahan proyek benar-benar terkirim
 node tools/smoke-18.mjs            # asap: 6 halaman + tombol kunci + nol galat JS
 node tools/uji-live.mjs            # KUOTA sungguhan (± 12 permintaan) — dengan kunci asli
+node tools/uji-setelan-penyedia.mjs # ganti penyedia dari halaman Pengaturan (Chromium + tiruan)
+node tools/uji-penyedia-gratis.mjs  # penyedia gratis (Pollinations/Gemini asli/Cloudflare ditiru)
 ```
 
 ### Penyedia GRATIS (opsional) — mana yang menutup semua fitur
@@ -239,7 +262,10 @@ Bawaan aplikasi tidak perlu diubah: percakapan lewat 9Router, gambar lewat Polli
 Kalau mau **semua fitur gratis dari satu akun** (teks + lihat foto + buat gambar FLUX + dengar + bicara):
 **Cloudflare Workers AI**, 10.000 neuron/hari tanpa kartu → ikuti langkahnya di
 [`PANDUAN-PENYEDIA-GRATIS.md`](PANDUAN-PENYEDIA-GRATIS.md).
-Pilihan lain: Google AI Studio (Gemini) untuk percakapan/vision gratis, Groq untuk percakapan cepat + Whisper.
+Pilihan lain: **Apinex** (6 model `free/*` — batas 5 permintaan/menit; satu di antaranya,
+`free/minimax-m3.1`, ternyata butuh langganan dan aplikasi mengatakannya apa adanya),
+**Google AI Studio (Gemini)** untuk percakapan/vision gratis (protokol asli Google,
+kunci `AIza…` maupun `AQ.…`), Groq untuk percakapan cepat + Whisper.
 Cek kemampuan yang sedang aktif: `GET /api/health` → blok `kemampuan`.
 
 ### Memakai 9Router (penyedia bawaan aplikasi ini)
